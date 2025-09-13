@@ -1,0 +1,37 @@
+[tool.black]
+line-length = 100
+force-exclude = '''
+(
+    venv/
+    | __pycache__/
+    | .idea/
+    | manage.py
+    | migrations/
+)
+'''
+
+[tool.isort]
+profile = "black"
+include_trailing_comma = true
+line_length = 100
+lines_after_imports = 2
+skip = [
+    "venv/",
+    "__pycache__/",
+    ".idea/",
+    "manage.py",
+    "migrations/"
+]
+
+[tool.mypy]
+ignore_missing_imports = true
+strict_optional = true
+check_untyped_defs = true
+exclude = [
+    "venv/",
+    "__pycache__/",
+    ".idea/",
+    "manage.py",
+    "migrations/",
+    "studyoverflow/studyoverflow/"
+]

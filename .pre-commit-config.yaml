@@ -1,0 +1,57 @@
+repos:
+  - repo: local
+    hooks:
+      - id: black
+        name: black
+        entry: black --config pyproject.toml
+        language: system
+        types: [python]
+        pass_filenames: true
+
+      - id: isort
+        name: isort
+        entry: isort --settings-path pyproject.toml
+        exclude: |
+          (?x)(
+              venv/|
+              __pycache__/|
+              .idea/|
+              manage.py|
+              migrations/
+          )
+        language: system
+        types: [python]
+        pass_filenames: true
+
+      - id: flake8
+        name: flake8
+        entry: flake8 --config .flake8
+        exclude: |
+          (?x)(
+              venv/|
+              __pycache__/|
+              .*pyc|
+              .idea/|
+              manage.py|
+              migrations/|
+              studyoverflow/studyoverflow/
+          )
+        language: system
+        types: [python]
+        pass_filenames: true
+
+      - id: mypy
+        name: mypy
+        entry: mypy --config-file pyproject.toml
+        exclude: |
+          (?x)(
+              venv/|
+              __pycache__/|
+              .idea/|
+              manage.py|
+              migrations/|
+              studyoverflow/studyoverflow/
+          )
+        language: system
+        types: [python]
+        pass_filenames: true

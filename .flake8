@@ -1,0 +1,12 @@
+[flake8]
+exclude =
+    venv/,
+    __pycache__/,
+    *.pyc,
+    .idea/
+    manage.py,
+    studyoverflow/studyoverflow/
+    migrations/
+
+max-line-length = 100
+max-complexity = 10
