@@ -1,0 +1,28 @@
+.bg-black {
+    background-color: black;
+}
+
+#header {
+    border-bottom: 1px solid darkgray;
+}
+
+.nav-hover {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.nav-hover:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.nav-hover:active {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+#studyoverflow-button {
+    transition: transform 0.6s ease;
+}
+
+#studyoverflow-button:hover {
+    transform: scale(1.05);
+}

@@ -1,0 +1,60 @@
+{% load static %}
+
+
+<!-- Базовый html-шаблон с header,
+не предназначен для использования без дочерних html-шаблонов -->
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Блок с названием страницы -->
+  {% block title %}
+  {% endblock %}
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <link type="text/css" rel="stylesheet" href="{% static 'base/css/base.css' %}">
+
+  <!-- Блок с загрузкой дополнительных css-стилей в дочерних html-шаблонах -->
+  {% block extra_css %}
+  {% endblock %}
+</head>
+
+<body class="bg-black">
+
+  <!-- header -->
+  <header id="header" class="p-3 bg-black text-white">
+    <div class="container">
+      <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+
+        <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+          <li><a id="studyoverflow-button" href="{% url 'home' %}" class="nav-link px-2 text-warning">StudyOverflow</a></li>
+          <li><a href="{% url 'posts' %}" class="nav-link nav-hover px-2 text-white">Все посты</a></li>
+          <li><a href="{% url 'create_post' %}" class="nav-link nav-hover px-2 text-white">Создать пост</a></li>
+          <li><a href="{% url 'users' %}" class="nav-link nav-hover px-2 text-white">Пользователи</a></li>
+        </ul>
+
+        <form class="col-12 col-lg-3 mb-3 mb-lg-0 me-lg-3">
+          <input type="search" class="form-control form-control-dark" placeholder="Поиск по заголовку..." aria-label="Search">
+        </form>
+
+        <div class="text-end">
+          <button type="button" class="btn btn-outline-light me-2">Войти</button>
+          <button type="button" class="btn btn-warning">Регистрация</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Блок с основным содержимым дочерних html-шаблонов -->
+  {% block content  %}
+  {% endblock %}
+
+  <!-- Блок с загрузкой дополнительных js-файлов в дочерних html-шаблонах -->
+  {% block extra_js %}
+  {% endblock %}
+
+</body>
+</html>

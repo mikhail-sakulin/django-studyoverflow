@@ -1,0 +1,159 @@
+#studyoverflow-emblem {
+    font-size: 80px;
+    text-align: center;
+    text-shadow: 2px 2px 5px rgba(255, 193, 7, 0.6),
+                 -2px -2px 5px rgba(255, 193, 7, 0.6);
+}
+
+#main_index {
+    min-height: 88vh;
+    padding-bottom: 50px;
+    animation: swayBG 20s ease-in-out infinite;
+}
+
+@keyframes swayBG {
+    0%   { background-position: -80px center; }
+    50%  { background-position: 0px center; }
+    100% { background-position: -80px center; }
+}
+
+#text-title {
+    font-weight: 500;
+    font-size: 35px;
+    color: #e0e0e0;
+}
+
+.text-block {
+    opacity: 0;
+    animation: ani 1s forwards;
+    text-align: center;
+    font-weight: 400;
+    font-size: 20px;
+    color: #C0D2E6;
+}
+
+@keyframes ani {
+    0% {opacity: 0;}
+    100% {opacity: 1;}
+}
+
+.text-block1 {
+    animation-delay: 0s;
+}
+
+.text-block2 {
+    animation-delay: 1s;
+}
+
+.text-block3 {
+    animation-delay: 2s;
+}
+
+:root{
+    --anim-duration: 1200ms;
+}
+
+#text-title{
+    line-height: 1.3;
+    text-align: center;
+}
+
+#changing-text {
+    display: inline-block;
+    position: relative;
+    vertical-align: bottom;
+    overflow: hidden;
+    transition: width  var(--anim-duration) cubic-bezier(.4,0,.2,1),
+                height var(--anim-duration) cubic-bezier(.4,0,.2,1);
+    box-sizing: content-box;
+    white-space: nowrap;
+}
+
+.phrase {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: auto;
+    display: inline-block;
+    white-space: nowrap;
+    transform: translateY(0);
+    opacity: 1;
+    transition:
+      transform var(--anim-duration) cubic-bezier(.4,0,.2,1),
+      opacity calc(var(--anim-duration) + 140ms) cubic-bezier(.4,0,.2,1);
+    will-change: transform, opacity;
+    font-weight: 600;
+    color: #b71c34;
+}
+
+.from-top {
+    transform: translateY(-100%);
+    opacity: 0;
+}
+
+.in {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.so-title-block {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: baseline;
+    gap: 8px;
+    text-align: center;
+}
+
+.so-row {
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+@media (max-width: 768px) {
+
+    .so-title-block {
+    flex-direction: column;
+    gap: 0;
+    }
+
+    .so-row {
+    display: block;
+    width: 100%;
+    margin-bottom: 6px;
+    font-size: 1.7rem;
+    }
+
+    #changing-text {
+    margin: 0 auto;
+    display: block;
+    width: fit-content;
+    }
+
+    #studyoverflow-emblem {
+      font-size: 3.5rem !important;
+      margin-top: 10vh!important;
+    }
+
+    #block-of-texts {
+      margin-top: 5vh !important;
+    }
+
+    .text-block {
+      margin-top: 1vh;
+    }
+}
+
+.new-line {
+  display: block;
+  width: 100%;
+}
+
+footer a.text-muted:hover {
+    color: #a23e3e !important;
+}
+
+.text-white-muted {
+    color: #e0e0e0;
+}

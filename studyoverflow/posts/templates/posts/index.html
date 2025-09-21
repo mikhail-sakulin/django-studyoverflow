@@ -1,0 +1,115 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+
+<!-- Дочерний html-шаблон главной страницы (index), расширяющий 'base/base.html' -->
+
+
+<!-- Блок с названием страницы -->
+{% block title %}
+  <title>StudyOverflow</title>
+{% endblock %}
+
+<!-- Блок с загрузкой дополнительных css-стилей в дочерних html-шаблонах -->
+{% block extra_css %}
+  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/index.css' %}">
+{% endblock %}
+
+<!-- Блок с основным содержимым страницы-->
+{% block content %}
+  <main id="main_index" style="background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)),
+                                           url({% static 'posts/img/background_main_page.png' %}) no-repeat center center;
+                               background-size: cover">
+
+    <div class="container d-flex flex-column justify-content-center align-items-center text-center">
+
+      <!-- Эмблема сайта-->
+      <h1 id="studyoverflow-emblem" class="text-warning mb-4" style="margin-top: 18vh">StudyOverflow</h1>
+
+      <!-- Динамический блок с некоторыми it-профессиями -->
+      <div id="text-title" class="so-title-block mt-4">
+        <div class="so-row">У каждого</div>
+        <div class="so-row"><span id="changing-text" aria-live="polite" aria-atomic="true"></span></div>
+        <div class="so-row">есть</div>
+        <div class="so-row new-line">аккаунт в StudyOverflow</div>
+      </div>
+
+      <!-- Три блока статических текстов -->
+      <div id="block-of-texts" class="row w-75 g-0" style="margin-top: 12vh">
+        <div class="col-md-4">
+          <div class="text-block text-block1">
+            100+ миллионов<br>посещений каждый<br>месяц
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="text-block text-block2">
+            Найди ответ на<br>любой вопрос или<br>задай свой
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="text-block text-block3">
+            Самый популярный<br>форум по<br>программированию
+          </div>
+        </div>
+      </div>
+
+      <a href="" class="btn btn-outline-warning btn-lg" style="margin-top: 10vh">Присоединиться</a>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-5 py-3 text-white">
+    <div class="container">
+
+      <div class="row w-75 mx-auto gy-4">
+
+        <!-- Блок 'о сайте' -->
+        <div class="col-md-4 d-flex flex-column align-items-center align-items-md-start text-center text-md-start">
+          <h5 class="text-white-muted">StudyOverflow</h5>
+          <p class="mt-3 text-muted" style="text-align: justify;">
+            StudyOverflow - это платформа для разработчиков, где можно задавать вопросы,
+            делиться знаниями и находить решения вопросов по программированию.
+          </p>
+        </div>
+
+        <!-- Блок навигации -->
+        <div class="col-md-4 d-flex justify-content-center">
+          <div class="text-start">
+            <h5 class="text-white-muted">Навигация</h5>
+            <ul class="list-unstyled mt-4">
+              <li><a href="{% url 'home' %}" class="text-muted">Главная</a></li>
+              <li><a href="{% url 'posts' %}" class="text-muted">Все посты</a></li>
+              <li><a href="{% url 'create_post' %}" class="text-muted">Создать пост</a></li>
+              <li><a href="{% url 'users' %}" class="text-muted">Пользователи</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Блок контактов -->
+        <div class="col-md-4 d-flex flex-column align-items-center">
+          <h5 class="text-white-muted">Контакты</h5>
+          <p class="mt-3 text-muted">Email: mv.sakulin@yandex.ru</p>
+        </div>
+      </div>
+
+      <div class="w-75 mx-auto">
+        <hr class="bg-light my-4">
+      </div>
+
+      <!-- Копирайт -->
+      <div class="row">
+        <div class="col text-center">
+          <p class="mb-0 text-muted">&copy; 2025 StudyOverflow. Все права защищены.</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Блок с загрузкой дополнительных js-файлов в дочерних html-шаблонах -->
+  {% block extra_js %}
+    <script src="{% static 'posts/js/index.js' %}"></script>
+  {% endblock %}
+
+{% endblock %}
+
