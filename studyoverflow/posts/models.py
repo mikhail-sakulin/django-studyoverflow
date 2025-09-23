@@ -3,8 +3,7 @@ from typing import Final
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
-
-from .utils import translit_rus_to_eng
+from posts.utils import translit_rus_to_eng
 
 
 MAX_TITLE_SLUG_LENGTH: Final = 255  # максимальная длина заголовка и slug
@@ -49,11 +48,14 @@ class Post(models.Model):
         Сохраняет объект в БД с автоматической генерацией slug.
 
         Slug генерируется на основе title с обрезкой в случае превышения максимальной длины.
+
+        Slug генерируется только 1 раз в момент создания поста.
         """
 
-        base_slug = slugify(translit_rus_to_eng(self.title))
-        slug = base_slug[:MAX_TITLE_SLUG_LENGTH]
-        self.slug = slug
+        if not self.slug:
+            base_slug = slugify(translit_rus_to_eng(self.title))
+            slug = base_slug[:MAX_TITLE_SLUG_LENGTH]
+            self.slug = slug
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
