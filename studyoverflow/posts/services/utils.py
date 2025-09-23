@@ -8,8 +8,7 @@ def translit_rus_to_eng(text: str) -> str:
     Преобразует русские буквы строки в латиницу.
 
     Пример:
-        >>> translit_rus_to_eng("Привет")
-        "privet"
+        translit_rus_to_eng("Привет") -> 'privet'
     """
 
     translit_dict = {
