@@ -55,3 +55,10 @@ repos:
         language: system
         types: [python]
         pass_filenames: true
+
+      - id: django-tests
+        name: Django tests
+        entry: python studyoverflow/manage.py test .
+        language: system
+        types: [python]
+        pass_filenames: false
