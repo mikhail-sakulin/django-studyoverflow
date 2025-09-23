@@ -14,6 +14,8 @@ def generate_slug(title: str, max_length: int = 255) -> str:
     Пример:
         generate_slug("Новый заголовок") -> 'novyjj-zagolovok'
     """
+    if not isinstance(title, str):
+        raise TypeError
     base_slug = slugify(translit_rus_to_eng(title))
     slug = base_slug[:max_length]
     return slug
