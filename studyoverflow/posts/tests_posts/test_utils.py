@@ -1,3 +1,7 @@
+"""
+Тесты для модуля utils приложения posts.
+"""
+
 from django.test import TestCase
 from posts.services.utils import translit_rus_to_eng
 
@@ -7,7 +11,7 @@ class TranslitTestCase(TestCase):
         self.assertEqual(translit_rus_to_eng("Привет, мир!"), "privet, mir!")
         self.assertEqual(translit_rus_to_eng("Ёж"), "jozh")
 
-    def test_engish_text(self):
+    def test_english_text(self):
         self.assertEqual(translit_rus_to_eng("cat"), "cat")
 
     def test_mixed_text(self):

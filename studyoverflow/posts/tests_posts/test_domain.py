@@ -1,3 +1,7 @@
+"""
+Тесты для модуля domain приложения posts.
+"""
+
 from django.test import TestCase
 from posts.services.domain import generate_slug
 
