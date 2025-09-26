@@ -27,7 +27,7 @@ class Post(models.Model):
 
     title = models.CharField(max_length=MAX_TITLE_SLUG_LENGTH, verbose_name="Заголовок")
     slug = models.SlugField(max_length=MAX_TITLE_SLUG_LENGTH, verbose_name="Slug")
-    content = models.TextField(blank=True, verbose_name="Текст поста")
+    content = models.TextField(blank=True, verbose_name="Содержимое поста")
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
