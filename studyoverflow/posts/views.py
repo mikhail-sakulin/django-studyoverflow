@@ -1,4 +1,7 @@
 from django.shortcuts import render
+from django.urls import reverse_lazy
+from django.views.generic import CreateView
+from posts.forms import PostCreateForm
 
 
 def index(request):
@@ -15,11 +18,14 @@ def show_posts(request):
     return render(request, "posts/posts.html")
 
 
-def create_post(request):
+class PostCreateView(CreateView):
     """
-    Страница создания постов.
+    Класс-представление для создания нового поста.
     """
-    return render(request, "posts/create_post.html")
+
+    form_class = PostCreateForm
+    template_name = "posts/create_post.html"
+    success_url = reverse_lazy("home")
 
 
 def users(request):
