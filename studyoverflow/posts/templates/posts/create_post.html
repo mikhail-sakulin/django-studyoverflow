@@ -7,6 +7,9 @@
 {% endblock %}
 
 {% block extra_css %}
+  <!-- Подключение CSS-темы для подсветки синтаксиса кода -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/create_post.css' %}">
 {% endblock %}
 
@@ -19,6 +22,7 @@
         <h2>Создать новый пост</h2>
         <hr/>
 
+        <!-- Форма создания поста -->
         <form action="" method="POST">
           {% csrf_token %}
 
@@ -31,12 +35,28 @@
             <div class="mb-3">
               <label for="{{ f.id_for_label }}" class="form-label">
                 {{ f.label }}
+                {% if f == form.content %}
+                  (поддерживается синтаксис Markdown)
+                {% endif %}
               </label>
               {{ f }}
             </div>
             {{ f.errors }}
 
           {% endfor %}
+
+          <div class="mb-3">
+            <button id="toggle-preview" type="button" class="btn btn-outline-light me-2">
+              Показать предпросмотр форматирования ▼
+            </button>
+          </div>
+
+          <div id="preview-wrapper" style="display: none;">
+            <div class="mb-3">
+              <label class="form-label">Предпросмотр Markdown (без обработки отдельных HTML-тегов)</label>
+              <pre id="content-preview" class="form-control"></pre>
+            </div>
+          </div>
 
           <button type="submit" class="btn btn-outline-warning btn-sm btn-form-submit mb-4 mt-2">
             Отправить
@@ -47,4 +67,16 @@
     </div>
   </div>
 
+{% endblock %}
+
+
+{% block extra_js %}
+  <!-- Подключение JS-библиотеки markdown-it для конвертации текста с Markdown в HTML в браузере -->
+  <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+
+  <!-- Подключение JS-скрипта highlight.js для подсветки синтаксиса кода -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <!-- Подключение локального JS-скрипта: управление окном предпросмотра, рендер Markdown и запуск подсветки синтаксиса кода -->
+  <script src="{% static 'posts/js/create_post.js' %}"></script>
 {% endblock %}
