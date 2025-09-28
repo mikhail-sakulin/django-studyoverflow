@@ -1,4 +1,27 @@
-#id_title, #id_content {
+#id_title, #id_content, #content-preview {
     background-color: black;
     color: white;
+}
+
+#id_content {
+    overflow: auto;
+    white-space: pre;
+}
+
+#content-preview {
+    font-family: system-ui;
+    overflow: auto;
+    white-space: pre;
+    border: 1px solid white;
+    resize: vertical;
+    padding-bottom: 0;
+}
+
+#content-preview > * {
+  margin-bottom: 0 !important;
+}
+
+#toggle-preview:focus {
+    outline: none;
+    box-shadow: none;
 }
