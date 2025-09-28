@@ -106,10 +106,10 @@
     </div>
   </footer>
 
-  <!-- Блок с загрузкой дополнительных js-файлов в дочерних html-шаблонах -->
-  {% block extra_js %}
-    <script src="{% static 'posts/js/index.js' %}"></script>
-  {% endblock %}
+{% endblock %}
 
+<!-- Блок с загрузкой дополнительных js-файлов в дочерних html-шаблонах -->
+{% block extra_js %}
+  <script src="{% static 'posts/js/index.js' %}"></script>
 {% endblock %}
 
