@@ -27,6 +27,12 @@ class PostCreateView(CreateView):
     template_name = "posts/create_post.html"
     success_url = reverse_lazy("home")
 
+    def form_valid(self, form):
+        post = form.save()
+        tags = form.cleaned_data["tags"]
+        post.tags.set(tags)
+        return super().form_valid(form)
+
 
 def users(request):
     """
