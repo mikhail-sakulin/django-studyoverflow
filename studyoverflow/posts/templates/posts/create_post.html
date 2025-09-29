@@ -38,25 +38,30 @@
                 {% if f == form.content %}
                   (поддерживается синтаксис Markdown)
                 {% endif %}
+                {% if f == form.tags %}
+                  (вводятся через запятую)
+                {% endif %}
               </label>
               {{ f }}
             </div>
             {{ f.errors }}
 
+            {% if f == form.content %}
+              <div class="mb-3">
+                <button id="toggle-preview" type="button" class="btn btn-outline-light me-2">
+                  Показать предпросмотр форматирования ▼
+                </button>
+              </div>
+
+              <div id="preview-wrapper" style="display: none;">
+                <div class="mb-3">
+                  <label class="form-label">Предпросмотр Markdown (без обработки отдельных HTML-тегов)</label>
+                  <pre id="content-preview" class="form-control"></pre>
+                </div>
+              </div>
+            {% endif %}
+
           {% endfor %}
-
-          <div class="mb-3">
-            <button id="toggle-preview" type="button" class="btn btn-outline-light me-2">
-              Показать предпросмотр форматирования ▼
-            </button>
-          </div>
-
-          <div id="preview-wrapper" style="display: none;">
-            <div class="mb-3">
-              <label class="form-label">Предпросмотр Markdown (без обработки отдельных HTML-тегов)</label>
-              <pre id="content-preview" class="form-control"></pre>
-            </div>
-          </div>
 
           <button type="submit" class="btn btn-outline-warning btn-sm btn-form-submit mb-4 mt-2">
             Отправить
