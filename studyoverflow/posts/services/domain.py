@@ -23,7 +23,7 @@ def generate_slug(title: str, max_length: int = 255) -> str:
     return slug
 
 
-def render_markdown_safe(markdown_text):
+def render_markdown_safe(markdown_text: str) -> str:
     """
     Преобразует текст с Markdown в HTML с использованием
     библиотеки markdown2 и bleach для удаления неразрешенных HTML-тегов.

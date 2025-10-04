@@ -3,6 +3,7 @@
 """
 
 from django import template
+from django.template.defaultfilters import stringfilter
 
 from ..services.domain import render_markdown_safe
 
@@ -11,7 +12,8 @@ register = template.Library()
 
 
 @register.filter
-def markdown_safe(text):
+@stringfilter
+def markdown_safe(text: str) -> str:
     """
     Фильтр для преобразования текста с Markdown разметкой в безопасный HTML.
     """
