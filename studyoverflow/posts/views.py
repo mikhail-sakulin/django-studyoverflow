@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from posts.forms import PostCreateForm
+from posts.models import LowercaseTag
 
 
 def index(request):
@@ -32,6 +33,11 @@ class PostCreateView(CreateView):
         tags = form.cleaned_data["tags"]
         post.tags.set(tags)
         return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["all_tags"] = LowercaseTag.objects.all().order_by("name")
+        return context
 
 
 def users(request):
