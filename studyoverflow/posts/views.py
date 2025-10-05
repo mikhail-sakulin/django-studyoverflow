@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from django.urls import reverse_lazy
-from django.views.generic import CreateView
+from django.views.generic import CreateView, ListView
 from posts.forms import PostCreateForm
-from posts.models import LowercaseTag
+from posts.models import LowercaseTag, Post
 
 
 def index(request):
@@ -10,6 +10,12 @@ def index(request):
     Главная страница сайта.
     """
     return render(request, "posts/index.html")
+
+
+class PostListView(ListView):
+    model = Post
+    template_name = "posts/post_list.html"
+    context_object_name = "posts"
 
 
 def show_posts(request):

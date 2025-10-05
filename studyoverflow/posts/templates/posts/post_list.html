@@ -1,0 +1,35 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+
+{% block title %}
+    <title>Посты</title>
+{% endblock %}
+
+
+{% block extra_css %}
+  <!-- Подключение CSS-темы для подсветки синтаксиса кода -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+
+  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_card.css' %}">
+{% endblock %}
+
+
+{% block content %}
+  <main class="container px-4 px-lg-0 my-4">
+    <div class="row g-4">
+      {% for post in posts %}
+        {% include 'posts/post_card.html' %}
+      {% endfor %}
+    </div>
+  </main>
+{% endblock %}
+
+
+{% block extra_js %}
+  <!-- Подключение JS-скрипта highlight.js для подсветки синтаксиса кода -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <!-- Запуск highlight.js -->
+  <script src="{% static 'posts/js/highlight_run.js' %}"></script>
+{% endblock %}

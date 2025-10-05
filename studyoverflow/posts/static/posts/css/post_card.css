@@ -1,0 +1,68 @@
+.card {
+    background-color: #202023;
+    border-radius: 10px!important;
+}
+
+#author-name {
+    color: cornflowerblue;
+    text-decoration: none;
+}
+
+#author-name:hover {
+    color: skyblue;
+}
+
+pre, code.hljs {
+    border-radius: 0.5rem!important;
+}
+
+.card-body * {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+#title {
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: none;
+    color: rgba(255, 193, 7, 0.85);
+    font-size: 1.3rem;
+}
+
+#title:hover {
+    color: #FFFA70;
+}
+
+#content {
+    font-size: 1rem;
+}
+
+pre {
+  margin-bottom: 4px!important;
+  margin-top: 4px!important;
+}
+
+.tags-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.tag-badge {
+    display: inline-block;
+    background-color: #464649;
+    color: lightgray;
+    border-radius: 9999px;
+    white-space: nowrap;
+    text-decoration: none;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.9rem;
+}
+
+.tag-badge:hover {
+    background-color: gray;
+    color: white;
+}

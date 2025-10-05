@@ -1,0 +1,36 @@
+{% load posts_tags %}
+
+
+<div class="card text-white rounded shadow-sm px-4">
+  <div class="card-body px-0">
+
+    <div class="row mx-0 mb-1" style="display: inline-block">
+      <a href="" id="author-name" class="px-0 py-0">author_name</a>
+    </div>
+
+    <div class="text-secondary mb-0">
+      Опубликовано: {{ post.time_create|date:"d.m.Y г. H:i" }}
+
+      {% if post.time_create|date:"d.m.Y H:i" != post.time_update|date:"d.m.Y H:i" %}
+        &nbsp|&nbsp&nbspИзменено: {{ post.time_update|date:"d.m.Y г. H:i" }}
+      {% endif %}
+    </div>
+
+    <hr class="mt-1 mb-2">
+
+    <a id="title" class="text-truncate mb-0" href="">{{ post.title }}</a>
+
+    {% if post.content %}
+      <div id="content" class="text-white mt-1 mb-2">
+        {{ post.content|markdown_safe|safe }}
+      </div>
+    {% endif %}
+
+    <div class="tags-wrapper mt-3 d-flex flex-wrap gap-2">
+      {% for tag in post.tags.all|dictsort:"name" %}
+        <a href="" class="tag-badge">&nbsp;{{ tag.name }}&nbsp;</a>
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
