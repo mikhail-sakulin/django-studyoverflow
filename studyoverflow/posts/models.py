@@ -61,7 +61,7 @@ class Post(models.Model):
 
     Атрибуты:
         title (CharField): Заголовок поста.
-        slug (SlugField): Человекопонятная часть уникального URL-идентификатора /slug/pk/.
+        slug (SlugField): Человекопонятная часть уникального URL-идентификатора /pk/slug/.
         content (TextField): Текст поста.
         tag (TaggableManager): Теги поста.
         time_create (DateTimeField): Время создания поста.
@@ -75,7 +75,7 @@ class Post(models.Model):
     Методы:
         save(*args, **kwargs): Переопределяет стандартный метод сохранения объекта в БД для
             генерации slug.
-        get_absolute_url(): Возвращает уникальный URL для поста на основе slug и pk.
+        get_absolute_url(): Возвращает уникальный URL для поста на основе pk и slug.
     """
 
     title = models.CharField(max_length=MAX_TITLE_SLUG_LENGTH_POST, verbose_name="Заголовок")
@@ -118,6 +118,6 @@ class Post(models.Model):
 
     def get_absolute_url(self):
         """
-        Возвращает уникальный URL для поста на основе slug и pk.
+        Возвращает уникальный URL для поста на основе pk и slug.
         """
-        return reverse("post", kwargs={"post_slug": self.slug, "pk": self.pk})
+        return reverse("posts:detail", kwargs={"pk": self.pk, "slug": self.slug})

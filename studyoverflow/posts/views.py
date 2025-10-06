@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, ListView
+from django.views.generic import CreateView, DetailView, ListView
 from posts.forms import PostCreateForm
 from posts.models import LowercaseTag, Post
 
@@ -17,13 +17,6 @@ class PostListView(ListView):
     template_name = "posts/post_list.html"
     context_object_name = "posts"
     paginate_by = 7
-
-
-def show_posts(request):
-    """
-    Страница отображения всех постов.
-    """
-    return render(request, "posts/posts.html")
 
 
 class PostCreateView(CreateView):
@@ -45,6 +38,12 @@ class PostCreateView(CreateView):
         context = super().get_context_data(**kwargs)
         context["all_tags"] = LowercaseTag.objects.all().order_by("name")
         return context
+
+
+class PostDetailView(DetailView):
+    model = Post
+    template_name = "posts/post_detail.html"
+    context_object_name = "post"
 
 
 def users(request):

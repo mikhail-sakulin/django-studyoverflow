@@ -18,7 +18,7 @@
 
     <hr class="mt-1 mb-2">
 
-    <a class="title text-truncate mb-0" href="">{{ post.title }}</a>
+    <a class="title text-truncate mb-0" href="{{ post.get_absolute_url }}">{{post.title}}</a>
 
     {% if post.content %}
       <div class="content text-white mt-1 mb-2">
