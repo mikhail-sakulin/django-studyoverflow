@@ -11,7 +11,7 @@
     <div class="text-secondary mb-0">
       Опубликовано: {{ post.time_create|date:"d.m.Y г. H:i" }}
 
-      {% if post.time_create|date:"d.m.Y H:i" != post.time_update|date:"d.m.Y H:i" %}
+      {% if post.is_edited %}
         &nbsp|&nbsp&nbspИзменено: {{ post.time_update|date:"d.m.Y г. H:i" }}
       {% endif %}
     </div>

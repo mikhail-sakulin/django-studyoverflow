@@ -67,6 +67,11 @@ class Post(models.Model):
         time_create (DateTimeField): Время создания поста.
         time_update (DateTimeField): Время последнего обновления поста.
 
+    Вычисляемые свойства:
+        is_edited (bool): Определяет, был ли пост отредактирован.
+            Считается True, если разница между временем обновления и временем создания
+            более 5 секунд.
+
     Методы:
         save(*args, **kwargs): Переопределяет стандартный метод сохранения объекта в БД для
             генерации slug.
@@ -82,6 +87,13 @@ class Post(models.Model):
 
     def __str__(self):
         return self.title
+
+    @property
+    def is_edited(self):
+        """
+        Вычисляемое свойство. Определяет факт редактирования поста.
+        """
+        return (self.time_update - self.time_create).total_seconds() > 5
 
     class Meta:
         verbose_name = "Пост"
