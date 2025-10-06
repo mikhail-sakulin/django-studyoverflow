@@ -10,13 +10,15 @@
 
 #id_content {
     overflow: auto;
-    white-space: pre;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
 #content-preview {
     font-family: system-ui;
     overflow: auto;
-    white-space: pre;
+    white-space: pre-wrap;
+    word-wrap: break-word;
     border: 1px solid white;
     resize: vertical;
     padding-bottom: 0;
