@@ -18,6 +18,11 @@ class PostListView(ListView):
     context_object_name = "posts"
     paginate_by = 7
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["section_of_menu_selected"] = "posts:list"
+        return context
+
 
 class PostCreateView(CreateView):
     """
@@ -37,6 +42,7 @@ class PostCreateView(CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["all_tags"] = LowercaseTag.objects.all().order_by("name")
+        context["section_of_menu_selected"] = "posts:create"
         return context
 
 
@@ -50,4 +56,4 @@ def users(request):
     """
     Страница демонстрации всех пользователей.
     """
-    return render(request, "posts/users.html")
+    return render(request, "posts/users.html", context={"section_of_menu_selected": "posts:users"})

@@ -20,6 +20,10 @@ html {
     transition: all 0.2s ease;
 }
 
+.nav-hover-selected {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
 .nav-hover:hover {
     background-color: rgba(255, 255, 255, 0.15);
 }

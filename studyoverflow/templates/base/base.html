@@ -1,4 +1,5 @@
 {% load static %}
+{% load posts_tags %}
 
 
 <!-- Базовый html-шаблон с header,
@@ -29,11 +30,17 @@
     <div class="container">
       <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
 
-        <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+        <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-2 mb-lg-0 gap-1">
           <li><a id="studyoverflow-button" href="{% url 'home' %}" class="nav-link px-2 text-warning">StudyOverflow</a></li>
-          <li><a href="{% url 'posts:list' %}" class="nav-link nav-hover px-2 text-white">Все посты</a></li>
-          <li><a href="{% url 'posts:create' %}" class="nav-link nav-hover px-2 text-white">Создать пост</a></li>
-          <li><a href="{% url 'posts:users' %}" class="nav-link nav-hover px-2 text-white">Пользователи</a></li>
+          {% get_menu_for_header as menu %}
+          {% for element_of_menu in menu %}
+            <li><a href="{% url element_of_menu.url %}"
+                   class="{% if section_of_menu_selected == element_of_menu.url %}
+                            nav-hover-selected
+                          {% endif %}
+                   nav-link nav-hover px-2 text-white">
+              {{ element_of_menu.name }}</a></li>
+          {% endfor %}
         </ul>
 
         <form class="col-12 col-lg-3 mb-3 mb-lg-0 me-lg-3">
