@@ -3,12 +3,12 @@
     border-radius: 10px!important;
 }
 
-#author-name {
+.author-name {
     color: cornflowerblue;
     text-decoration: none;
 }
 
-#author-name:hover {
+.author-name:hover {
     color: skyblue;
 }
 
@@ -21,7 +21,7 @@ pre, code.hljs {
     margin-bottom: 0;
 }
 
-#title {
+.title {
     display: inline-block;
     max-width: 100%;
     white-space: nowrap;
@@ -32,12 +32,30 @@ pre, code.hljs {
     font-size: 1.3rem;
 }
 
-#title:hover {
+.title:hover {
     color: #FFFA70;
 }
 
-#content {
+.content {
     font-size: 1rem;
+    max-height: 200px;
+    overflow: hidden;
+    position: relative;
+}
+
+.content.overflow::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4rem;
+    background: linear-gradient(transparent, #202023);
+}
+
+.content > * {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
 }
 
 pre {

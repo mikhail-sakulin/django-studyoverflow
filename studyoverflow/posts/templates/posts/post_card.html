@@ -5,7 +5,7 @@
   <div class="card-body px-0">
 
     <div class="row mx-0 mb-1" style="display: inline-block">
-      <a href="" id="author-name" class="px-0 py-0">author_name</a>
+      <a href="" class="author-name px-0 py-0">author_name</a>
     </div>
 
     <div class="text-secondary mb-0">
@@ -18,10 +18,10 @@
 
     <hr class="mt-1 mb-2">
 
-    <a id="title" class="text-truncate mb-0" href="">{{ post.title }}</a>
+    <a class="title text-truncate mb-0" href="">{{ post.title }}</a>
 
     {% if post.content %}
-      <div id="content" class="text-white mt-1 mb-2">
+      <div class="content text-white mt-1 mb-2">
         {{ post.content|markdown_safe|safe }}
       </div>
     {% endif %}
