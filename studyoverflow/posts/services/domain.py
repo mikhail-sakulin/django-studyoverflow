@@ -9,14 +9,6 @@ from django.utils.text import slugify
 from .utils import translit_rus_to_eng
 
 
-# Меню сайта для header для base.html
-menu = [
-    {"name": "Все посты", "url": "posts:list"},
-    {"name": "Создать пост", "url": "posts:create"},
-    {"name": "Пользователи", "url": "posts:users"},
-]
-
-
 def generate_slug(title: str, max_length: int = 255) -> str:
     """
     Генерирует человекочитаемый slug на основе заголовка.

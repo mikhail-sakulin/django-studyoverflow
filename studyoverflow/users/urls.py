@@ -1,9 +1,9 @@
-# from django.urls import path
+from django.urls import path
 
-# from . import views
+from . import views
 
 
 app_name = "users"
 
 
-# urlpatterns = []
+urlpatterns = [path("", views.UsersTemplateView.as_view(), name="list")]

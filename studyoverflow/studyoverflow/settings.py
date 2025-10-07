@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "navigation.apps.NavigationConfig",
     "posts.apps.PostsConfig",
     "users.apps.UsersConfig",
     "django_extensions",

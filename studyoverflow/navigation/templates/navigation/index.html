@@ -1,8 +1,9 @@
-{% extends 'base/base.html' %}
+{% extends 'navigation/base.html' %}
 {% load static %}
+{% load navigation_tags %}
 
 
-<!-- Дочерний html-шаблон главной страницы (index), расширяющий 'base/base.html' -->
+<!-- Дочерний html-шаблон главной страницы (index), расширяющий 'navigation/base.html' -->
 
 
 <!-- Блок с названием страницы -->
@@ -12,13 +13,13 @@
 
 <!-- Блок с загрузкой дополнительных css-стилей в дочерних html-шаблонах -->
 {% block extra_css %}
-  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/index.css' %}">
+  <link type="text/css" rel="stylesheet" href="{% static 'navigation/css/index.css' %}">
 {% endblock %}
 
 <!-- Блок с основным содержимым страницы-->
 {% block content %}
   <main id="main_index" style="background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)),
-                                           url({% static 'posts/img/background_main_page.png' %}) no-repeat center center;
+                                           url({% static 'navigation/img/background_home_page.png' %}) no-repeat center center;
                                background-size: cover">
 
     <div class="container d-flex flex-column justify-content-center align-items-center text-center">
@@ -79,9 +80,13 @@
             <h5 class="text-white-muted">Навигация</h5>
             <ul class="list-unstyled mt-4">
               <li><a href="{% url 'home' %}" class="text-muted">Главная</a></li>
-              <li><a href="{% url 'posts:list' %}" class="text-muted">Все посты</a></li>
-              <li><a href="{% url 'posts:create' %}" class="text-muted">Создать пост</a></li>
-              <li><a href="{% url 'posts:users' %}" class="text-muted">Пользователи</a></li>
+              {% get_menu_for_header as menu %}
+              {% for element_of_menu in menu %}
+                <li><a href="{% url element_of_menu.url %}" class="text-muted">
+                      {{ element_of_menu.name }}
+                    </a>
+                </li>
+              {% endfor %}
             </ul>
           </div>
         </div>
@@ -110,6 +115,6 @@
 
 <!-- Блок с загрузкой дополнительных js-файлов в дочерних html-шаблонах -->
 {% block extra_js %}
-  <script src="{% static 'posts/js/index.js' %}"></script>
+  <script src="{% static 'navigation/js/index.js' %}"></script>
 {% endblock %}
 

@@ -1,5 +1,5 @@
 {% load static %}
-{% load posts_tags %}
+{% load navigation_tags %}
 
 
 <!-- Базовый html-шаблон с header,
@@ -16,7 +16,7 @@
   {% endblock %}
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-  <link type="text/css" rel="stylesheet" href="{% static 'base/css/base.css' %}">
+  <link type="text/css" rel="stylesheet" href="{% static 'navigation/css/base.css' %}">
 
   <!-- Блок с загрузкой дополнительных css-стилей в дочерних html-шаблонах -->
   {% block extra_css %}
@@ -38,8 +38,10 @@
                    class="{% if section_of_menu_selected == element_of_menu.url %}
                             nav-hover-selected
                           {% endif %}
-                   nav-link nav-hover px-2 text-white">
-              {{ element_of_menu.name }}</a></li>
+                          nav-link nav-hover px-2 text-white">
+                    {{ element_of_menu.name }}
+                </a>
+            </li>
           {% endfor %}
         </ul>
 
