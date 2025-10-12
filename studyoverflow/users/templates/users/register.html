@@ -1,0 +1,85 @@
+{% load static %}
+
+
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Регистрация</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+  <link type="text/css" rel="stylesheet" href="{% static 'users/css/register.css' %}">
+</head>
+
+<body>
+
+  <div id="register-container" class="container">
+    <form action="#" method="post" class="registration-card">
+      {% csrf_token %}
+
+      <!-- Ошибки формы, не связанные с полями -->
+      <div class="form-error">{{ form.non_field_errors }}</div>
+
+      {% for f in form %}
+        <div class="form-group mb-3">
+          <!-- label -->
+          <label for="{{ f.id_for_label }}" class="form-label text-white">
+            {{ f.label }}
+            {% if f.field.required %}
+              *
+            {% endif %}
+          </label>
+
+          <!-- Поле формы input -->
+          {{ f }}
+
+          <!-- help_text -->
+          {% if f.help_text %}
+            <small class="form-text text-muted d-block mt-1">
+              {% autoescape off %}
+                {{ f.help_text }}
+              {% endautoescape %}
+            </small>
+          {% endif %}
+
+          <!-- Ошибки поля -->
+          {% if f.errors %}
+            <div class="text-danger fs-6">
+              {% for err in f.errors %}
+                <div class="mt-1">
+                  {% if "This password is too short" in err %}
+                    Пароль слишком короткий. Он должен содержать не менее 8 символов.
+                  {% else %}
+                    {{ err }}
+                  {% endif %}
+                  <br>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+      {% endfor %}
+
+      <p class="text-white fs-6 mt-2">
+        * — обязательное поле
+      </p>
+
+      <div class="d-flex justify-content-between mb-0 mt-1">
+        <button type="submit" class="btn btn-outline-warning btn-sm btn-form-submit fs-6">
+          Регистрация
+        </button>
+        <button type="button" class="btn btn-outline-light" onclick="window.history.back()">
+          Отмена
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+</body>
+</html>

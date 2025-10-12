@@ -1,0 +1,25 @@
+body {
+    background: black;
+}
+
+#register-container {
+    max-width: 25vw;
+    min-width: 380px;
+    margin-top: 100px;
+    margin-bottom: 100px
+}
+
+.registration-card {
+    background-color: rgba(24, 24, 26);
+    border-radius: 20px;
+    padding: 20px;
+}
+
+.form-text {
+    color: #8d8d8d !important;
+}
+
+.registration-card ul {
+    list-style-type: disc;
+    margin-left: 1rem;
+}
