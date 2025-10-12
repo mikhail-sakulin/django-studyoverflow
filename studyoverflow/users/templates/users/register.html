@@ -68,7 +68,13 @@
         <button type="submit" class="btn btn-outline-warning btn-sm btn-form-submit fs-6">
           Регистрация
         </button>
-        <a href="{% url 'home' %}" class="btn btn-outline-light">
+        <a href="
+             {% if next %}
+              {{ next }}
+             {% else %}
+              {% url 'home' %}
+             {% endif %}"
+           class="btn btn-outline-light">
           Отмена
         </a>
       </div>

@@ -52,7 +52,7 @@
         <div class="text-end">
 <!--          <button type="button" class="btn btn-outline-light me-2">Войти</button>-->
           <a href="{% url 'users:login' %}?next={{ request.path }}" class="btn btn-outline-light me-2">Войти</a>
-          <a href="{% url 'users:register' %}" class="btn btn-warning">Регистрация</a>
+          <a href="{% url 'users:register' %}?next={{ request.path }}" class="btn btn-warning">Регистрация</a>
         </div>
 
       </div>

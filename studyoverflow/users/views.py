@@ -14,6 +14,22 @@ class UserRegisterView(CreateView):
     template_name = "users/register.html"
     success_url = reverse_lazy("home")
 
+    def get_success_url(self):
+        """
+        Редирект после регистрации.
+        """
+        # Редирект на next_url, если задан GET-параметр next
+        next_url = self.request.GET.get("next")
+        return next_url or self.success_url
+
+    def get_context_data(self, **kwargs):
+        """
+        Передает GET-параметр next в шаблон.
+        """
+        context = super().get_context_data(**kwargs)
+        context["next"] = self.request.GET.get("next")
+        return context
+
 
 class UserLoginView(LoginView):
     form_class = UserLoginForm
