@@ -1,12 +1,13 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy
-from users.services.domain import CustomUsernameValidator
+from users.services.domain import CustomUsernameValidator, PersonalNameValidator
 from users.services.infrastructure import avatar_upload_to
 
 
 class User(AbstractUser):
     username_validator = CustomUsernameValidator()
+    first_name_last_name_validator = PersonalNameValidator()
 
     username = models.CharField(
         verbose_name="Имя пользователя",
@@ -20,6 +21,16 @@ class User(AbstractUser):
         error_messages={
             "unique": gettext_lazy("A user with that username already exists."),
         },
+    )
+
+    first_name = models.CharField(
+        max_length=150, blank=True, validators=[first_name_last_name_validator], verbose_name="Имя"
+    )
+    last_name = models.CharField(
+        max_length=150,
+        blank=True,
+        validators=[first_name_last_name_validator],
+        verbose_name="Фамилия",
     )
 
     avatar = models.ImageField(
