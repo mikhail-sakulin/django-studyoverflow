@@ -54,6 +54,9 @@ class TaggedPost(GenericTaggedItemBase):
 
     tag = models.ForeignKey(LowercaseTag, related_name="posts", on_delete=models.CASCADE)
 
+    def __str__(self):
+        return f"{self.object_id} - {self.tag.name}"
+
 
 class Post(models.Model):
     """
