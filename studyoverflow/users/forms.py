@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.utils.translation import gettext_lazy
 
 
 class UserRegisterForm(UserCreationForm):
@@ -48,3 +49,22 @@ class UserRegisterForm(UserCreationForm):
             raise forms.ValidationError("Длина имени пользователя должна быть не менее 4 символов.")
 
         return username
+
+
+class UserLoginForm(AuthenticationForm):
+    username = forms.CharField(
+        label="Имя пользователя",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Имя пользователя"}),
+    )
+    password = forms.CharField(
+        label="Пароль",
+        widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Пароль"}),
+    )
+    error_messages = {
+        "invalid_login": gettext_lazy("Неверное имя пользователя или неверный пароль."),
+        "inactive": gettext_lazy("This account is inactive."),
+    }
+
+    class Meta:
+        model = get_user_model()
+        fields = ["username", "password"]
