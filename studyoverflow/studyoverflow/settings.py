@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 
 import environ
-from django.conf.global_settings import MEDIA_ROOT
+from django.contrib.messages import constants as messages
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -142,3 +142,5 @@ AUTH_USER_MODEL = "users.User"
 
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "home"
+
+MESSAGE_TAGS = {messages.SUCCESS: "success"}
