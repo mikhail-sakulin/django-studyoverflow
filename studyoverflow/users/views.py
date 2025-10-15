@@ -1,4 +1,6 @@
-from django.contrib.auth.views import LoginView
+from django.contrib import messages
+from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, TemplateView
 from users.forms import UserLoginForm, UserRegisterForm
@@ -9,10 +11,11 @@ class UsersTemplateView(TemplateView):
     extra_context = {"section_of_menu_selected": "users:list"}
 
 
-class UserRegisterView(CreateView):
+class UserRegisterView(SuccessMessageMixin, CreateView):
     form_class = UserRegisterForm
     template_name = "users/register.html"
     success_url = reverse_lazy("home")
+    success_message = "Регистрация успешно завершена!"
 
     def get_success_url(self):
         """
@@ -34,3 +37,16 @@ class UserRegisterView(CreateView):
 class UserLoginView(LoginView):
     form_class = UserLoginForm
     template_name = "users/login.html"
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Добро пожаловать, {form.get_user().get_username()}!")
+        return super().form_valid(form)
+
+
+class CustomLogoutView(LogoutView):
+    def post(self, request, *args, **kwargs):
+        user_was_authenticated = request.user.is_authenticated
+        response = super().post(request, *args, **kwargs)
+        if user_was_authenticated:
+            messages.info(self.request, "Вы вышли из аккаунта.")
+        return response
