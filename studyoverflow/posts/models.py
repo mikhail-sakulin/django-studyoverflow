@@ -1,5 +1,6 @@
 from typing import Final
 
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.urls import reverse
 from posts.services.domain import generate_slug
@@ -63,6 +64,7 @@ class Post(models.Model):
     Модель поста приложения posts.
 
     Атрибуты:
+        author (User): Автор поста.
         title (CharField): Заголовок поста.
         slug (SlugField): Человекопонятная часть уникального URL-идентификатора /pk/slug/.
         content (TextField): Текст поста.
@@ -81,6 +83,9 @@ class Post(models.Model):
         get_absolute_url(): Возвращает уникальный URL для поста на основе pk и slug.
     """
 
+    author = models.ForeignKey(
+        get_user_model(), on_delete=models.CASCADE, related_name="posts", verbose_name="Автор"
+    )
     title = models.CharField(max_length=MAX_TITLE_SLUG_LENGTH_POST, verbose_name="Заголовок")
     slug = models.SlugField(max_length=MAX_TITLE_SLUG_LENGTH_POST, verbose_name="Slug")
     content = models.TextField(blank=True, verbose_name="Содержимое поста")
