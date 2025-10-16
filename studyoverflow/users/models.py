@@ -1,8 +1,16 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy
-from users.services.domain import CustomUsernameValidator, PersonalNameValidator
-from users.services.infrastructure import avatar_upload_to, generate_avatar_small
+from users.services.domain import (
+    CustomUsernameValidator,
+    PersonalNameValidator,
+    delete_old_avatar_paths,
+)
+from users.services.infrastructure import (
+    avatar_upload_to,
+    generate_avatar_small,
+    get_old_avatar_paths,
+)
 
 
 class User(AbstractUser):
@@ -50,6 +58,9 @@ class User(AbstractUser):
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
     def save(self, *args, **kwargs):
+        # Сохранение старых путей для файлов avatar перед save()
+        old_avatar_paths = get_old_avatar_paths(self)
+
         super().save(*args, **kwargs)
 
         # Создание avatar_small и получение имени файла
@@ -65,6 +76,9 @@ class User(AbstractUser):
         if self.avatar_small.name != name_avatar_small:
             self.avatar_small.name = name_avatar_small
             super().save(update_fields=["avatar_small"])
+
+            # Удаление старых файлов avatar
+            delete_old_avatar_paths(old_avatar_paths)
 
     def __str__(self):
         return self.username

@@ -62,3 +62,17 @@ def get_path_to_avatar(user: "User") -> tuple[str, str, str]:
     root, ext = os.path.splitext(path_to_avatar)
 
     return path_to_avatar, root, ext
+
+
+def get_old_avatar_paths(user: "User") -> tuple[str | None, ...]:
+    old_avatar_path = None
+    old_avatar_small_path = None
+
+    if user.pk:
+        old = type(user).objects.get(pk=user.pk)
+        if old.avatar and old.avatar.name != user.avatar.name:
+            old_avatar_path = old.avatar.path
+        if old.avatar_small:
+            old_avatar_small_path = old.avatar_small.path
+
+    return old_avatar_path, old_avatar_small_path

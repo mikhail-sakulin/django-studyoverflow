@@ -2,6 +2,7 @@
 Модуль содержит бизнес-логику приложения users.
 """
 
+import os
 import uuid
 
 from django.core.exceptions import ValidationError
@@ -165,3 +166,12 @@ def generate_static_image(img: PILImage, fmt: str, path_to_generate_image: str) 
 
     # Сохранение картинки
     img.save(path_to_generate_image, format=fmt, **save_kwargs)
+
+
+def delete_old_avatar_paths(old_avatar_paths: tuple[str | None, ...]) -> None:
+    for path in old_avatar_paths:
+        if path and os.path.exists(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
