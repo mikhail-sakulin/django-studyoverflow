@@ -4,16 +4,29 @@
 <div class="card text-white rounded shadow-sm px-4">
   <div class="card-body px-0">
 
-    <div class="row mx-0 mb-1" style="display: inline-block">
-      <a href="" class="author-name px-0 py-0">author_name</a>
-    </div>
+    <!-- Автор и время публикации -->
+    <div class="d-flex align-items-center mb-2">
 
-    <div class="text-secondary mb-0">
-      Опубликовано: {{ post.time_create|date:"d.m.Y г. H:i" }}
+      <img id="avatar"
+           src="{% if post.author.avatar_small %}
+                  {{ post.author.avatar_small.url }}
+                {% else %}
+                  {{ post.author.avatar.url }}
+                {% endif %}"
+           alt="{{ post.author.username }}"
+           class="rounded-circle">
 
-      {% if post.is_edited %}
-        &nbsp|&nbsp&nbspИзменено: {{ post.time_update|date:"d.m.Y г. H:i" }}
-      {% endif %}
+      <div>
+        <a id="username" href="" class="author-name d-block mb-1">{{ post.author.username }}</a>
+
+        <div id="time_create-time_update" class="text-secondary">
+          Опубликовано: {{ post.time_create|date:"d.m.Y г. H:i" }}
+          {% if post.is_edited %}
+            &nbsp;|&nbsp; Изменено: {{ post.time_update|date:"d.m.Y г. H:i" }}
+          {% endif %}
+        </div>
+      </div>
+
     </div>
 
     <hr class="mt-1 mb-2">

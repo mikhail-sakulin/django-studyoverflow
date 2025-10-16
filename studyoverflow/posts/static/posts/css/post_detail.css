@@ -14,3 +14,19 @@
     position: relative;
     line-height: 1.8;
 }
+
+#avatar {
+    margin-right: 0.9rem;
+    width: 70px;
+    height: 70px;
+    object-fit: cover;
+}
+
+#username {
+    margin-top: -0.7rem;
+    font-size: 1.1rem;
+}
+
+#time_create-time_update {
+    font-size: 1rem
+}

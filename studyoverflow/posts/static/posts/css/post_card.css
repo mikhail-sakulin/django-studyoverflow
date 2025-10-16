@@ -29,3 +29,20 @@
     height: 3rem;
     background: linear-gradient(transparent, #202023);
 }
+
+#avatar {
+    margin-right: 0.7rem;
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    image-rendering: pixelated; /* Для сохранения четкости пиксельных изображений */
+}
+
+#username {
+    margin-top: -0.25rem;
+    font-size: 1.1rem;
+}
+
+#time_create-time_update {
+    font-size: 0.94rem
+}
