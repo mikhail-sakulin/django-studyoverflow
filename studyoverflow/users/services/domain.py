@@ -8,6 +8,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils.deconstruct import deconstructible
 from django.utils.translation import gettext_lazy
+from PIL import Image, ImageSequence
+from PIL.Image import Image as PILImage
 
 
 @deconstructible
@@ -77,3 +79,89 @@ def generate_new_filename_with_uuid(filename: str) -> str:
     ext = filename.split(".")[-1]
     filename = f"{uuid.uuid4().hex}.{ext}"
     return filename
+
+
+def generate_image(path_to_default_image: str, ext: str, path_to_generate_image: str) -> None:
+    # Генерация avatar_small, открытие исходного avatar для обработки
+    with Image.open(path_to_default_image) as img:
+
+        # Определение формата изображения
+        if img.format:
+            fmt = img.format
+        elif ext:
+            fmt = ext.replace(".", "").upper()
+        else:
+            fmt = "PNG"
+
+        fmt = fmt.replace("JPG", "JPEG")
+
+        # --- Обработка анимированного GIF ---
+        if fmt == "GIF" and getattr(img, "is_animated", False):
+            generate_gif(img, path_to_generate_image)
+
+        # --- Обработка обычных изображений ---
+        else:
+            generate_static_image(img, fmt, path_to_generate_image)
+
+
+def generate_gif(img: PILImage, path_to_generate_image: str) -> None:
+    frames = []
+    durations = []
+
+    # Ограничение количества кадров
+    max_frames = 100
+    for i, frame in enumerate(ImageSequence.Iterator(img)):
+        if i >= max_frames:
+            break
+        frame = frame.convert("RGBA")
+
+        # Уменьшение размера кадра
+        frame.thumbnail((150, 150))
+
+        frames.append(frame)
+        durations.append(frame.info.get("duration", 100))
+
+    # Метаданные первого кадра
+    first_frame = frames[0]
+    loop = img.info.get("loop", 0)
+    disposal = img.info.get("disposal", 2)
+    transparency = img.info.get("transparency")
+
+    # Настройки сохранения GIF
+    save_kwargs = {
+        "save_all": True,
+        "append_images": frames[1:],
+        "loop": loop,
+        "duration": durations,
+        "disposal": disposal,
+        "format": "GIF",
+    }
+    if transparency is not None:
+        save_kwargs["transparency"] = transparency
+
+    # Сохранение GIF
+    first_frame.save(path_to_generate_image, **save_kwargs)
+
+
+def generate_static_image(img: PILImage, fmt: str, path_to_generate_image: str) -> None:
+    # Если есть альфа-канал, сохранение в RGBA, иначе RGB
+    if img.mode in ("RGBA", "LA"):
+        img = img.convert("RGBA")
+    else:
+        img = img.convert("RGB")
+
+    # Уменьшение размера изображения
+    img.thumbnail((150, 150))
+
+    # Настройки сохранения
+    save_kwargs = {}
+
+    if fmt.upper() in ("JPEG", "WEBP"):
+        save_kwargs["quality"] = 100
+
+    # Для PNG/WebP оптимизация
+    if fmt.upper() in ("PNG", "WEBP"):
+        save_kwargs["optimize"] = True
+
+    # Сохранение картинки
+    img.save(path_to_generate_image, format=fmt, **save_kwargs)
