@@ -10,7 +10,7 @@
       <img id="avatar"
            src="{% if post.author.avatar_small %}
                   {{ post.author.avatar_small.url }}
-                {% else %}
+                {% elif post.author.avatar %}
                   {{ post.author.avatar.url }}
                 {% endif %}"
            alt="{{ post.author.username }}"
