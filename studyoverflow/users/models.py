@@ -9,14 +9,26 @@ from users.services.domain import (
 from users.services.infrastructure import (
     delete_old_avatar_names,
     generate_avatar_small,
+    generate_default_avatar_in_different_sizes,
     get_old_avatar_names,
 )
 
 
 class User(AbstractUser):
+    # Константы
+    DEFAULT_AVATAR_FILENAME = "avatars/default_avatar.jpg"
+    DEFAULT_AVATAR_SMALL_SIZE1_FILENAME = "avatars/default_avatar_small_size1.jpg"
+    DEFAULT_AVATAR_SMALL_SIZE2_FILENAME = "avatars/default_avatar_small_size2.jpg"
+    AVATAR_SMALL_SIZES = {
+        "size1": (100, 100),
+        "size2": (170, 170),
+    }
+
+    # Валидаторы
     username_validator = CustomUsernameValidator()
     first_name_last_name_validator = PersonalNameValidator()
 
+    # Поля модели
     username = models.CharField(
         verbose_name="Имя пользователя",
         max_length=150,
@@ -43,17 +55,16 @@ class User(AbstractUser):
 
     avatar = models.ImageField(
         blank=True,
-        default="avatars/default_avatar.jpg",
+        default=DEFAULT_AVATAR_FILENAME,
         verbose_name="Аватар",
     )
 
-    avatar_small_size1 = models.ImageField(blank=True, verbose_name="Миниатюра аватара №1")
-    avatar_small_size2 = models.ImageField(blank=True, verbose_name="Миниатюра аватара №2")
-
-    AVATAR_SMALL_SIZES = {
-        "size1": (100, 100),
-        "size2": (170, 170),
-    }
+    avatar_small_size1 = models.ImageField(
+        blank=True, default=DEFAULT_AVATAR_SMALL_SIZE1_FILENAME, verbose_name="Миниатюра аватара №1"
+    )
+    avatar_small_size2 = models.ImageField(
+        blank=True, default=DEFAULT_AVATAR_SMALL_SIZE2_FILENAME, verbose_name="Миниатюра аватара №2"
+    )
 
     bio = models.TextField(blank=True, verbose_name="Информация о пользователе")
     reputation = models.IntegerField(blank=True, default=0, verbose_name="Репутация")
@@ -104,6 +115,14 @@ class User(AbstractUser):
         if is_avatar_changed:
             # Удаление старых файлов avatar
             delete_old_avatar_names(old_avatar_names)
+
+    @classmethod
+    def generate_default_avatar_different_sizes(cls):
+        """
+        Генерирует уменьшенные версии стандартного аватара default_avatar
+        для всех размеров, указанных в AVATAR_SMALL_SIZES.
+        """
+        generate_default_avatar_in_different_sizes(cls)
 
     def __str__(self):
         return self.username

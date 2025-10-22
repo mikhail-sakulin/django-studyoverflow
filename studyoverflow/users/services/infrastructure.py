@@ -5,9 +5,10 @@
 import os
 from dataclasses import astuple, dataclass
 from io import BytesIO
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Type
 
 from botocore.exceptions import BotoCoreError
+from django.core.files import File
 from django.core.files.base import ContentFile
 from django.core.files.storage import storages
 from PIL import Image
@@ -136,3 +137,54 @@ def delete_old_avatar_names(old_avatar_names: OldAvatarNames) -> None:
             except BotoCoreError:
                 # Ошибка при обращении к хранилищу
                 pass
+
+
+def generate_default_avatar_in_different_sizes(user_model: Type["User"]) -> None:
+    """
+    Генерирует уменьшенные версии default_avatar всех размеров.
+    Используется для создания стандартных аватарок в хранилище.
+    """
+    # Если default_avatar не существует в хранилище, ничего не создается
+    if not storage_default.exists(user_model.DEFAULT_AVATAR_FILENAME):
+        return
+
+    # Создание avatar_small уменьшенных размеров
+    with storage_default.open(user_model.DEFAULT_AVATAR_FILENAME, "rb") as default_avatar:
+        default_avatar.seek(0)
+        generate_default_avatar_small(
+            user_model, default_avatar, user_model.DEFAULT_AVATAR_SMALL_SIZE1_FILENAME, size_type=1
+        )
+
+        default_avatar.seek(0)
+        generate_default_avatar_small(
+            user_model, default_avatar, user_model.DEFAULT_AVATAR_SMALL_SIZE2_FILENAME, size_type=2
+        )
+
+
+def generate_default_avatar_small(
+    user_model: Type["User"],
+    default_avatar: File,
+    storage_path_to_avatar_small: str,
+    size_type: int,
+) -> None:
+    """
+    Генерирует уменьшенную версию default_avatar для одного размера.
+    Сохраняет avatar_small в хранилище по указанному пути.
+    """
+    try:
+        root, ext = os.path.splitext(storage_path_to_avatar_small)
+
+        # Если нужный avatar_small не создан, то создается avatar_small в BytesIO
+        with Image.open(default_avatar) as img:
+            buffer = generate_image(img, ext, user_model.AVATAR_SMALL_SIZES[f"size{size_type}"])
+
+        # Сохранение avatar_small (из BytesIO) в хранилище
+        save_img_in_storage(buffer, storage_path_to_avatar_small)
+
+    except (OSError, ValueError):
+        # Ошибка обработки изображения
+        return
+
+    except BotoCoreError:
+        # Ошибка при обращении к хранилищу
+        return
