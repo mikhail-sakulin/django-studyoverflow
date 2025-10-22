@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "posts.apps.PostsConfig",
     "users.apps.UsersConfig",
     "django_extensions",
+    "storages",
 ]
 
 MIDDLEWARE = [
@@ -131,7 +132,7 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 MEDIA_ROOT = BASE_DIR / "media"
 
-MEDIA_URL = "/media/"
+# MEDIA_URL = "/media/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -144,3 +145,26 @@ LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "home"
 
 MESSAGE_TAGS = {messages.SUCCESS: "success", messages.INFO: "info"}
+
+# Конфигурация STORAGES
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+# Настройки AWS S3 / Beget
+AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_ENDPOINT_URL = "https://s3.ru1.storage.beget.cloud"
+AWS_S3_USE_SSL = True
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None
+AWS_QUERYSTRING_AUTH = False
+
+# URL для медиа файлов
+MEDIA_URL = f"https://s3.ru1.storage.beget.cloud/{AWS_STORAGE_BUCKET_NAME}/"
