@@ -4,12 +4,13 @@
 
 import os
 import uuid
+from io import BytesIO
 
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils.deconstruct import deconstructible
 from django.utils.translation import gettext_lazy
-from PIL import Image, ImageSequence
+from PIL import ImageSequence
 from PIL.Image import Image as PILImage
 
 
@@ -77,39 +78,55 @@ class PersonalNameValidator:
 
 
 def generate_new_filename_with_uuid(filename: str) -> str:
-    ext = filename.split(".")[-1]
-    filename = f"{uuid.uuid4().hex}.{ext}"
-    return filename
+    """
+    Генерирует уникальное имя файла на основе UUID,
+    сохраняет исходное расширение, если оно есть.
+    """
+    root, ext = os.path.splitext(filename)
+    ext = ext.lower()
+    new_filename = f"{uuid.uuid4().hex}{ext}"
+    return new_filename
 
 
-def generate_image(path_to_default_image: str, ext: str, path_to_generate_image: str) -> None:
-    # Генерация avatar_small, открытие исходного avatar для обработки
-    with Image.open(path_to_default_image) as img:
+def generate_image(img: PILImage, ext: str) -> BytesIO:
+    """
+    Создает изображение в BytesIO из PILImage.
+    Обрабатывает GIF и статические изображения.
+    """
+    # Определение формата изображения
+    if img.format:
+        fmt = img.format
+    elif ext:
+        fmt = ext.replace(".", "").upper()
+    else:
+        fmt = "PNG"
 
-        # Определение формата изображения
-        if img.format:
-            fmt = img.format
-        elif ext:
-            fmt = ext.replace(".", "").upper()
-        else:
-            fmt = "PNG"
+    fmt = fmt.replace("JPG", "JPEG")
 
-        fmt = fmt.replace("JPG", "JPEG")
+    # Буфер в памяти
+    buffer = BytesIO()
 
-        # --- Обработка анимированного GIF ---
-        if fmt == "GIF" and getattr(img, "is_animated", False):
-            generate_gif(img, path_to_generate_image)
+    # --- Обработка анимированного GIF ---
+    if fmt == "GIF" and getattr(img, "is_animated", False):
+        # Создание GIF в BytesIO
+        generate_gif(img, buffer)
 
-        # --- Обработка обычных изображений ---
-        else:
-            generate_static_image(img, fmt, path_to_generate_image)
+    # --- Обработка обычных изображений ---
+    else:
+        # Создание image в BytesIO
+        generate_static_image(img, fmt, buffer)
+
+    return buffer
 
 
-def generate_gif(img: PILImage, path_to_generate_image: str) -> None:
+def generate_gif(img: PILImage, buffer: BytesIO) -> None:
+    """
+    Генерация уменьшенной анимированной GIF в BytesIO.
+    """
     frames = []
     durations = []
 
-    # Ограничение количества кадров
+    # Ограничение количества кадров для GIF
     max_frames = 100
     for i, frame in enumerate(ImageSequence.Iterator(img)):
         if i >= max_frames:
@@ -121,6 +138,10 @@ def generate_gif(img: PILImage, path_to_generate_image: str) -> None:
 
         frames.append(frame)
         durations.append(frame.info.get("duration", 100))
+
+    # Если у GIF нет кадров, то ничего не сохраняется
+    if not frames:
+        return
 
     # Метаданные первого кадра
     first_frame = frames[0]
@@ -140,11 +161,14 @@ def generate_gif(img: PILImage, path_to_generate_image: str) -> None:
     if transparency is not None:
         save_kwargs["transparency"] = transparency
 
-    # Сохранение GIF
-    first_frame.save(path_to_generate_image, **save_kwargs)
+    # Сохранение GIF в buffer
+    first_frame.save(buffer, **save_kwargs)
 
 
-def generate_static_image(img: PILImage, fmt: str, path_to_generate_image: str) -> None:
+def generate_static_image(img: PILImage, fmt: str, buffer: BytesIO) -> None:
+    """
+    Генерация уменьшенного статического изображения в BytesIO.
+    """
     # Если есть альфа-канал, сохранение в RGBA, иначе RGB
     if img.mode in ("RGBA", "LA"):
         img = img.convert("RGBA")
@@ -164,14 +188,5 @@ def generate_static_image(img: PILImage, fmt: str, path_to_generate_image: str) 
     if fmt.upper() in ("PNG", "WEBP"):
         save_kwargs["optimize"] = True
 
-    # Сохранение картинки
-    img.save(path_to_generate_image, format=fmt, **save_kwargs)
-
-
-def delete_old_avatar_paths(old_avatar_paths: tuple[str | None, ...]) -> None:
-    for path in old_avatar_paths:
-        if path and os.path.exists(path):
-            try:
-                os.remove(path)
-            except Exception:
-                pass
+    # Сохранение картинки в buffer
+    img.save(buffer, format=fmt, **save_kwargs)

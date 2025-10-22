@@ -4,12 +4,12 @@ from django.utils.translation import gettext_lazy
 from users.services.domain import (
     CustomUsernameValidator,
     PersonalNameValidator,
-    delete_old_avatar_paths,
+    generate_new_filename_with_uuid,
 )
 from users.services.infrastructure import (
-    avatar_upload_to,
+    delete_old_avatar_names,
     generate_avatar_small,
-    get_old_avatar_paths,
+    get_old_avatar_names,
 )
 
 
@@ -42,7 +42,6 @@ class User(AbstractUser):
     )
 
     avatar = models.ImageField(
-        upload_to=avatar_upload_to,
         blank=True,
         default="avatars/default_avatar.jpg",
         verbose_name="Аватар",
@@ -58,27 +57,43 @@ class User(AbstractUser):
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
     def save(self, *args, **kwargs):
-        # Сохранение старых путей для файлов avatar перед save()
-        old_avatar_paths = get_old_avatar_paths(self)
+        """
+        Переопределение save() для:
+            - генерации уменьшенных версий avatar
+            - удаления устаревших файлов
+        """
+        # Сохранение старых имен файлов для avatar перед save() для их
+        # последующего удаления
+        old_avatar_names = get_old_avatar_names(self)
+
+        # False, если аватар не менялся, или создается новый пользователь,
+        # True, если аватар менялся
+        is_avatar_changed = (
+            old_avatar_names.old_avatar_name is not None
+            and old_avatar_names.old_avatar_name != self.avatar.name
+        )
+
+        # avatar и avatar_small создаются только при условии, что avatar поменялся,
+        # при создании нового объекта is_avatar_changed == False
+        if is_avatar_changed:
+            # Создание avatar.name с помощью uuid
+            avatar_name = generate_new_filename_with_uuid(self.avatar.name)
+
+            # Полное имя для avatar в хранилище
+            self.avatar.name = f"avatars/{self.pk}/{avatar_name}"
+
+            # Создание avatar_small и получение имени файла
+            avatar_small_name = generate_avatar_small(self)
+
+            # Если name_avatar_small == False, значит avatar_small не создается
+            if avatar_small_name:
+                self.avatar_small.name = avatar_small_name
 
         super().save(*args, **kwargs)
 
-        # Создание avatar_small и получение имени файла
-        name_avatar_small = generate_avatar_small(self)
-
-        # Если name_avatar_small == False, значит возникла ошибка, тогда
-        # avatar_small не создается
-        if not name_avatar_small:
-            return
-
-        # Если нужный avatar_small уже сгенерирован (avatar не менялся),
-        # то повторного сохранения не происходит
-        if self.avatar_small.name != name_avatar_small:
-            self.avatar_small.name = name_avatar_small
-            super().save(update_fields=["avatar_small"])
-
+        if is_avatar_changed:
             # Удаление старых файлов avatar
-            delete_old_avatar_paths(old_avatar_paths)
+            delete_old_avatar_names(old_avatar_names)
 
     def __str__(self):
         return self.username

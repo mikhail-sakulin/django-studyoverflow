@@ -3,22 +3,33 @@
 """
 
 import os
+from dataclasses import astuple, dataclass
+from io import BytesIO
 from typing import TYPE_CHECKING
 
+from botocore.exceptions import BotoCoreError
+from django.core.files.base import ContentFile
+from django.core.files.storage import storages
+from PIL import Image
 from users.services.domain import generate_image, generate_new_filename_with_uuid
-
-from studyoverflow import settings
 
 
 if TYPE_CHECKING:
     from ..models import User
 
 
+storage_default = storages["default"]
+
+
 def avatar_upload_to(instance: "User", filename: str) -> str:
-    return os.path.join("avatars", generate_new_filename_with_uuid(filename))
+    return f"avatars/{generate_new_filename_with_uuid(filename)}"
 
 
 def generate_avatar_small(user: "User") -> bool | str:
+    """
+    Генерирует уменьшенную версию avatar пользователя.
+    Возвращает путь avatar_small в хранилище или False, если avatar_small не создается.
+    """
     # Если нет avatar, то avatar_small не создается
     if not getattr(user, "avatar", None) or not user.avatar.name:
         return False
@@ -29,50 +40,92 @@ def generate_avatar_small(user: "User") -> bool | str:
 
     # Генерация avatar_small только если avatar доступен
     try:
-        # Получение полного пути к avatar, имени файла и расширения
-        path_to_avatar, root, ext = get_path_to_avatar(user)
+        # Получение расширения и пути к avatar в хранилище
+        root, ext = get_storage_path_to_avatar_with_ext(user)
 
         # Создание пути к avatar_small
-        path_to_avatar_small = f"{root}_small{ext}"
+        storage_path_to_avatar_small = f"{root}_small{ext}"
 
-        # Если avatar_small уже существует, то новый не создается
-        if not os.path.exists(path_to_avatar_small):
-            # Если avatar_small не существует, то создается изображение
-            generate_image(path_to_avatar, ext, path_to_avatar_small)
+        # Если актуальный avatar_small уже существует, то дубликат не создается
+        if not storage_default.exists(storage_path_to_avatar_small):
+            # Если нужный avatar_small не создан, то создается avatar_small в BytesIO
+            with Image.open(user.avatar) as img:
+                buffer = generate_image(img, ext)
 
-    except OSError:
+            # Сохранение avatar_small (из BytesIO) в хранилище
+            save_img_in_storage(buffer, storage_path_to_avatar_small)
+
+    except (OSError, ValueError):
+        # Ошибка обработки изображения
         return False
 
-    # Относительный путь до avatar_small, начиная после MEDIA_ROOT
-    name_avatar_small = os.path.relpath(path_to_avatar_small, settings.MEDIA_ROOT)
+    except BotoCoreError:
+        # Ошибка при обращении к хранилищу
+        return False
 
-    return name_avatar_small
-
-
-def get_path_to_avatar(user: "User") -> tuple[str, str, str]:
-    # Полный путь до avatar
-    path_to_avatar = user.avatar.path
-
-    # Проверка, существует ли файл для avatar
-    if not os.path.exists(path_to_avatar):
-        raise IOError(f"Путь к аватарке {path_to_avatar} не найден.")
-
-    # Создание полного пути к avatar_small, имя файла на основании
-    # имени avatar + "_small".
-    root, ext = os.path.splitext(path_to_avatar)
-
-    return path_to_avatar, root, ext
+    # Путь к avatar_small в хранилище
+    return storage_path_to_avatar_small
 
 
-def get_old_avatar_paths(user: "User") -> tuple[str | None, ...]:
-    old_avatar_path = None
-    old_avatar_small_path = None
+def get_storage_path_to_avatar_with_ext(user: "User") -> tuple[str, str]:
+    """
+    Возвращает кортеж (путь без расширения, расширение файла) для avatar пользователя.
+    """
+    # Путь к avatar в хранилище и его расширение
+    root, ext = os.path.splitext(user.avatar.name)
+    return root, ext
+
+
+def save_img_in_storage(buffer: BytesIO, storage_path_to_avatar_small: str) -> None:
+    """
+    Сохраняет изображение из BytesIO в хранилище.
+    """
+    buffer.seek(0)
+    storage_default.save(storage_path_to_avatar_small, ContentFile(buffer.read()))
+
+
+@dataclass(slots=True)
+class OldAvatarNames:
+    """
+    Dataclass для хранения имен старых файлов аватарок пользователя,
+    подлежащих удалению.
+    """
+
+    old_avatar_name: None | str = None
+    old_avatar_small_name: None | str = None
+
+    def __iter__(self):
+        """
+        Возвращает итератор по значениям атрибутов в порядке объявления.
+        """
+        return iter(astuple(self))
+
+
+def get_old_avatar_names(user: "User") -> OldAvatarNames:
+    """
+    Получает старые пути в хранилище для avatar и avatar_small для пользователя
+    для их последующего удаления.
+    """
+    old_avatar_names = OldAvatarNames()
 
     if user.pk:
-        old = type(user).objects.get(pk=user.pk)
-        if old.avatar and old.avatar.name != user.avatar.name:
-            old_avatar_path = old.avatar.path
-        if old.avatar_small:
-            old_avatar_small_path = old.avatar_small.path
+        old_user = type(user).objects.get(pk=user.pk)
+        if old_user.avatar and old_user.avatar.name != user.avatar.name:
+            old_avatar_names.old_avatar_name = old_user.avatar.name
+        if old_user.avatar_small:
+            old_avatar_names.old_avatar_small_name = old_user.avatar_small.name
 
-    return old_avatar_path, old_avatar_small_path
+    return old_avatar_names
+
+
+def delete_old_avatar_names(old_avatar_names: OldAvatarNames) -> None:
+    """
+    Удаляет старые файлы для avatar и avatar_small пользователя из хранилища.
+    """
+    for name in old_avatar_names:
+        if name and storage_default.exists(name):
+            try:
+                storage_default.delete(name)
+            except BotoCoreError:
+                # Ошибка при обращении к хранилищу
+                pass
