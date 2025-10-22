@@ -47,7 +47,13 @@ class User(AbstractUser):
         verbose_name="Аватар",
     )
 
-    avatar_small = models.ImageField(blank=True, verbose_name="Миниатюра аватара")
+    avatar_small_size1 = models.ImageField(blank=True, verbose_name="Миниатюра аватара №1")
+    avatar_small_size2 = models.ImageField(blank=True, verbose_name="Миниатюра аватара №2")
+
+    AVATAR_SMALL_SIZES = {
+        "size1": (100, 100),
+        "size2": (170, 170),
+    }
 
     bio = models.TextField(blank=True, verbose_name="Информация о пользователе")
     reputation = models.IntegerField(blank=True, default=0, verbose_name="Репутация")
@@ -82,12 +88,16 @@ class User(AbstractUser):
             # Полное имя для avatar в хранилище
             self.avatar.name = f"avatars/{self.pk}/{avatar_name}"
 
-            # Создание avatar_small и получение имени файла
-            avatar_small_name = generate_avatar_small(self)
+            # Создание avatar_small и получение имен файлов
+            avatar_small_size1_name = generate_avatar_small(self, size_type=1)
+            avatar_small_size2_name = generate_avatar_small(self, size_type=2)
 
-            # Если name_avatar_small == False, значит avatar_small не создается
-            if avatar_small_name:
-                self.avatar_small.name = avatar_small_name
+            # Если avatar_small_name == False, значит avatar_small не создается
+            if avatar_small_size1_name:
+                self.avatar_small_size1.name = avatar_small_size1_name
+
+            if avatar_small_size2_name:
+                self.avatar_small_size2.name = avatar_small_size2_name
 
         super().save(*args, **kwargs)
 

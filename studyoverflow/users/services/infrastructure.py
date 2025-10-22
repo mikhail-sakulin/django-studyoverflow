@@ -25,7 +25,7 @@ def avatar_upload_to(instance: "User", filename: str) -> str:
     return f"avatars/{generate_new_filename_with_uuid(filename)}"
 
 
-def generate_avatar_small(user: "User") -> bool | str:
+def generate_avatar_small(user: "User", size_type: int) -> bool | str:
     """
     Генерирует уменьшенную версию avatar пользователя.
     Возвращает путь avatar_small в хранилище или False, если avatar_small не создается.
@@ -38,19 +38,23 @@ def generate_avatar_small(user: "User") -> bool | str:
     if os.path.basename(user.avatar.name) == "default_avatar.jpg":
         return False
 
+    # Если передан некорректный size_type, то avatar_small не создается
+    if f"size{size_type}" not in user.AVATAR_SMALL_SIZES:
+        return False
+
     # Генерация avatar_small только если avatar доступен
     try:
         # Получение расширения и пути к avatar в хранилище
         root, ext = get_storage_path_to_avatar_with_ext(user)
 
         # Создание пути к avatar_small
-        storage_path_to_avatar_small = f"{root}_small{ext}"
+        storage_path_to_avatar_small = f"{root}_small_size{size_type}{ext}"
 
         # Если актуальный avatar_small уже существует, то дубликат не создается
         if not storage_default.exists(storage_path_to_avatar_small):
             # Если нужный avatar_small не создан, то создается avatar_small в BytesIO
             with Image.open(user.avatar) as img:
-                buffer = generate_image(img, ext)
+                buffer = generate_image(img, ext, user.AVATAR_SMALL_SIZES[f"size{size_type}"])
 
             # Сохранение avatar_small (из BytesIO) в хранилище
             save_img_in_storage(buffer, storage_path_to_avatar_small)
@@ -92,7 +96,8 @@ class OldAvatarNames:
     """
 
     old_avatar_name: None | str = None
-    old_avatar_small_name: None | str = None
+    old_avatar_small_size1_name: None | str = None
+    old_avatar_small_size2_name: None | str = None
 
     def __iter__(self):
         """
@@ -112,8 +117,10 @@ def get_old_avatar_names(user: "User") -> OldAvatarNames:
         old_user = type(user).objects.get(pk=user.pk)
         if old_user.avatar and old_user.avatar.name != user.avatar.name:
             old_avatar_names.old_avatar_name = old_user.avatar.name
-        if old_user.avatar_small:
-            old_avatar_names.old_avatar_small_name = old_user.avatar_small.name
+        if old_user.avatar_small_size1:
+            old_avatar_names.old_avatar_small_size1_name = old_user.avatar_small_size1.name
+        if old_user.avatar_small_size2:
+            old_avatar_names.old_avatar_small_size2_name = old_user.avatar_small_size2.name
 
     return old_avatar_names
 

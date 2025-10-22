@@ -88,7 +88,7 @@ def generate_new_filename_with_uuid(filename: str) -> str:
     return new_filename
 
 
-def generate_image(img: PILImage, ext: str) -> BytesIO:
+def generate_image(img: PILImage, ext: str, size: tuple[float, float]) -> BytesIO:
     """
     Создает изображение в BytesIO из PILImage.
     Обрабатывает GIF и статические изображения.
@@ -109,17 +109,17 @@ def generate_image(img: PILImage, ext: str) -> BytesIO:
     # --- Обработка анимированного GIF ---
     if fmt == "GIF" and getattr(img, "is_animated", False):
         # Создание GIF в BytesIO
-        generate_gif(img, buffer)
+        generate_gif(img, buffer, size)
 
     # --- Обработка обычных изображений ---
     else:
         # Создание image в BytesIO
-        generate_static_image(img, fmt, buffer)
+        generate_static_image(img, fmt, buffer, size)
 
     return buffer
 
 
-def generate_gif(img: PILImage, buffer: BytesIO) -> None:
+def generate_gif(img: PILImage, buffer: BytesIO, size: tuple[float, float]) -> None:
     """
     Генерация уменьшенной анимированной GIF в BytesIO.
     """
@@ -134,7 +134,7 @@ def generate_gif(img: PILImage, buffer: BytesIO) -> None:
         frame = frame.convert("RGBA")
 
         # Уменьшение размера кадра
-        frame.thumbnail((150, 150))
+        frame.thumbnail(size)
 
         frames.append(frame)
         durations.append(frame.info.get("duration", 100))
@@ -165,7 +165,9 @@ def generate_gif(img: PILImage, buffer: BytesIO) -> None:
     first_frame.save(buffer, **save_kwargs)
 
 
-def generate_static_image(img: PILImage, fmt: str, buffer: BytesIO) -> None:
+def generate_static_image(
+    img: PILImage, fmt: str, buffer: BytesIO, size: tuple[float, float]
+) -> None:
     """
     Генерация уменьшенного статического изображения в BytesIO.
     """
@@ -176,7 +178,7 @@ def generate_static_image(img: PILImage, fmt: str, buffer: BytesIO) -> None:
         img = img.convert("RGB")
 
     # Уменьшение размера изображения
-    img.thumbnail((150, 150))
+    img.thumbnail(size)
 
     # Настройки сохранения
     save_kwargs = {}
