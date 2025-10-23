@@ -5,6 +5,7 @@ from users.services.domain import (
     generate_new_filename_with_uuid,
 )
 from users.services.infrastructure import (
+    AvatarFileValidator,
     CustomUsernameValidator,
     PersonalNameValidator,
     delete_old_avatar_names,
@@ -27,6 +28,7 @@ class User(AbstractUser):
     # Валидаторы
     username_validator = CustomUsernameValidator()
     first_name_last_name_validator = PersonalNameValidator()
+    avatar_validator = AvatarFileValidator()
 
     # Поля модели
     username = models.CharField(
@@ -56,6 +58,7 @@ class User(AbstractUser):
     avatar = models.ImageField(
         blank=True,
         default=DEFAULT_AVATAR_FILENAME,
+        validators=[avatar_validator],
         verbose_name="Аватар",
     )
 

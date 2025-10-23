@@ -7,6 +7,7 @@ from dataclasses import astuple, dataclass
 from io import BytesIO
 from typing import TYPE_CHECKING, Type
 
+import filetype
 from botocore.exceptions import BotoCoreError
 from django.core.exceptions import ValidationError
 from django.core.files import File
@@ -90,6 +91,86 @@ class PersonalNameValidator:
             raise ValidationError(
                 gettext_lazy("Имя и фамилия не должны содержать подряд несколько дефисов."),
                 code=self.code,
+            )
+
+
+@deconstructible
+class AvatarFileValidator:
+    """
+    Класс-валидатор для проверки аватаров пользователей.
+
+    Проверяет:
+        - размер файла,
+        - MIME-тип файла,
+        - минимальные размеры изображения,
+        - соотношения сторон изображения.
+    """
+
+    # Разрешенные MIME-типы файлов
+    ALLOWED_MIME_TYPES = (
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "image/x-icon",
+    )
+
+    def __init__(self, max_size: int = 10 * 1024 * 1024):
+        self.max_size = max_size
+        self.min_height = 200
+        self.min_width = 200
+        self.min_aspect_ration = 0.25
+        self.max_aspect_ration = 4
+
+    def __call__(self, file, *args, **kwargs):
+        # Проверка размера файла
+        if file.size > self.max_size:
+            max_size_mb = self.max_size / (1024 * 1024)
+            raise ValidationError(
+                gettext_lazy(f"Максимальный разрешенный размер файла: {max_size_mb} Mb."),
+                code="file_too_large",
+            )
+
+        # Проверка MIME-типа файла по содержимому
+        try:
+            # Получение MIME-типа
+            kind = filetype.guess(file.read(1024))
+            file.seek(0)
+        except Exception:
+            # Если magic не смог прочитать файл
+            raise ValidationError(gettext_lazy("Не удалось определить тип файла."))
+
+        if not kind or kind.mime not in self.ALLOWED_MIME_TYPES:
+            raise ValidationError(
+                gettext_lazy(
+                    f"Недопустимый тип файла, разрешены только: "
+                    f"{', '.join(el.split('/')[-1] for el in self.ALLOWED_MIME_TYPES)}."
+                ),
+                code="invalid_file_type",
+            )
+
+        # Проверка размеров и соотношения сторон
+        img = Image.open(file)
+        width, height = img.size
+
+        if width < self.min_width or height < self.min_height:
+            raise ValidationError(
+                gettext_lazy(
+                    f"Изображение слишком маленькое. Разрешенный минимум: "
+                    f"{self.min_width}x{self.min_height} px."
+                ),
+                code="file_too_small",
+            )
+
+        aspect_ratio = width / height
+
+        if aspect_ratio < self.min_aspect_ration or aspect_ratio > self.max_aspect_ration:
+            raise ValidationError(
+                gettext_lazy(
+                    f"Недопустимое соотношение сторон изображения. Допустимо "
+                    f"{self.min_aspect_ration}-{self.max_aspect_ration}."
+                ),
+                code="invalid_file_aspect_ration",
             )
 
 
