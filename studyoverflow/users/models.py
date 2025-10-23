@@ -2,11 +2,11 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy
 from users.services.domain import (
-    CustomUsernameValidator,
-    PersonalNameValidator,
     generate_new_filename_with_uuid,
 )
 from users.services.infrastructure import (
+    CustomUsernameValidator,
+    PersonalNameValidator,
     delete_old_avatar_names,
     generate_avatar_small,
     generate_default_avatar_in_different_sizes,

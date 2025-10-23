@@ -14,11 +14,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='user',
             name='first_name',
-            field=models.CharField(blank=True, max_length=150, validators=[users.services.domain.PersonalNameValidator()], verbose_name='Имя'),
+            field=models.CharField(blank=True, max_length=150, validators=[users.services.infrastructure.PersonalNameValidator()], verbose_name='Имя'),
         ),
         migrations.AlterField(
             model_name='user',
             name='last_name',
-            field=models.CharField(blank=True, max_length=150, validators=[users.services.domain.PersonalNameValidator()], verbose_name='Фамилия'),
+            field=models.CharField(blank=True, max_length=150, validators=[users.services.infrastructure.PersonalNameValidator()], verbose_name='Фамилия'),
         ),
     ]

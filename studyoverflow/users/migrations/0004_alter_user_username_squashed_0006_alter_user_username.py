@@ -16,6 +16,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='user',
             name='username',
-            field=models.CharField(error_messages={'unique': 'A user with that username already exists.'}, help_text="Имя пользователя должно быть не менее 4 символов и состоять только из латинских букв, цифр, символов '_' и '-'.", max_length=150, unique=True, validators=[users.services.domain.CustomUsernameValidator()], verbose_name='Имя пользователя'),
+            field=models.CharField(error_messages={'unique': 'A user with that username already exists.'}, help_text="Имя пользователя должно быть не менее 4 символов и состоять только из латинских букв, цифр, символов '_' и '-'.", max_length=150, unique=True, validators=[users.services.infrastructure.CustomUsernameValidator()], verbose_name='Имя пользователя'),
         ),
     ]
