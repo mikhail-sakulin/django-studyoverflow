@@ -1,0 +1,91 @@
+#avatar {
+    width: 300px;
+    height: 300px;
+    object-fit: cover;
+    border: 3px solid #ffc107;
+}
+
+.bio-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.bio-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bio-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.bio-scroll::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.bio-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.card-body {
+    background-color: #202023;
+}
+
+.profile-btn {
+  transition: filter 0.1s ease;
+}
+
+.profile-btn:focus,
+.profile-btn:focus-visible,
+.profile-btn:active {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.profile-btn:active {
+  filter: brightness(1.08);
+}
+
+.author-name {
+    color: cornflowerblue;
+}
+
+.text-white-secondary {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.card {
+    border-radius: 0.7rem !important;
+}
+
+.card-body {
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+}
+
+.card-header:first-child {
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+}
+
+hr {
+  border: none;
+  border-top: 2px solid white;
+}
+
+@media (max-width: 767.98px) {
+  .bio-scroll {
+    overflow-y: visible !important;
+    overflow-x: hidden !important;
+  }
+
+  .flex-grow-1.d-flex.flex-column.w-100 {
+    height: auto !important;
+  }
+}
+
+.bio-textarea {
+    height: 100px !important;
+    resize: none !important;
+}
