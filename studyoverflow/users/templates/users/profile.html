@@ -1,0 +1,146 @@
+{% extends 'navigation/base.html' %}
+{% load static %}
+
+{% block title %}
+  <title>Профиль пользователя {{ user.username }}</title>
+{% endblock %}
+
+
+{% block extra_css %}
+  <link type="text/css" rel="stylesheet" href="{% static 'users/css/profile.css' %}">
+
+  <link type="text/css" rel="stylesheet" href="{% static 'users/css/register-login.css' %}">
+{% endblock %}
+
+
+{% block content %}
+
+  <div class="container my-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 col-md-10">
+
+        <div class="card shadow-lg border-0">
+
+          <div class="card-header bg-warning text-dark p-4">
+            <h4 class="mb-0">Профиль пользователя {{ user.username }}</h4>
+          </div>
+
+          <div class="card-body p-4">
+
+            <div class="d-flex flex-column d-md-flex flex-md-row align-items-md-start g-4 mb-4">
+
+              <!-- Аватар -->
+              <div class="d-flex justify-content-center mb-4 mb-md-0 me-md-4" style="flex-shrink: 0;">
+                <img id="avatar"
+                     src="{% if user.avatar %}{{ user.avatar.url }}{% else %}{% static 'path/to/default/avatar.jpg' %}{% endif %}"
+                     alt="{{ user.username }}"
+                     class="rounded">
+              </div>
+
+              <div class="flex-grow-1 d-flex flex-column w-100" style="height: 300px;">
+
+                <div class="w-100">
+                  <p class="author-name mb-1 fs-5 text-break">{{ user.username }}</p>
+                  <p class="text-secondary mb-3 text-break">{{ user.email }}</p>
+                </div>
+
+                <!-- Информация о пользователе: bio и даты -->
+                <div class="w-100 flex-grow-1 bio-scroll text-white">
+                  <div class="mt-1">
+
+                    <h6 class="fw-bold mb-1">{{ user.first_name }} {{ user.last_name }}</h6>
+
+                    <p class="text-white-secondary small text-break">
+                      {% if user.bio %}
+                        {{ user.bio }}
+                      {% else %}
+                        Информация о пользователе не указана.
+                      {% endif %}
+                    </p>
+
+                    <div class="row small mt-2">
+                      <div class="col-4 mb-1">
+                        <span class="fw-bold d-block">Дата рождения:</span>
+                        <span class="text-white-secondary">
+                          {% if user.date_birth %}
+                            {{ user.date_birth|date:"d M Y" }}
+                          {% else %}
+                            Не указана
+                          {% endif %}
+                        </span>
+                      </div>
+
+                      <div class="col-4 mb-1">
+                        <span class="fw-bold d-block">На сайте с:</span>
+                        <span class="text-white-secondary">
+                          {{ user.date_joined|date:"Y.m.d" }}
+                        </span>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                <!-- Кнопки -->
+                <div class="d-flex flex-column align-items-end gap-2 w-100 mt-auto pt-4">
+                  <button type="button" class="btn btn-warning btn-sm profile-btn" id="toggle-edit-btn" style="width: 180px;">
+                    Редактировать профиль
+                  </button>
+
+                  <a href="#" class="btn btn-outline-light btn-sm" style="width: 180px;">
+                    Сменить пароль
+                  </a>
+                </div>
+
+              </div>
+            </div>
+
+            <hr>
+
+            <!-- Строка статистики -->
+            <div class="row text-center mb-2">
+              <div class="col-4">
+                <p class="mb-0 text-white">Репутация</p>
+                <h6 class="fw-bold text-primary">{{ user.reputation }}</h6>
+              </div>
+              <div class="col-4 border-start border-end">
+                <p class="mb-0 text-white">Опубликовано постов</p>
+                <h6 class="fw-bold text-primary">1250</h6>
+              </div>
+              <div class="col-4">
+                <p class="mb-0 text-white">Оставлено ответов</p>
+                <h6 class="fw-bold text-primary">0</h6>
+              </div>
+            </div>
+
+            <hr>
+
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-2 gap-2">
+              <p class="text-muted small mb-0 text-center text-md-start">
+                Последний раз был в сети: {{ user.last_login|date:"H:i, d M Y" }}
+              </p>
+
+              <form method="post" action="#" class="d-inline mb-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirmDelete();">
+                  Удалить аккаунт
+                </button>
+              </form>
+
+            </div>
+          </div>
+        </div>
+
+      <!-- Форма редактирования профиля пользователя -->
+      {% include 'users/profile_update_form.html' %}
+
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+  <script src="{% static 'users/js/profile.js' %}"></script>
+{% endblock %}
