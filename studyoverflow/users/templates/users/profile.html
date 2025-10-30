@@ -32,7 +32,11 @@
               <!-- Аватар -->
               <div class="d-flex justify-content-center mb-4 mb-md-0 me-md-4" style="flex-shrink: 0;">
                 <img id="avatar"
-                     src="{% if user.avatar %}{{ user.avatar.url }}{% else %}{% static 'path/to/default/avatar.jpg' %}{% endif %}"
+                     src="{% if user.avatar_small_size3 %}
+                            {{ user.avatar_small_size3.url }}
+                          {% elif user.avatar %}
+                            {{ user.avatar.url }}
+                          {% endif %}"
                      alt="{{ user.username }}"
                      class="rounded">
               </div>
