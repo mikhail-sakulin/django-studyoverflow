@@ -1,9 +1,10 @@
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, TemplateView
-from users.forms import UserLoginForm, UserRegisterForm
+from django.views.generic import CreateView, TemplateView, UpdateView
+from users.forms import UserLoginForm, UserProfileUpdateForm, UserRegisterForm
 
 
 class UsersTemplateView(TemplateView):
@@ -50,3 +51,13 @@ class CustomLogoutView(LogoutView):
         if user_was_authenticated:
             messages.info(self.request, "Вы вышли из аккаунта.")
         return response
+
+
+class UserProfileUpdateView(UpdateView):
+    model = get_user_model()
+    form_class = UserProfileUpdateForm
+    template_name = "users/profile.html"
+    success_url = reverse_lazy("users:profile")
+
+    def get_object(self, queryset=None):
+        return self.request.user
