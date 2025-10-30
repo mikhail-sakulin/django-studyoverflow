@@ -247,6 +247,7 @@ class OldAvatarNames:
     old_avatar_name: None | str = None
     old_avatar_small_size1_name: None | str = None
     old_avatar_small_size2_name: None | str = None
+    old_avatar_small_size3_name: None | str = None
 
     def __iter__(self):
         """
@@ -270,6 +271,8 @@ def get_old_avatar_names(user: "User") -> OldAvatarNames:
             old_avatar_names.old_avatar_small_size1_name = old_user.avatar_small_size1.name
         if old_user.avatar_small_size2:
             old_avatar_names.old_avatar_small_size2_name = old_user.avatar_small_size2.name
+        if old_user.avatar_small_size3:
+            old_avatar_names.old_avatar_small_size3_name = old_user.avatar_small_size3.name
 
     return old_avatar_names
 
@@ -306,6 +309,11 @@ def generate_default_avatar_in_different_sizes(user_model: Type["User"]) -> None
         default_avatar.seek(0)
         generate_default_avatar_small(
             user_model, default_avatar, user_model.DEFAULT_AVATAR_SMALL_SIZE2_FILENAME, size_type=2
+        )
+
+        default_avatar.seek(0)
+        generate_default_avatar_small(
+            user_model, default_avatar, user_model.DEFAULT_AVATAR_SMALL_SIZE3_FILENAME, size_type=3
         )
 
 

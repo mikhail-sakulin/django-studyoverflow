@@ -20,9 +20,11 @@ class User(AbstractUser):
     DEFAULT_AVATAR_FILENAME = "avatars/default_avatar.jpg"
     DEFAULT_AVATAR_SMALL_SIZE1_FILENAME = "avatars/default_avatar_small_size1.jpg"
     DEFAULT_AVATAR_SMALL_SIZE2_FILENAME = "avatars/default_avatar_small_size2.jpg"
+    DEFAULT_AVATAR_SMALL_SIZE3_FILENAME = "avatars/default_avatar_small_size3.jpg"
     AVATAR_SMALL_SIZES = {
         "size1": (100, 100),
         "size2": (170, 170),
+        "size3": (800, 800),
     }
 
     # Валидаторы
@@ -68,13 +70,23 @@ class User(AbstractUser):
     avatar_small_size2 = models.ImageField(
         blank=True, default=DEFAULT_AVATAR_SMALL_SIZE2_FILENAME, verbose_name="Миниатюра аватара №2"
     )
+    avatar_small_size3 = models.ImageField(
+        blank=True, default=DEFAULT_AVATAR_SMALL_SIZE3_FILENAME, verbose_name="Миниатюра аватара №3"
+    )
 
     bio = models.TextField(blank=True, verbose_name="Информация о пользователе")
-    reputation = models.IntegerField(blank=True, default=0, verbose_name="Репутация")
 
-    date_birth = models.DateTimeField(blank=True, null=True, verbose_name="Дата рождения")
-    date_joined = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
-    time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
+    date_birth = models.DateField(blank=True, null=True, verbose_name="Дата рождения")
+    date_joined = models.DateTimeField(auto_now_add=True, verbose_name="Время создания аккаунта")
+
+    reputation = models.IntegerField(default=0, verbose_name="Репутация")
+    posts_count = models.PositiveIntegerField(default=0, verbose_name="Количество постов")
+    answers_count = models.PositiveIntegerField(default=0, verbose_name="Количество ответов")
+
+    last_seen = models.DateTimeField(
+        null=True,
+        verbose_name="Был в сети",
+    )
 
     def save(self, *args, **kwargs):
         """
@@ -105,6 +117,7 @@ class User(AbstractUser):
             # Создание avatar_small и получение имен файлов
             avatar_small_size1_name = generate_avatar_small(self, size_type=1)
             avatar_small_size2_name = generate_avatar_small(self, size_type=2)
+            avatar_small_size3_name = generate_avatar_small(self, size_type=3)
 
             # Если avatar_small_name == False, значит avatar_small не создается
             if avatar_small_size1_name:
@@ -112,6 +125,9 @@ class User(AbstractUser):
 
             if avatar_small_size2_name:
                 self.avatar_small_size2.name = avatar_small_size2_name
+
+            if avatar_small_size3_name:
+                self.avatar_small_size3.name = avatar_small_size3_name
 
         super().save(*args, **kwargs)
 
