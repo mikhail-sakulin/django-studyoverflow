@@ -105,19 +105,29 @@ class User(AbstractUser):
             and old_avatar_names.old_avatar_name != self.avatar.name
         )
 
+        # Если пользовательский аватар удален, то self.avatar.name == ""
+        is_avatar_deleted = not self.avatar
+
         # avatar и avatar_small создаются только при условии, что avatar поменялся,
         # при создании нового объекта is_avatar_changed == False
         if is_avatar_changed:
-            # Создание avatar.name с помощью uuid
-            avatar_name = generate_new_filename_with_uuid(self.avatar.name)
+            if is_avatar_deleted:
+                # Если пользовательский аватар удален, то ему присваиваются стандартные аватары
+                self.avatar.name = self._meta.get_field("avatar").get_default()
+                avatar_small_size1_name = self._meta.get_field("avatar_small_size1").get_default()
+                avatar_small_size2_name = self._meta.get_field("avatar_small_size2").get_default()
+                avatar_small_size3_name = self._meta.get_field("avatar_small_size3").get_default()
+            else:
+                # Создание avatar.name с помощью uuid
+                avatar_name = generate_new_filename_with_uuid(self.avatar.name)
 
-            # Полное имя для avatar в хранилище
-            self.avatar.name = f"avatars/{self.pk}/{avatar_name}"
+                # Полное имя для avatar в хранилище
+                self.avatar.name = f"avatars/{self.pk}/{avatar_name}"
 
-            # Создание avatar_small и получение имен файлов
-            avatar_small_size1_name = generate_avatar_small(self, size_type=1)
-            avatar_small_size2_name = generate_avatar_small(self, size_type=2)
-            avatar_small_size3_name = generate_avatar_small(self, size_type=3)
+                # Создание avatar_small и получение имен файлов
+                avatar_small_size1_name = generate_avatar_small(self, size_type=1)
+                avatar_small_size2_name = generate_avatar_small(self, size_type=2)
+                avatar_small_size3_name = generate_avatar_small(self, size_type=3)
 
             # Если avatar_small_name == False, значит avatar_small не создается
             if avatar_small_size1_name:
@@ -131,9 +141,10 @@ class User(AbstractUser):
 
         super().save(*args, **kwargs)
 
-        if is_avatar_changed:
-            # Удаление старых файлов avatar
-            delete_old_avatar_names(old_avatar_names)
+        if is_avatar_changed or is_avatar_deleted:
+            # Удаление старых файлов avatar, если они не были default
+            if old_avatar_names.old_avatar_name != self._meta.get_field("avatar").get_default():
+                delete_old_avatar_names(old_avatar_names)
 
     @classmethod
     def generate_default_avatar_different_sizes(cls):
