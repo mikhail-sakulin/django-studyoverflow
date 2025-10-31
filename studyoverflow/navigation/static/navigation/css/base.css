@@ -39,3 +39,22 @@ html {
 #studyoverflow-button:hover {
     transform: scale(1.05);
 }
+
+#profile-button {
+    height: 2.4rem;
+    display: inline-flex;
+    align-items: center;
+    padding-bottom: 0.8rem;
+    padding-left: 0.64rem;
+    padding-right: 0.64rem;
+}
+
+#profile-icon {
+    font-size: 1.9rem
+}
+
+#profile-icon-label {
+    padding-left: 0.5rem;
+    padding-top: 0.5rem;
+    font-size: 1rem
+}
