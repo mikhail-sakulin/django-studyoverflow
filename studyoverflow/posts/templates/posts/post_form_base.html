@@ -2,15 +2,11 @@
 {% load static %}
 
 
-{% block title %}
-  <title>Создание поста</title>
-{% endblock %}
-
 {% block extra_css %}
   <!-- Подключение CSS-темы для подсветки синтаксиса кода -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 
-  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/create_post.css' %}">
+  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_create.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -19,7 +15,9 @@
     <div class="row text-white">
       <div class="col-12">
 
-        <h2>Создать новый пост</h2>
+        {% block heading %}
+        {% endblock %}
+
         <hr/>
 
         <!-- Форма создания поста -->
@@ -88,9 +86,14 @@
 
           {% endfor %}
 
-          <button type="submit" class="btn btn-outline-warning btn-sm btn-form-submit mt-3">
-            Отправить
-          </button>
+          <div class="d-flex justify-content-between mb-0 mt-4">
+            <button type="submit" class="btn btn-outline-warning btn-form-submit">
+              {% block button_confirm %}
+              {% endblock %}
+            </button>
+            {% block button_cancel %}
+            {% endblock %}
+          </div>
 
         </form>
       </div>

@@ -1,0 +1,25 @@
+{% extends 'posts/post_form_base.html' %}
+{% load static %}
+
+
+{% block title %}
+  <title>Создание поста</title>
+{% endblock %}
+
+
+{% block heading %}
+  <h2>Создать новый пост</h2>
+{% endblock %}
+
+
+{% block button_confirm %}
+  Отправить
+{% endblock %}
+
+
+{% block button_cancel %}
+  <a href="{% url 'home' %}"
+     class="btn btn-outline-light">
+    Отмена
+  </a>
+{% endblock %}
