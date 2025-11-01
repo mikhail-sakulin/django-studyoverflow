@@ -1,0 +1,25 @@
+{% extends 'posts/post_form_base.html' %}
+{% load static %}
+
+
+{% block title %}
+  <title>Редактирование поста</title>
+{% endblock %}
+
+
+{% block heading %}
+  <h2>Редактировать пост</h2>
+{% endblock %}
+
+
+{% block button_confirm %}
+  Редактировать
+{% endblock %}
+
+
+{% block button_cancel %}
+  <a href="{{ post.get_absolute_url }}"
+     class="btn btn-outline-light">
+    Отмена
+  </a>
+{% endblock %}
