@@ -54,7 +54,19 @@
         </div>
       </div>
 
-      <a href="{% url 'users:register' %}?next={{ request.path }}" class="btn btn-outline-warning btn-lg" style="margin-top: 10vh">Присоединиться</a>
+      <a href="{% if user.is_authenticated %}
+                {% url 'posts:create' %}
+               {% else %}
+                {% url 'users:register' %}?next={{ request.path }}
+               {% endif %}"
+         class="btn btn-outline-warning btn-lg"
+         style="margin-top: 10vh">
+          {% if user.is_authenticated %}
+            Создать новый пост
+          {% else %}
+            Присоединиться
+          {% endif %}
+      </a>
 
     </div>
   </main>
