@@ -6,6 +6,12 @@
   <title>Авторизация</title>
 {% endblock %}
 
+
+{% block extra_css %}
+  <link type="text/css" rel="stylesheet" href="{% static 'users/css/login.css' %}">
+{% endblock %}
+
+
 {% block form %}
 
   <div id="register-login-container" class="container">
@@ -53,16 +59,18 @@
         {% endfor %}
       </div>
 
+      <!-- Ссылка создать аккаунт под ошибками -->
+      <div class="mb-3">
+        <a href="{% url 'users:register' %}" class="create-account-link">
+          Создать аккаунт
+        </a>
+      </div>
+
       <div class="d-flex justify-content-between mb-0 mt-4">
-        <button type="submit" class="btn btn-outline-warning btn-sm btn-form-submit fs-6">
+        <button type="submit" class="btn btn-outline-warning btn-sm btn-form-submit fs-6 px-3">
           Вход
         </button>
-        <a href="
-             {% if next %}
-              {{ next }}
-             {% else %}
-              {% url 'home' %}
-             {% endif %}"
+        <a href="{% url 'home' %}"
            class="btn btn-outline-light">
           Отмена
         </a>
