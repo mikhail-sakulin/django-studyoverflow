@@ -129,3 +129,36 @@ class Post(models.Model):
         Возвращает уникальный URL для поста на основе pk и slug.
         """
         return reverse("posts:detail", kwargs={"pk": self.pk, "slug": self.slug})
+
+
+class Comment(models.Model):
+    post = models.ForeignKey(
+        Post, on_delete=models.CASCADE, related_name="comments", verbose_name="Пост"
+    )
+    author = models.ForeignKey(
+        get_user_model(), on_delete=models.CASCADE, related_name="comments", verbose_name="Автор"
+    )
+    parent_comment = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="child_comments",
+        verbose_name="Родительский комментарий",
+    )
+    content = models.TextField(max_length=5000, verbose_name="Текст комментария")
+
+    time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
+    time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
+
+    class Meta:
+        verbose_name = "Комментарий"
+        verbose_name_plural = "Комментарии"
+        ordering = ["-time_create"]
+
+    def __str__(self):
+        return f"{self.author}: {self.content[:30]}"
+
+    @property
+    def has_parent_comment(self):
+        return self.parent_comment is not None
