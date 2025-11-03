@@ -81,7 +81,7 @@ class User(AbstractUser):
 
     reputation = models.IntegerField(default=0, verbose_name="Репутация")
     posts_count = models.PositiveIntegerField(default=0, verbose_name="Количество постов")
-    answers_count = models.PositiveIntegerField(default=0, verbose_name="Количество ответов")
+    comments_count = models.PositiveIntegerField(default=0, verbose_name="Количество комментариев")
 
     last_seen = models.DateTimeField(
         null=True,
