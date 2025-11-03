@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy
@@ -53,7 +54,7 @@ class CustomLogoutView(LogoutView):
         return response
 
 
-class UserProfileUpdateView(UpdateView):
+class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = get_user_model()
     form_class = UserProfileUpdateForm
     template_name = "users/profile.html"
