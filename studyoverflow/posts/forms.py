@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from posts.models import MAX_NAME_SLUG_LENGTH_TAG, MAX_TITLE_SLUG_LENGTH_POST, Post
+from posts.models import MAX_NAME_SLUG_LENGTH_TAG, MAX_TITLE_SLUG_LENGTH_POST, Comment, Post
 from taggit.forms import TagWidget
 
 
@@ -47,3 +47,15 @@ class PostCreateForm(forms.ModelForm):
                 )
 
         return tags_list
+
+
+class CommentCreateForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ["content"]
+        labels = {"content": "Комментарий (поддерживается синтаксис Markdown)"}
+        widgets = {
+            "content": forms.Textarea(
+                attrs={"class": "form-control", "placeholder": "Комментарий...", "rows": 5}
+            ),
+        }
