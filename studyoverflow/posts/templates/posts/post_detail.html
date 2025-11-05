@@ -15,15 +15,17 @@
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_base.css' %}">
 
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_detail.css' %}">
+
+  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/comment_card.css' %}">
 {% endblock %}
 
 
 {% block content %}
 
   <main class="container px-4 px-lg-0 my-4">
-    <div class="row g-4">
+    <div class="row mt-4 mx-0">
 
-      <div class="card text-white rounded shadow-sm px-4">
+      <div class="card text-white rounded shadow-sm px-4 mb-4">
         <div class="card-body px-0">
 
         <!-- Автор и время публикации -->
@@ -39,7 +41,7 @@
                class="rounded-circle">
 
           <div>
-            <a id="username" href="" class="author-name d-block mb-1">{{ post.author.username }}</a>
+            <a id="username" href="" class="author-name d-inline-block mb-1">{{ post.author.username }}</a>
 
             <div id="time_create-time_update" class="text-secondary">
               Опубликовано: {{ post.time_create|date:"d.m.Y г. H:i" }}
@@ -67,12 +69,84 @@
             {% endfor %}
           </div>
 
-          <div class="d-flex justify-content-between mt-5 mb-2">
-            <a href="{% url 'posts:edit' post.pk post.slug %}" class="btn btn-outline-warning">Редактировать</a>
-            <button type="button" class="btn btn-outline-danger">Удалить</button>
+          <div class="d-flex justify-content-between mt-2rem mb-1">
+            {% if post.author == user %}
+              <a href="{% url 'posts:edit' post.pk post.slug %}" class="btn btn-outline-warning">Редактировать</a>
+              <button type="button" class="btn btn-outline-danger">Удалить</button>
+            {% else %}
+              <button id="show-comment-form" type="button" class="btn btn-outline-light btn-sm">
+                Комментировать
+              </button>
+            {% endif %}
           </div>
 
         </div>
+      </div>
+
+      <!-- Форма комментария поста -->
+      <div id="comment-form-container" style="display: none;" class="w-100 mb-4 px-0">
+        <form method="POST" action="{% url 'posts:comment_create' post.pk post.slug %}">
+          {% csrf_token %}
+
+          <div class="mb-2 px-2 text-white">
+            <h5>{{ comment_form.content.label }}</h5>
+          </div>
+
+          <div class="mb-2">
+            {{ comment_form.content }}
+
+            <!-- Ошибки поля content -->
+            {% if comment_form.content.errors %}
+              <div class="text-danger fs-6">
+                {% for err in comment_form.content.errors %}
+                  <div class="mt-1">
+                    {{ err }}
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Ошибки формы, не связанные с полями -->
+          <div class="text-danger fs-6 mb-3">
+            {% for error in comment_form.non_field_errors %}
+              {{ error }}<br>
+            {% endfor %}
+          </div>
+
+          <div class="d-flex justify-content-between mt-3 px-2">
+            <button type="submit" class="btn btn-outline-warning btn-sm">Отправить</button>
+            <button type="button" id="cancel-comment" class="btn btn-outline-light btn-sm px-4">Скрыть</button>
+          </div>
+
+        </form>
+      </div>
+
+      <div class="text-white mb-2 px-2">
+        {% if post.comments.all.exists %}
+          <h4>Комментарии:</h4>
+        {% else %}
+          <span style="font-size: 1.2rem">Комментариев нет.
+            {% if post.author != user %}
+              Вы можете оставить первый!
+            {% endif %}
+          </span>
+        {% endif %}
+      </div>
+
+      <div class="d-flex flex-column px-0" style="gap: 1.5rem;">
+        {% with post.comments.all as root_comments %}
+          {% for root_comment in root_comments %}
+            {% include 'posts/comment_card.html' with comment=root_comment %}
+
+            {% for children_comment in root_comment.child_comments.all %}
+              <div class="ms-6">
+                {% include 'posts/comment_card.html' with comment=children_comment %}
+              </div>
+            {% endfor %}
+
+          {% endfor %}
+        {% endwith %}
       </div>
 
     </div>
@@ -84,6 +158,8 @@
 {% block extra_js %}
   <!-- Подключение JS-скрипта highlight.js для подсветки синтаксиса кода -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <script src="{% static 'posts/js/post_detail.js' %}"></script>
 
   <!-- Запуск highlight.js -->
   <script src="{% static 'posts/js/highlight_run.js' %}"></script>
