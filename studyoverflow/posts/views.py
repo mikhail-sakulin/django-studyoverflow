@@ -1,5 +1,8 @@
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import redirect
+from django.db.models import Prefetch
+from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from posts.forms import CommentCreateForm, PostCreateForm
@@ -42,31 +45,53 @@ class PostDetailView(DetailView):
         return context
 
     def get_queryset(self):
-        return Post.objects.prefetch_related("comments", "comments__child_comments")
+        return Post.objects.prefetch_related(
+            Prefetch(
+                "comments",
+                queryset=Comment.objects.roots().prefetch_related(
+                    Prefetch("child_comments", queryset=Comment.objects.order_by("time_create"))
+                ),
+            )
+        )
 
-    def post(self, request, *args, **kwargs):
-        # Получение объекта (post) на основе pk или slug
-        self.object = self.get_object()
-        form = CommentCreateForm(request.POST)
-        if form.is_valid():
-            comment = form.save(commit=False)
-            comment.post = self.object
-            comment.author = request.user
 
-            # Связь с родительским комментарием, если он есть
-            parent_id = form.cleaned_data.get("parent_comment")
-            if parent_id:
-                try:
-                    comment.parent_comment = Comment.objects.get(id=parent_id)
-                except Comment.DoesNotExist:
-                    # Если родительский комментарий не найден, то остается None
-                    pass
+class CommentCreateView(LoginRequiredMixin, CreateView):
+    model = Comment
+    form_class = CommentCreateForm
 
-            comment.save()
-            return redirect(self.object.get_absolute_url())
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        post_id = self.kwargs.get("post_pk")
+        kwargs["post"] = get_object_or_404(Post, id=post_id)
+        return kwargs
 
-        context = self.get_context_data(comment_form=form)
-        return self.render_to_response(context)
+    def form_valid(self, form):
+        form.instance.post = form.post
+        form.instance.author = self.request.user
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        # Ошибки формы в messages, если они имеются
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages.error(self.request, f'Ошибка в "{form.fields[field].label}": {error}')
+
+        # Редирект обратно на страницу поста
+        return self._redirect_to_post_detail()
+
+    def get_success_url(self):
+        return self.object.post.get_absolute_url()
+
+    def get(self, request, *args, **kwargs):
+        return self._redirect_to_post_detail()
+
+    def _redirect_to_post_detail(self):
+        """
+        Редирект на страницу поста.
+        """
+        post = get_object_or_404(Post, id=self.kwargs.get("post_pk"))
+        return HttpResponseRedirect(post.get_absolute_url())
 
 
 class PostUpdateView(PostTagMixin, UpdateView):
