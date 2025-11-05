@@ -24,9 +24,29 @@
 
 #username {
     margin-top: -0.7rem;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
 }
 
 #time_create-time_update {
     font-size: 1rem
+}
+
+.mt-2rem {
+    margin-top: 2rem;
+}
+
+.mt-1_2rem {
+    margin-top: 1.2rem;
+}
+
+#id_content {
+    background-color: #0d1117;
+    color: white;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.ms-6 {
+    margin-left: 4rem;
 }

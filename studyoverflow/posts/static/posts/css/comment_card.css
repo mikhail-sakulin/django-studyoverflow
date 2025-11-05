@@ -1,0 +1,33 @@
+.content-comment {
+    font-size: 1rem;
+    max-height: 200px;
+    overflow: hidden;
+    position: relative;
+}
+
+.content-comment.overflow::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3rem;
+    background: linear-gradient(transparent, #202023);
+}
+
+#avatar-comment {
+    margin-right: 0.7rem;
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    image-rendering: pixelated;
+}
+
+.username-comment {
+    margin-top: -0.25rem;
+    font-size: 1.1rem;
+}
+
+#time_create-time_update-comment {
+    font-size: 0.94rem
+}
