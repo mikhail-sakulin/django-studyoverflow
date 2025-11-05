@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "users.apps.UsersConfig",
     "django_extensions",
     "storages",
+    "widget_tweaks",
 ]
 
 MIDDLEWARE = [
@@ -145,7 +146,7 @@ LOGIN_URL = "/users/login/"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "home"
 
-MESSAGE_TAGS = {messages.SUCCESS: "success", messages.INFO: "info"}
+MESSAGE_TAGS = {messages.SUCCESS: "success", messages.INFO: "info", messages.ERROR: "danger"}
 
 # Конфигурация STORAGES
 STORAGES = {
