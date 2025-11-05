@@ -22,8 +22,8 @@
 {% block content %}
 
   <!-- Карточки с постами -->
-  <main class="container px-4 px-lg-0 my-4">
-    <div class="row g-4">
+  <main class="container px-4 px-lg-2 my-4">
+    <div class="row g-4 mx-0">
       {% for post in posts %}
         {% include 'posts/post_card.html' %}
       {% endfor %}
