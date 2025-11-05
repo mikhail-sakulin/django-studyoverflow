@@ -63,7 +63,7 @@
                     </p>
 
                     <div class="row small mt-2">
-                      <div class="col-4 mb-1">
+                      <div class="col-5 mb-1">
                         <span class="fw-bold d-block">Дата рождения:</span>
                         <span class="text-white-secondary">
                           {% if user.date_birth %}
@@ -74,7 +74,7 @@
                         </span>
                       </div>
 
-                      <div class="col-4 mb-1">
+                      <div class="col-5 mb-1">
                         <span class="fw-bold d-block">На сайте с:</span>
                         <span class="text-white-secondary">
                           {{ user.date_joined|date:"Y.m.d" }}
@@ -113,7 +113,7 @@
               </div>
               <div class="col-4">
                 <p class="mb-0 text-white">Оставлено ответов</p>
-                <h6 class="fw-bold text-primary">{{ user.answers_count }}</h6>
+                <h6 class="fw-bold text-primary">{{ user.comments_count }}</h6>
               </div>
             </div>
 
