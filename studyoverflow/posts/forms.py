@@ -52,10 +52,37 @@ class PostCreateForm(forms.ModelForm):
 class CommentCreateForm(forms.ModelForm):
     class Meta:
         model = Comment
-        fields = ["content"]
+        fields = ["content", "parent_comment", "reply_to"]
         labels = {"content": "Комментарий (поддерживается синтаксис Markdown)"}
         widgets = {
             "content": forms.Textarea(
                 attrs={"class": "form-control", "placeholder": "Комментарий...", "rows": 5}
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop("user", None)
+        self.post = kwargs.pop("post", None)
+        super().__init__(*args, **kwargs)
+
+    def clean_parent_comment(self):
+        parent_comment = self.cleaned_data["parent_comment"]
+        if parent_comment:
+            post = self.post
+            if parent_comment.post != post:
+                raise ValidationError(
+                    "Указанный родительский комментарий не принадлежит этому посту."
+                )
+        return parent_comment
+
+    def clean_reply_to(self):
+        reply_to = self.cleaned_data["reply_to"]
+        parent_comment = self.cleaned_data["parent_comment"]
+        if reply_to and parent_comment:
+            if reply_to.post != self.post:
+                raise ValidationError("Комментарий для ответа не принадлежит этому посту.")
+
+            if reply_to.parent_comment is not None and reply_to.parent_comment != parent_comment:
+                raise ValidationError("Указан неверный комментарий для ответа.")
+
+        return reply_to
