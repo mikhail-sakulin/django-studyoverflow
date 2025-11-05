@@ -131,7 +131,17 @@ class Post(models.Model):
         return reverse("posts:detail", kwargs={"pk": self.pk, "slug": self.slug})
 
 
+class CommentQuerySet(models.QuerySet):
+    def roots(self):
+        return self.filter(parent_comment__isnull=True)
+
+    def children(self):
+        return self.filter(parent_comment__isnull=False)
+
+
 class Comment(models.Model):
+    objects = CommentQuerySet.as_manager()
+
     post = models.ForeignKey(
         Post, on_delete=models.CASCADE, related_name="comments", verbose_name="Пост"
     )
@@ -145,6 +155,14 @@ class Comment(models.Model):
         blank=True,
         related_name="child_comments",
         verbose_name="Родительский комментарий",
+    )
+    reply_to = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="replies",
+        verbose_name="Ответ на комментарий",
     )
     content = models.TextField(max_length=5000, verbose_name="Текст комментария")
 
@@ -162,3 +180,10 @@ class Comment(models.Model):
     @property
     def has_parent_comment(self):
         return self.parent_comment is not None
+
+    @property
+    def is_edited(self):
+        """
+        Вычисляемое свойство. Определяет факт редактирования комментария.
+        """
+        return (self.time_update - self.time_create).total_seconds() > 5
