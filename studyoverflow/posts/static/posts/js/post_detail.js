@@ -2,6 +2,7 @@
     JS-скрипт для:
     - отображения и скрытия формы добавления комментария,
     - обработки кнопок "Отмена" для закрытия форм
+    - управления формами редактирования комментариев
 */
 
 
@@ -30,7 +31,6 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // Обработка кнопок "Ответить" у комментариев
-
     const replyButtons = document.querySelectorAll(".reply-btn");
     const cancelReplyButtons = document.querySelectorAll(".cancel-reply-btn");
 
@@ -51,7 +51,34 @@ document.addEventListener("DOMContentLoaded", function() {
             const form = document.getElementById(`reply-form-${commentId}`);
             form.style.display = "none";
             const replyBtn = document.querySelector(`.reply-btn[data-comment-id="${commentId}"]`);
-            replyBtn.disabled = false;
+            if (replyBtn) replyBtn.disabled = false;
+        });
+    });
+
+    // Получение ссылок на кнопки "Редактировать" и "Отмена"
+    const editButtons = document.querySelectorAll(".edit-comment-btn");
+    const cancelEditButtons = document.querySelectorAll(".cancel-edit-btn");
+
+    // Показ формы редактирования
+    editButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const commentId = btn.getAttribute("data-comment-id");
+            const editForm = document.getElementById(`edit-form-${commentId}`);
+
+            editForm.style.display = "block";
+            btn.disabled = true;
+        });
+    });
+
+    // Скрытие формы редактирования
+    cancelEditButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const commentId = btn.getAttribute("data-comment-id");
+            const editForm = document.getElementById(`edit-form-${commentId}`);
+            const editBtn = document.querySelector(`.edit-comment-btn[data-comment-id="${commentId}"]`);
+
+            editForm.style.display = "none";
+            if (editBtn) editBtn.disabled = false;
         });
     });
 });
