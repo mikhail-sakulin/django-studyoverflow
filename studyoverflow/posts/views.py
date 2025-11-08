@@ -1,7 +1,9 @@
+from typing import Any
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch
-from django.http import HttpResponseRedirect
+from django.http import HttpRequest, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
@@ -55,9 +57,26 @@ class PostDetailView(DetailView):
         )
 
 
-class CommentCreateView(LoginRequiredMixin, CreateView):
+class PostUpdateView(PostTagMixin, UpdateView):
+    model = Post
+    form_class = PostCreateForm
+    template_name = "posts/post_edit.html"
+    context_object_name = "post"
+
+
+class CommentBaseView(LoginRequiredMixin):
     model = Comment
     form_class = CommentCreateForm
+
+    kwargs: dict[str, Any]
+    request: HttpRequest
+
+    def _redirect_to_post_detail(self):
+        """
+        Редирект на страницу поста.
+        """
+        post = get_object_or_404(Post, id=self.kwargs.get("post_pk"))
+        return HttpResponseRedirect(post.get_absolute_url())
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -65,11 +84,6 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         post_id = self.kwargs.get("post_pk")
         kwargs["post"] = get_object_or_404(Post, id=post_id)
         return kwargs
-
-    def form_valid(self, form):
-        form.instance.post = form.post
-        form.instance.author = self.request.user
-        return super().form_valid(form)
 
     def form_invalid(self, form):
         # Ошибки формы в messages, если они имеются
@@ -80,22 +94,22 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         # Редирект обратно на страницу поста
         return self._redirect_to_post_detail()
 
-    def get_success_url(self):
-        return self.object.post.get_absolute_url()
-
     def get(self, request, *args, **kwargs):
         return self._redirect_to_post_detail()
 
-    def _redirect_to_post_detail(self):
-        """
-        Редирект на страницу поста.
-        """
-        post = get_object_or_404(Post, id=self.kwargs.get("post_pk"))
-        return HttpResponseRedirect(post.get_absolute_url())
+    def get_success_url(self):
+        return self.object.post.get_absolute_url()
 
 
-class PostUpdateView(PostTagMixin, UpdateView):
-    model = Post
-    form_class = PostCreateForm
-    template_name = "posts/post_edit.html"
-    context_object_name = "post"
+class CommentCreateView(CommentBaseView, CreateView):
+    model = Comment
+    form_class = CommentCreateForm
+
+    def form_valid(self, form):
+        form.instance.post = form.post
+        form.instance.author = self.request.user
+        return super().form_valid(form)
+
+
+class CommentUpdateView(CommentBaseView, UpdateView):
+    pk_url_kwarg = "comment_pk"
