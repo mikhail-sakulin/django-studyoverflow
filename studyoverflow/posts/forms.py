@@ -65,24 +65,54 @@ class CommentCreateForm(forms.ModelForm):
         self.post = kwargs.pop("post", None)
         super().__init__(*args, **kwargs)
 
-    def clean_parent_comment(self):
-        parent_comment = self.cleaned_data["parent_comment"]
-        if parent_comment:
-            post = self.post
-            if parent_comment.post != post:
-                raise ValidationError(
-                    "Указанный родительский комментарий не принадлежит этому посту."
-                )
-        return parent_comment
+    def clean(self):
+        cleaned_data = super().clean()
+        parent_comment = cleaned_data.get("parent_comment")
+        reply_to = cleaned_data.get("reply_to")
 
-    def clean_reply_to(self):
-        reply_to = self.cleaned_data["reply_to"]
-        parent_comment = self.cleaned_data["parent_comment"]
-        if reply_to and parent_comment:
+        errors = {}
+
+        # Проверка принадлежности parent_comment посту
+        if parent_comment and parent_comment.post != self.post:
+            errors["parent_comment"] = ValidationError(
+                "Родительский комментарий не принадлежит этому посту."
+            )
+
+        # Проверка на комментирование своего поста
+        if self.user == self.post.author and not parent_comment:
+            errors["content"] = ValidationError(
+                "Вы не можете комментировать свой собственный пост."
+            )
+
+        # Проверка reply_to
+        if reply_to:
             if reply_to.post != self.post:
-                raise ValidationError("Комментарий для ответа не принадлежит этому посту.")
+                errors["reply_to"] = ValidationError(
+                    "Комментарий для ответа не принадлежит этому посту."
+                )
 
-            if reply_to.parent_comment is not None and reply_to.parent_comment != parent_comment:
-                raise ValidationError("Указан неверный комментарий для ответа.")
+            if self.user == reply_to.author:
+                errors["reply_to"] = ValidationError("Вы не можете отвечать на свой комментарий.")
 
-        return reply_to
+        if errors:
+            raise ValidationError(errors)
+
+        return cleaned_data
+
+
+class CommentUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ["content"]
+        widgets = {
+            "content": forms.Textarea(
+                attrs={"class": "form-control", "placeholder": "Комментарий...", "rows": 5}
+            ),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        content = cleaned_data.get("content")
+        if not content or not content.strip():
+            self.add_error("content", "Комментарий не может быть пустым.")
+        return cleaned_data
