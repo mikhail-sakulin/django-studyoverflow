@@ -1,6 +1,7 @@
 from typing import Final
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 from posts.services.domain import generate_slug
@@ -168,6 +169,44 @@ class Comment(models.Model):
 
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
+
+    def clean(self):
+        errors = {}
+
+        author = getattr(self, "author", None)
+        post = getattr(self, "post", None)
+
+        if not self.content or not self.content.strip():
+            errors["content"] = "Комментарий не может быть пустым."
+
+        if self.parent_comment:
+            if self.parent_comment == self:
+                errors["parent_comment"] = "Комментарий не может быть родителем сам себе."
+            elif post and self.parent_comment.post != post:
+                errors["parent_comment"] = "Родительский комментарий не принадлежит этому посту."
+
+        if author and post and not self.parent_comment and author == post.author:
+            errors["content"] = "Вы не можете комментировать свой пост."
+
+        if self.reply_to:
+            if (
+                self.parent_comment
+                and self.reply_to.parent_comment
+                and self.reply_to.parent_comment != self.parent_comment
+            ):
+                errors["reply_to"] = "Неверный комментарий для ответа."
+
+            elif self.reply_to == self:
+                errors["reply_to"] = "Комментарий не может отвечать сам себе."
+
+            elif post and self.reply_to.post != post:
+                errors["reply_to"] = "Комментарий для ответа не принадлежит этому посту."
+
+            elif author and author == self.reply_to.author:
+                errors["reply_to"] = "Вы не можете отвечать на свой комментарий."
+
+        if errors:
+            raise ValidationError(errors)
 
     class Meta:
         verbose_name = "Комментарий"
