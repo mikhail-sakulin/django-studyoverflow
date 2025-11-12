@@ -2,9 +2,12 @@
 Модуль содержит инфраструктурную логику приложения posts.
 """
 
-from typing import Generic, Protocol, TypeVar
+from typing import Any, Generic, Protocol, TypeVar
 
-from posts.models import LowercaseTag
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import Http404, HttpResponse
+from django.shortcuts import get_object_or_404, redirect
+from posts.models import LowercaseTag, Post
 
 
 class PostTagMixinProtocol(Protocol):
@@ -42,3 +45,41 @@ class PostTagMixin(Generic[T_Parent]):
         context = super().get_context_data(**kwargs)  # type: ignore
         context["all_tags"] = LowercaseTag.objects.all().order_by("name")
         return context
+
+
+class CommentGetMethodMixin:
+    kwargs: dict[str, Any]
+
+    def get(self, request, *args, **kwargs):
+        post_id = self.kwargs.get("post_pk")
+        post = get_object_or_404(Post, id=post_id)
+        return redirect("posts:detail", pk=post.pk, slug=post.slug)
+
+
+class LoginRequiredHTMXMixin(LoginRequiredMixin):
+    """
+    Расширение LoginRequiredMixin, чтобы HTMX делал редирект на страницу логина.
+    """
+
+    def handle_no_permission(self):
+        if self.request.headers.get("Hx-Request"):
+            return HttpResponse(
+                headers={"HX-Redirect": f"{self.get_login_url()}?next={self.request.path}"}
+            )
+        return super().handle_no_permission()
+
+
+class HTMXHandle404Mixin:
+    """
+    Обрабатывает Http404 для HTMX-запросов, чтобы не выбрасывать ошибку,
+    а триггерить обновление комментариев.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            return super().dispatch(request, *args, **kwargs)  # type: ignore
+        except Http404:
+            if request.headers.get("Hx-Request"):
+                response = HttpResponse(headers={"HX-Trigger": "commentsUpdated"})
+                return response
+            raise
