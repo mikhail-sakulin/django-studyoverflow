@@ -1,84 +1,131 @@
 /*
-    JS-скрипт для:
-    - отображения и скрытия формы добавления комментария,
-    - обработки кнопок "Отмена" для закрытия форм
-    - управления формами редактирования комментариев
+    JS-скрипт для управления комментариями:
+    - Показ/скрытие формы комментария (root)
+    - Показ/скрытие формы ответа (reply)
+    - Показ/скрытие формы редактирования (edit)
+    - Делегирование событий клика для кнопок управления комментариями
+    - Обработка кастомных событий HTMX для успешной отправки/ошибок форм
+    - Перезагрузка страницы по кастомному событию
 */
 
 
-// Ожидание полной загрузки DOM-дерева
 document.addEventListener("DOMContentLoaded", function() {
-
-    // Получение ссылок на основные элементы управления формой комментария
-    const showBtn = document.getElementById("show-comment-form");
-    const formContainer = document.getElementById("comment-form-container");
-    const cancelBtn = document.getElementById("cancel-comment");
-
-    // Проверка существования всех элементов на странице
-    if (showBtn && formContainer && cancelBtn) {
-
-        // Показ формы добавления комментария
-        showBtn.addEventListener("click", () => {
-            formContainer.style.display = "block";
-            showBtn.disabled = true;
-        });
-
-        // Скрытие формы комментария при нажатии "Отмена"
-        cancelBtn.addEventListener("click", () => {
-          formContainer.style.display = "none";
-          showBtn.disabled = false;
-        });
+    // Показ формы и блокировка кнопки
+    function showForm(containerId, toggleBtn) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.style.display = "block";
+        if (toggleBtn) toggleBtn.disabled = true;
     }
 
-    // Обработка кнопок "Ответить" у комментариев
-    const replyButtons = document.querySelectorAll(".reply-btn");
-    const cancelReplyButtons = document.querySelectorAll(".cancel-reply-btn");
+    // Скрытие формы и разблокировка кнопки
+    function hideForm(containerId, toggleBtn) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.style.display = "none";
+        if (toggleBtn) toggleBtn.disabled = false;
+    }
 
-    // Показ формы ответа на конкретный комментарий и блокировка кнопки "Ответить"
-    replyButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-            const commentId = btn.getAttribute("data-comment-id");
-            const form = document.getElementById(`reply-form-${commentId}`);
-            form.style.display = "block";
-            btn.disabled = true;
-        });
-    });
+    // --- Делегирование кликов по всему телу документа ---
+    document.body.addEventListener("click", function(event) {
+        const target = event.target;
 
-     // Скрытие формы ответа и разблокировка кнопки "Ответить"
-    cancelReplyButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-            const commentId = btn.getAttribute("data-comment-id");
-            const form = document.getElementById(`reply-form-${commentId}`);
-            form.style.display = "none";
-            const replyBtn = document.querySelector(`.reply-btn[data-comment-id="${commentId}"]`);
-            if (replyBtn) replyBtn.disabled = false;
-        });
-    });
+        // Root форма: показать
+        if (target.id === "show-comment-form") {
+            showForm("comment-form-container", target);
+            return;
+        }
 
-    // Получение ссылок на кнопки "Редактировать" и "Отмена"
-    const editButtons = document.querySelectorAll(".edit-comment-btn");
-    const cancelEditButtons = document.querySelectorAll(".cancel-edit-btn");
+        // Root форма: скрыть
+        if (target.id === "cancel-comment") {
+            hideForm("comment-form-container", document.getElementById("show-comment-form"));
+            return;
+        }
 
-    // Показ формы редактирования
-    editButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-            const commentId = btn.getAttribute("data-comment-id");
-            const editForm = document.getElementById(`edit-form-${commentId}`);
+        // Reply форма: показать
+        const replyBtn = target.closest(".reply-btn");
+        if (replyBtn) {
+            const commentId = replyBtn.dataset.commentId.trim();
+            showForm(`reply-form-${commentId}`, replyBtn);
+            return;
+        }
 
-            editForm.style.display = "block";
-            btn.disabled = true;
-        });
-    });
+        // Reply форма: скрыть
+        const cancelReplyBtn = target.closest(".cancel-reply-btn");
+        if (cancelReplyBtn) {
+            const commentId = cancelReplyBtn.dataset.commentId.trim();
+            hideForm(`reply-form-${commentId}`, document.querySelector(`.reply-btn[data-comment-id="${commentId}"]`));
+            return;
+        }
 
-    // Скрытие формы редактирования
-    cancelEditButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-            const commentId = btn.getAttribute("data-comment-id");
-            const editForm = document.getElementById(`edit-form-${commentId}`);
+        // Edit форма: показать
+        const editBtn = target.closest(".edit-comment-btn");
+        if (editBtn) {
+            const commentId = editBtn.dataset.commentId.trim();
+            const editContainer = document.getElementById(`edit-form-${commentId}`);
+            if (!editContainer) return;
+            editContainer.style.display = "block";
+            editBtn.disabled = true;
+            return;
+        }
+
+        // Edit форма: скрыть
+        const cancelEditBtn = target.closest(".cancel-edit-btn");
+        if (cancelEditBtn) {
+            const commentId = cancelEditBtn.dataset.commentId.trim();
+            const editContainer = document.getElementById(`edit-form-${commentId}`);
+            if (!editContainer) return;
+            editContainer.style.display = "none";
             const editBtn = document.querySelector(`.edit-comment-btn[data-comment-id="${commentId}"]`);
-
-            editForm.style.display = "none";
             if (editBtn) editBtn.disabled = false;
-        });
+            return;
+        }
+    });
+
+    // --- HTMX события ---
+    document.body.addEventListener("htmx:afterSwap", function(event) {
+        const swappedEl = event.target;
+
+        // Если обновилась root форма, оставить её открытой
+        if (swappedEl.id === "comment-form-container") {
+            showForm("comment-form-container", document.getElementById("show-comment-form"));
+        }
+    });
+
+    // --- Кастомные события root формы ---
+    document.body.addEventListener("commentRootFormSuccess", function() {
+        hideForm("comment-form-container", document.getElementById("show-comment-form"));
+    });
+
+    document.body.addEventListener("commentRootFormError", function() {
+        showForm("comment-form-container", document.getElementById("show-comment-form"));
+    });
+
+    // --- Кастомные события reply формы ---
+    document.body.addEventListener("commentChildFormSuccess", function(event) {
+        const commentId = event.detail?.commentId;
+        if (!commentId) return;
+        hideForm(`reply-form-${commentId}`, document.querySelector(`.reply-btn[data-comment-id="${commentId}"]`));
+    });
+
+    document.body.addEventListener("commentChildFormError", function(event) {
+        const commentId = event.detail?.commentId;
+        if (!commentId) return;
+        showForm(`reply-form-${commentId}`, document.querySelector(`.reply-btn[data-comment-id="${commentId}"]`));
+    });
+
+    // --- Кастомное событие перезагрузки страницы ---
+    document.body.addEventListener('reloadPage', function() {
+        window.location.reload();
+    });
+
+    // --- Кастомное событие ошибки при редактировании комментария ---
+    document.body.addEventListener("commentUpdateError", function(event) {
+        const commentId = event.detail?.commentId;
+        if (!commentId) return;
+        const editContainer = document.getElementById(`edit-form-${commentId}`);
+        const editBtn = document.querySelector(`.edit-comment-btn[data-comment-id="${commentId}"]`);
+        if (editContainer) editContainer.style.display = "block";
+        if (editBtn) editBtn.disabled = true;
     });
 });
