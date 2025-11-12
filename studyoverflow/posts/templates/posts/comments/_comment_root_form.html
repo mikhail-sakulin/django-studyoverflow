@@ -1,0 +1,24 @@
+<form id="root-comment-form"
+      method="POST"
+      action="{% url 'posts:comment_root_create' post.pk post.slug %}"
+      hx-post="{% url 'posts:comment_root_create' post.pk post.slug %}"
+      hx-swap="outerHTML"
+      hx-indicator="#loading-indicator">
+  {% csrf_token %}
+
+  <div class="mb-2 px-2 text-white">
+    <h5>{{ comment_form.content.label }}</h5>
+  </div>
+
+  <div class="mb-2">
+    {{ comment_form.content }}
+  </div>
+
+  {% include 'posts/comments/_comment_base_form_errors.html' %}
+
+  <div class="d-flex justify-content-between mt-3 px-2">
+    <button type="submit" class="btn btn-outline-warning btn-sm">Отправить</button>
+    <button type="button" id="cancel-comment" class="btn btn-outline-light btn-sm px-4">Скрыть</button>
+  </div>
+
+</form>

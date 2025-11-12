@@ -1,0 +1,25 @@
+<form method="POST"
+      action="{% url 'posts:comment_update' comment.post.pk comment.post.slug comment.pk %}"
+      hx-post="{% url 'posts:comment_update' comment.post.pk comment.post.slug comment.pk %}"
+      hx-target="#comment-card-{{ comment.id }}"
+      hx-swap="outerHTML"
+      hx-indicator="#loading-indicator">
+  {% csrf_token %}
+
+  <div class="mb-2">
+    <textarea id="id_content"
+              name="content"
+              class="form-control"
+              rows="5"
+              placeholder="Редактировать комментарий...">{{ comment_form.content.value|default:comment.content }}</textarea>
+  </div>
+
+  {% include 'posts/comments/_comment_base_form_errors.html' %}
+
+  <div class="d-flex justify-content-between mt-3">
+    <button type="submit" class="btn btn-outline-warning btn-sm">Сохранить</button>
+    <button type="button" class="btn btn-outline-light btn-sm cancel-edit-btn px-3" data-comment-id="{{ comment.id }}">
+      Скрыть
+    </button>
+  </div>
+</form>

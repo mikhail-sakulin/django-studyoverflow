@@ -1,0 +1,19 @@
+<!-- Ошибки полей -->
+{% if comment_form.errors %}
+  <div class="text-danger fs-6">
+    {% for field_name, errors in comment_form.errors.items %}
+      {% for err in errors %}
+        <div class="mt-1">
+          {{ field_name }}: {{ err }}
+        </div>
+      {% endfor %}
+    {% endfor %}
+  </div>
+{% endif %}
+
+<!-- Ошибки формы, не связанные с полями -->
+<div class="text-danger fs-6 mb-3">
+  {% for error in comment_form.non_field_errors %}
+    {{ error }}<br>
+  {% endfor %}
+</div>
