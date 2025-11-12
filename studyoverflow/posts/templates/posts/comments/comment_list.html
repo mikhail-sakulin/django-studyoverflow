@@ -1,0 +1,26 @@
+<div class="text-white mb-2 px-2">
+  {% if post.comments.all.exists %}
+    <h4>Комментарии:</h4>
+  {% else %}
+    <span style="font-size: 1.2rem">Комментариев нет.
+      {% if post.author != user %}
+        Вы можете оставить первый!
+      {% endif %}
+    </span>
+  {% endif %}
+</div>
+
+<div id="comments-section" class="d-flex flex-column px-0" style="gap: 1.5rem;">
+  {% for root_comment in root_comments %}
+    <div id="comment-wrapper-{{ root_comment.id }}">
+      {% include 'posts/comments/_comment_card.html' with comment=root_comment %}
+    </div>
+
+    {% for child in root_comment.child_comments.all %}
+      <div id="comment-wrapper-{{ child.id }}" class="ms-6">
+        {% include 'posts/comments/_comment_card.html' with comment=child %}
+      </div>
+    {% endfor %}
+
+  {% endfor %}
+</div>
