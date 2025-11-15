@@ -36,4 +36,9 @@ urlpatterns = [
         views.CommentDeleteView.as_view(),
         name="comment_delete",
     ),
+    path(
+        "<int:post_pk>/<slug:post_slug>/likes/",
+        views.ToggleLikePostView.as_view(),
+        name="toggle_like_post",
+    ),
 ]
