@@ -16,13 +16,15 @@
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_card.css' %}">
 
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_list.css' %}">
+
+  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/like_button.css' %}">
 {% endblock %}
 
 
 {% block content %}
 
   <!-- Карточки с постами -->
-  <main class="container px-4 px-lg-2 my-4">
+  <main class="container px-4 px-lg-2 my-4" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <div class="row g-4 mx-0">
       {% for post in posts %}
         {% include 'posts/post_card.html' %}
@@ -100,6 +102,8 @@
 
   <!-- Запуск highlight.js -->
   <script src="{% static 'posts/js/highlight_run.js' %}"></script>
+
+  <script src="https://unpkg.com/htmx.org@2.0.7"></script>
 
   <!-- Подключение js-скрипта для эффекта затемнения для content, если не помещается по высоте -->
   <script src="{% static 'posts/js/overflow_gradient.js' %}"></script>
