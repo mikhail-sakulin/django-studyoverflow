@@ -5,6 +5,7 @@ from django.db.models import Prefetch
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from posts.forms import CommentCreateForm, CommentUpdateForm, PostCreateForm
 from posts.models import Comment, Post
@@ -12,11 +13,12 @@ from posts.services.infrastructure import (
     CommentGetMethodMixin,
     HTMXHandle404Mixin,
     LoginRequiredHTMXMixin,
+    PostQuerysetMixin,
     PostTagMixin,
 )
 
 
-class PostListView(ListView):
+class PostListView(PostQuerysetMixin, ListView):
     model = Post
     template_name = "posts/post_list.html"
     context_object_name = "posts"
@@ -39,7 +41,7 @@ class PostCreateView(PostTagMixin, LoginRequiredHTMXMixin, CreateView):
         return context
 
 
-class PostDetailView(DetailView):
+class PostDetailView(PostQuerysetMixin, DetailView):
     model = Post
     template_name = "posts/post_detail.html"
     context_object_name = "post"
@@ -220,3 +222,21 @@ class CommentDeleteView(
         self.object = self.get_object()
         self.object.delete()
         return HttpResponse(headers={"HX-Trigger": "commentsUpdated"})
+
+
+class ToggleLikePostView(LoginRequiredHTMXMixin, View):
+    def post(self, request, *args, **kwargs):
+        post = get_object_or_404(Post, pk=kwargs["post_pk"])
+        like, created = post.likes.get_or_create(user=request.user)
+        if not created:
+            like.delete()
+
+        context = {
+            "post": post,
+            "likes_count": post.likes.count(),
+            "user_has_liked": created,
+        }
+
+        response = render(request, "posts/likes/_like-button.html", context)
+
+        return response
