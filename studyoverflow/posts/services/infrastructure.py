@@ -5,9 +5,11 @@
 from typing import Any, Generic, Protocol, TypeVar
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import Http404, HttpResponse
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import Count, Exists, OuterRef
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
-from posts.models import LowercaseTag, Post
+from posts.models import Like, LowercaseTag, Post
 
 
 class PostTagMixinProtocol(Protocol):
@@ -47,6 +49,30 @@ class PostTagMixin(Generic[T_Parent]):
         return context
 
 
+class PostQuerysetMixin:
+    model: type[Post]
+    request: HttpRequest
+
+    def get_queryset(self):  # type: ignore
+        queryset = (
+            self.model.objects.all()
+            .select_related("author")
+            .prefetch_related("tags", "likes")
+            .annotate(likes_count=Count("likes"))
+            .order_by("-time_create")
+        )
+        if self.request.user.is_authenticated:
+            content_type = ContentType.objects.get_for_model(self.model)
+            queryset = queryset.annotate(
+                user_has_liked=Exists(
+                    Like.objects.filter(
+                        content_type=content_type, object_id=OuterRef("pk"), user=self.request.user
+                    )
+                )
+            )
+        return queryset
+
+
 class CommentGetMethodMixin:
     kwargs: dict[str, Any]
 
@@ -63,9 +89,7 @@ class LoginRequiredHTMXMixin(LoginRequiredMixin):
 
     def handle_no_permission(self):
         if self.request.headers.get("Hx-Request"):
-            return HttpResponse(
-                headers={"HX-Redirect": f"{self.get_login_url()}?next={self.request.path}"}
-            )
+            return HttpResponse(headers={"HX-Redirect": f"{self.get_login_url()}"})
         return super().handle_no_permission()
 
 
