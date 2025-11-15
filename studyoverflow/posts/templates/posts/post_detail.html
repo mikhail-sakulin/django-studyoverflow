@@ -17,6 +17,8 @@
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_detail.css' %}">
 
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/comment_card.css' %}">
+
+  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/like_button.css' %}">
 {% endblock %}
 
 
@@ -68,15 +70,23 @@
             {% endfor %}
           </div>
 
-          <div class="d-flex justify-content-between mt-2rem mb-1">
-            {% if post.author == user %}
-              <a href="{% url 'posts:edit' post.pk post.slug %}" class="btn btn-outline-warning">Редактировать</a>
-              <button type="button" class="btn btn-outline-danger">Удалить</button>
-            {% else %}
-              <button id="show-comment-form" type="button" class="btn btn-outline-light btn-sm">
-                Комментировать
-              </button>
-            {% endif %}
+          <div class="d-flex justify-content-between align-items-center mt-2 mb-1">
+
+            {% with user_has_liked=post.user_has_liked likes_count=post.likes_count %}
+              {% include 'posts/likes/_like-button.html' %}
+            {% endwith %}
+
+              <div class="d-flex justify-content-end">
+                {% if post.author != user %}
+                  <button id="show-comment-form" type="button" class="btn btn-outline-light btn-sm">
+                    Комментировать
+                  </button>
+                {% else %}
+                  <a href="{% url 'posts:edit' post.pk post.slug %}" class="btn btn-outline-warning btn-sm me-3">Редактировать</a>
+                  <button type="button" class="btn btn-outline-danger btn-sm">Удалить</button>
+                {% endif %}
+              </div>
+
           </div>
 
         </div>
