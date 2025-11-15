@@ -46,3 +46,12 @@
 #time_create-time_update {
     font-size: 0.94rem
 }
+
+.more-link {
+    color: cornflowerblue !important;
+    text-decoration: none;
+}
+
+.more-link:hover {
+    color: #0a58ca !important;
+}
