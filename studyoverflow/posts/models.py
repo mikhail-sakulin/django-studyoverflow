@@ -1,6 +1,8 @@
 from typing import Final
 
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
@@ -91,6 +93,9 @@ class Post(models.Model):
     slug = models.SlugField(max_length=MAX_TITLE_SLUG_LENGTH_POST, verbose_name="Slug")
     content = models.TextField(blank=True, verbose_name="Содержимое поста")
     tags = TaggableManager(through=TaggedPost, verbose_name="Теги")
+    likes = GenericRelation(
+        "Like", content_type_field="content_type", object_id_field="object_id", verbose_name="Лайк"
+    )
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
@@ -166,7 +171,9 @@ class Comment(models.Model):
         verbose_name="Ответ на комментарий",
     )
     content = models.TextField(max_length=5000, verbose_name="Текст комментария")
-
+    likes = GenericRelation(
+        "Like", content_type_field="content_type", object_id_field="object_id", verbose_name="Лайк"
+    )
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
@@ -226,3 +233,37 @@ class Comment(models.Model):
         Вычисляемое свойство. Определяет факт редактирования комментария.
         """
         return (self.time_update - self.time_create).total_seconds() > 5
+
+
+class LikeManager(models.Manager):
+    def is_liked(self, user, obj):
+        ct = ContentType.objects.get_for_model(obj)
+        return self.filter(content_type=ct, object_id=obj.pk, user=user).exists()
+
+
+class Like(models.Model):
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name="likes",
+        verbose_name="Пользователь",
+    )
+
+    content_type = models.ForeignKey(
+        ContentType, on_delete=models.CASCADE, verbose_name="Тип объекта"
+    )
+    object_id = models.PositiveIntegerField(verbose_name="ID объекта")
+    content_object = GenericForeignKey("content_type", "object_id")
+
+    time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
+
+    objects = LikeManager()
+
+    class Meta:
+        unique_together = ("user", "content_type", "object_id")
+        ordering = ["-time_create"]
+        verbose_name = "Лайк"
+        verbose_name_plural = "Лайки"
+
+    def __str__(self):
+        return f"Like by {self.user} on {self.content_object}"
