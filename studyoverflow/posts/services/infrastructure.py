@@ -49,7 +49,45 @@ class PostTagMixin(Generic[T_Parent]):
         return context
 
 
-class PostQuerysetMixin:
+class LikeAnnotationsMixin:
+    like_model = None
+    like_related_field = "likes"
+    request: HttpRequest
+
+    def _get_content_type(self, model):
+        return ContentType.objects.get_for_model(model)
+
+    def annotate_queryset(self, queryset):
+        queryset = queryset.annotate(likes_count=Count(self.like_related_field))
+
+        user = getattr(self.request, "user", None)
+
+        if user and user.is_authenticated:
+            content_type = self._get_content_type(queryset.model)
+
+            queryset = queryset.annotate(
+                user_has_liked=Exists(
+                    Like.objects.filter(
+                        content_type=content_type, object_id=OuterRef("pk"), user=user
+                    )
+                )
+            )
+        else:
+            queryset = queryset.annotate(user_has_liked=Exists(Like.objects.none()))
+
+        return queryset
+
+    def annotate_object(self, obj):
+        queryset = self.annotate_queryset(obj.__class__.objects.filter(pk=obj.pk))
+        annotated = queryset.first()
+
+        obj.likes_count = annotated.likes_count
+        obj.user_has_liked = annotated.user_has_liked
+
+        return obj
+
+
+class PostQuerysetMixin(LikeAnnotationsMixin):
     model: type[Post]
     request: HttpRequest
 
@@ -57,19 +95,11 @@ class PostQuerysetMixin:
         queryset = (
             self.model.objects.all()
             .select_related("author")
-            .prefetch_related("tags", "likes")
+            .prefetch_related("tags")
             .annotate(likes_count=Count("likes"))
             .order_by("-time_create")
         )
-        if self.request.user.is_authenticated:
-            content_type = ContentType.objects.get_for_model(self.model)
-            queryset = queryset.annotate(
-                user_has_liked=Exists(
-                    Like.objects.filter(
-                        content_type=content_type, object_id=OuterRef("pk"), user=self.request.user
-                    )
-                )
-            )
+        queryset = self.annotate_queryset(queryset)
         return queryset
 
 
