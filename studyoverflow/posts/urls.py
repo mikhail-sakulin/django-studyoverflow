@@ -41,4 +41,9 @@ urlpatterns = [
         views.ToggleLikePostView.as_view(),
         name="toggle_like_post",
     ),
+    path(
+        "<int:post_pk>/<slug:post_slug>/comments/<int:comment_pk>/likes/",
+        views.ToggleLikeCommentView.as_view(),
+        name="toggle_like_comment",
+    ),
 ]
