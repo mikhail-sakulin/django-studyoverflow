@@ -26,6 +26,15 @@ document.addEventListener("DOMContentLoaded", function() {
         if (toggleBtn) toggleBtn.disabled = false;
     }
 
+    // --- Общая функция: ошибка редактирования комментария ---
+    function activateEditErrorState(commentId) {
+        const editContainer = document.getElementById(`edit-form-${commentId}`);
+        const editBtn = document.querySelector(`.edit-comment-btn[data-comment-id="${commentId}"]`);
+
+        if (editContainer) editContainer.style.display = "block";
+        if (editBtn) editBtn.disabled = true;
+    }
+
     // --- Делегирование кликов по всему телу документа ---
     document.body.addEventListener("click", function(event) {
         const target = event.target;
@@ -90,6 +99,18 @@ document.addEventListener("DOMContentLoaded", function() {
         if (swappedEl.id === "comment-form-container") {
             showForm("comment-form-container", document.getElementById("show-comment-form"));
         }
+
+         // --- Кастомное событие ошибки при обновлении комментария (после HTMX swap) ---
+        const triggers = event.detail.xhr?.getResponseHeader("HX-Trigger");
+        if (!triggers) return;
+
+        let parsed;
+        try { parsed = JSON.parse(triggers); } catch { return; }
+
+        if (parsed.commentUpdateError) {
+            const commentId = parsed.commentUpdateError.commentId;
+            activateEditErrorState(commentId);
+        }
     });
 
     // --- Кастомные события root формы ---
@@ -123,9 +144,6 @@ document.addEventListener("DOMContentLoaded", function() {
     document.body.addEventListener("commentUpdateError", function(event) {
         const commentId = event.detail?.commentId;
         if (!commentId) return;
-        const editContainer = document.getElementById(`edit-form-${commentId}`);
-        const editBtn = document.querySelector(`.edit-comment-btn[data-comment-id="${commentId}"]`);
-        if (editContainer) editContainer.style.display = "block";
-        if (editBtn) editBtn.disabled = true;
+        activateEditErrorState(commentId);
     });
 });
