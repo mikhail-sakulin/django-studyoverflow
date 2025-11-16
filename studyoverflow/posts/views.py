@@ -1,6 +1,7 @@
 import json
 
 from django.contrib import messages
+from django.db import models, transaction
 from django.db.models import Prefetch
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
@@ -12,6 +13,7 @@ from posts.models import Comment, Post
 from posts.services.infrastructure import (
     CommentGetMethodMixin,
     HTMXHandle404Mixin,
+    LikeAnnotationsMixin,
     LoginRequiredHTMXMixin,
     PostQuerysetMixin,
     PostTagMixin,
@@ -60,7 +62,7 @@ class PostUpdateView(LoginRequiredHTMXMixin, PostTagMixin, UpdateView):
     context_object_name = "post"
 
 
-class CommentListView(ListView):
+class CommentListView(LikeAnnotationsMixin, ListView):
     model = Comment
     template_name = "posts/comments/comment_list.html"
     context_object_name = "root_comments"
@@ -73,9 +75,21 @@ class CommentListView(ListView):
 
     def get_queryset(self):
         post = self._get_post_object()
-        return post.comments.roots().prefetch_related(
-            Prefetch("child_comments", queryset=Comment.objects.order_by("-time_create"))
+
+        child_queryset = self.annotate_queryset(
+            Comment.objects.select_related("author", "post").order_by("-time_create")
         )
+
+        queryset = (
+            post.comments.roots()
+            .select_related("author", "post")
+            .prefetch_related(Prefetch("child_comments", queryset=child_queryset))
+            .order_by("-time_create")
+        )
+
+        queryset = self.annotate_queryset(queryset)
+
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -179,12 +193,22 @@ class CommentChildCreateView(CommentRootCreateView):
 
 
 class CommentUpdateView(
-    LoginRequiredHTMXMixin, HTMXHandle404Mixin, CommentGetMethodMixin, UpdateView
+    LikeAnnotationsMixin,
+    LoginRequiredHTMXMixin,
+    HTMXHandle404Mixin,
+    CommentGetMethodMixin,
+    UpdateView,
 ):
     model = Comment
     form_class = CommentUpdateForm
     pk_url_kwarg = "comment_pk"
     template_name = "posts/comments/_comment_card.html"
+
+    def get_object(self, queryset=None):
+        queryset = queryset or self.model.objects.select_related("author", "post")
+        obj = super().get_object(queryset=queryset)
+        obj = self.annotate_object(obj)
+        return obj
 
     def get_context_data(self, form, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -224,19 +248,54 @@ class CommentDeleteView(
         return HttpResponse(headers={"HX-Trigger": "commentsUpdated"})
 
 
-class ToggleLikePostView(LoginRequiredHTMXMixin, View):
+class ToggleLikeBaseView(LoginRequiredHTMXMixin, View):
+    model: type[models.Model]
+    pk_url_kwarg: str = "pk"
+
+    def _get_toggle_like_url(self, liked_object):
+        return reverse_lazy("home")
+
     def post(self, request, *args, **kwargs):
-        post = get_object_or_404(Post, pk=kwargs["post_pk"])
-        like, created = post.likes.get_or_create(user=request.user)
-        if not created:
-            like.delete()
+        liked_object = get_object_or_404(self.model, pk=kwargs[self.pk_url_kwarg])
+
+        with transaction.atomic():
+            liked_object = self.model.objects.select_for_update().get(pk=kwargs[self.pk_url_kwarg])
+            like, created = liked_object.likes.get_or_create(user=request.user)
+            if not created:
+                like.delete()
 
         context = {
-            "post": post,
-            "likes_count": post.likes.count(),
+            "toggle_like_url": self._get_toggle_like_url(liked_object),
+            "liked_object": liked_object,
+            "likes_count": liked_object.likes.count(),
             "user_has_liked": created,
         }
 
         response = render(request, "posts/likes/_like-button.html", context)
 
         return response
+
+
+class ToggleLikePostView(ToggleLikeBaseView):
+    model = Post
+    pk_url_kwarg = "post_pk"
+
+    def _get_toggle_like_url(self, post):
+        return reverse_lazy(
+            "posts:toggle_like_post", kwargs={"post_pk": post.pk, "post_slug": post.slug}
+        )
+
+
+class ToggleLikeCommentView(ToggleLikeBaseView):
+    model = Comment
+    pk_url_kwarg = "comment_pk"
+
+    def _get_toggle_like_url(self, comment):
+        return reverse_lazy(
+            "posts:toggle_like_comment",
+            kwargs={
+                "post_pk": comment.post.pk,
+                "post_slug": comment.post.slug,
+                "comment_pk": comment.pk,
+            },
+        )
