@@ -1,15 +1,15 @@
 <button
     class="btn btn-outline-danger border-0 d-flex align-items-center like-button"
-    id="likes-button-{{ post.id }}"
-    hx-post="{% url 'posts:toggle_like_post' post.pk post.slug %}"
-    hx-target="#likes-button-{{ post.id }}"
+    id="likes-button-{{ liked_object.id }}"
+    hx-post="{{ toggle_like_url }}"
+    hx-target="#likes-button-{{ liked_object.id }}"
     hx-swap="outerHTML">
   <i id="i-like" class="{% if user_has_liked %}
               bi bi-heart-fill
             {% else %}
               bi bi-heart
             {% endif %} px-0"></i>
-  <span id="likes-count-{{ post.id }}" class="ms-2 fs-5">
+  <span id="likes-count-{{ liked_object.id }}" class="ms-2 fs-5">
     {{ likes_count }}
   </span>
 </button>

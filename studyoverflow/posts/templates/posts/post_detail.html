@@ -28,7 +28,7 @@
     <div class="row mt-4 mx-0">
 
       <div class="card text-white rounded shadow-sm px-4 mb-4">
-        <div class="card-body px-0">
+        <div class="card-body px-0 pb-2">
 
         <div class="d-flex align-items-center mb-2">
 
@@ -72,7 +72,9 @@
 
           <div class="d-flex justify-content-between align-items-center mt-2 mb-1">
 
-            {% with user_has_liked=post.user_has_liked likes_count=post.likes_count %}
+            {% url 'posts:toggle_like_post' post.pk post.slug as toggle_like_url %}
+
+            {% with liked_object=post user_has_liked=post.user_has_liked likes_count=post.likes_count toggle_like_url=toggle_like_url %}
               {% include 'posts/likes/_like-button.html' %}
             {% endwith %}
 
