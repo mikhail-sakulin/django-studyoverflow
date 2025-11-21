@@ -17,81 +17,32 @@
 
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_list.css' %}">
 
+  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/filters.css' %}">
+
+  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/tags.css' %}">
+
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/like_button.css' %}">
 {% endblock %}
 
 
 {% block content %}
 
-  <!-- Карточки с постами -->
-  <main class="container px-4 px-lg-2 my-4" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    <div class="row g-4 mx-0">
-      {% for post in posts %}
-        {% include 'posts/post_card.html' %}
-      {% endfor %}
-    </div>
-  </main>
+  {% include 'posts/_filters.html' %}
 
-  <!-- Пагинация -->
-  {% if page_obj.has_other_pages %}
-    <nav>
-      <ul class="pagination mb-4">
-
-        <li class="page-item {% if not page_obj.has_previous %} disabled {% endif %}">
-          <a class="page-link px-4" href="?page={{ 1 }}">
-            Первая
-          </a>
-        </li>
-
-        <li class="page-item {% if not page_obj.has_previous %} disabled {% endif %}">
-          <a class="page-link" href="?page={{ page_obj.number|add:-1 }}">
-            <span aria-hidden="true">«</span>
-          </a>
-        </li>
-
-        {% if page_obj.number|add:-2 > 0 %}
-          <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.number|add:-2 }}">{{ page_obj.number|add:-2 }}</a>
-          </li>
+    <!-- Карточки с постами -->
+    <main class="container px-4 px-lg-2 mb-4" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+      <div class="row g-4 mx-0">
+        {% if posts %}
+          {% for post in posts %}
+            {% include 'posts/post_card.html' %}
+          {% endfor %}
+        {% else %}
+          <h5 class="text-white text-center px-1 mt-5">Постов с заданными фильтрами не найдено.</h5>
         {% endif %}
+      </div>
+    </main>
 
-        {% if page_obj.number|add:-1 > 0 %}
-          <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.number|add:-1 }}">{{ page_obj.number|add:-1 }}</a>
-          </li>
-        {% endif %}
-
-        <li class="page-item active">
-          <a class="page-link" href="#">{{ page_obj.number }}</a>
-        </li>
-
-        {% if page_obj.number|add:1 <= page_obj.paginator.num_pages %}
-          <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.number|add:1 }}">{{ page_obj.number|add:1 }}</a>
-          </li>
-        {% endif %}
-
-        {% if page_obj.number|add:2 <= page_obj.paginator.num_pages %}
-          <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.number|add:2 }}">{{ page_obj.number|add:2 }}</a>
-          </li>
-        {% endif %}
-
-        <li class="page-item {% if not page_obj.has_next %} disabled {% endif %}">
-          <a class="page-link" href="?page={{ page_obj.number|add:1 }}">
-            <span aria-hidden="true">»</span>
-          </a>
-        </li>
-
-        <li class="page-item {% if not page_obj.has_next %} disabled {% endif %}">
-          <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
-            Последняя
-          </a>
-        </li>
-
-      </ul>
-    </nav>
-  {% endif %}
+  {% include 'posts/_pagination.html' %}
 
 {% endblock %}
 
@@ -104,6 +55,11 @@
   <script src="{% static 'posts/js/highlight_run.js' %}"></script>
 
   <script src="https://unpkg.com/htmx.org@2.0.7"></script>
+
+  <!-- Подключение локального JS-скрипта для управления тегами и блоком готовых тегов -->
+  <script src="{% static 'posts/js/create_post_tags.js' %}"></script>
+
+  <script src="{% static 'posts/js/filters.js' %}"></script>
 
   <!-- Подключение js-скрипта для эффекта затемнения для content, если не помещается по высоте -->
   <script src="{% static 'posts/js/overflow_gradient.js' %}"></script>
