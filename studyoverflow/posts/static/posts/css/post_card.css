@@ -55,3 +55,7 @@
 .more-link:hover {
     color: #0a58ca !important;
 }
+
+.more-link:hover #comments_count {
+    filter: brightness(0.8);
+}

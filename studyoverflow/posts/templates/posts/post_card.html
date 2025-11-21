@@ -53,9 +53,20 @@
         {% include 'posts/likes/_like-button.html' %}
       {% endwith %}
 
-      <a href="{{ post.get_absolute_url }}" class="more-link">
-        подробнее
-      </a>
+      <div class="d-flex justify-content-end">
+        <a href="{{ post.get_absolute_url }}#comments-wrapper" class="more-link me-4">
+          <span>
+            Комментарии:
+          </span>
+          <span id="comments_count" class="text-warning">
+            {{ post.comments_count }}
+          </span>
+        </a>
+
+        <a href="{{ post.get_absolute_url }}" class="more-link">
+          Подробнее
+        </a>
+      </div>
 
     </div>
 
