@@ -1,0 +1,41 @@
+#tags-container {
+    color: white;
+    border: 1px solid white;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: none !important;
+    max-height: 190px;
+    overflow-y: auto;
+    padding: 5px;
+}
+
+.tag-item {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: .5rem;
+    margin-bottom: 4px;
+}
+
+.tag-item.selected {
+    background-color: #444 !important;
+    color: white;
+}
+
+.tag-item:hover {
+    background-color: #333;
+}
+
+#tag-search {
+    background-color: black;
+    color: white;
+    border: 1px solid white;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    width: 100%;
+    padding: 6px 12px;
+    box-sizing: border-box;
+}
+
+#tags-wrapper {
+  display: none;
+}
