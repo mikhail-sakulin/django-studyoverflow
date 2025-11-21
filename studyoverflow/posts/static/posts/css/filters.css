@@ -1,0 +1,122 @@
+#filters-form {
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out, margin-top 0.3s ease;
+}
+
+#filters-form .form-control {
+    background-color: #000 !important;
+    color: #fff !important;
+}
+
+#filters-form .bg-black {
+    background: #000 !important;
+    border-radius: .5rem;
+}
+
+.filters-hidden {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    margin-top: 0 !important;
+    pointer-events: none;
+}
+
+.filters-visible {
+    max-height: 2000px;
+    opacity: 1;
+    margin-top: 0;
+}
+
+#filters-toggle {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+    color: white;
+    margin-bottom: 1rem;
+}
+
+#filters-toggle-text {
+    transition: color 0.2s;
+}
+
+#filters-toggle-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+/* Ховер на toggle */
+#filters-toggle:hover #filters-toggle-text,
+#filters-toggle:hover #filters-toggle-icon {
+    color: #ffc107 !important;
+}
+
+#filters-form .btn-outline-light.active {
+    background-color: white !important;
+    color: black !important;
+    border-color: white !important;
+    font-weight: 600;
+}
+
+#filters-form .btn-outline-light,
+#filters-form .btn-outline-warning {
+    border-radius: .5rem !important;
+    padding: 6px 14px !important;
+}
+
+#filters-form .btn-group {
+    gap: 8px;
+    display: inline-flex !important;
+    width: auto !important;
+}
+
+#filters-form .btn-group .btn {
+    flex: 0 0 auto !important;
+    width: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#toggle-tags {
+    width: 9rem;
+}
+
+.order-arrow-btn {
+    text-decoration: none;
+    color: white !important;
+    font-size: 1.5rem;
+    line-height: 1;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.order-arrow-btn.active {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    border-radius: .25rem;
+    color: #ffc107 !important;
+}
+
+.order-arrow-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3) !important;
+    border-radius: .25rem;
+}
+
+@media (max-width: 576px) {
+    #filters-form .col-md-6 .d-flex.align-items-center {
+        flex-wrap: wrap;
+    }
+
+    #filters-form .col-md-6 .d-flex.align-items-center .ms-3.d-flex.gap-1 {
+        margin-left: 0 !important;
+        margin-top: 8px;
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
