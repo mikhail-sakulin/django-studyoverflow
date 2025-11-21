@@ -36,7 +36,7 @@
     <hr class="mt-1 mb-2">
 
     <!-- Блок содержимого комментария -->
-    <div id="comment-content-{{ comment.id }}" class="content-comment text-white mt-1">
+    <div id="comment-content-{{ comment.id }}" class="content-comment text-white mt-1 px-1">
       {{ comment.content|markdown_safe|safe }}
     </div>
 
@@ -44,7 +44,7 @@
 
     {% url 'posts:toggle_like_comment' comment.post.pk comment.post.slug comment.pk as toggle_like_url %}
 
-      {% with liked_object=comment user_has_liked=comment.user_has_liked likes_count=comment.likes_count toggle_like_url=toggle_like_url %}
+    {% with liked_object=comment user_has_liked=comment.user_has_liked likes_count=comment.likes_count toggle_like_url=toggle_like_url %}
       {% include 'posts/likes/_like-button.html' %}
     {% endwith %}
 
