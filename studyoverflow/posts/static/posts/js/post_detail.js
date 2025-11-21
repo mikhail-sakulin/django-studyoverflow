@@ -10,6 +10,15 @@
 
 
 document.addEventListener("DOMContentLoaded", function() {
+    // --- Подсветка всех блоков <pre><code> ---
+    function highlightCodeBlocks() {
+        if (window.hljs) {
+            hljs.highlightAll();
+        }
+    }
+    // Подсветка при полной загрузке страницы
+    highlightCodeBlocks();
+
     // Показ формы и блокировка кнопки
     function showForm(containerId, toggleBtn) {
         const container = document.getElementById(containerId);
@@ -94,6 +103,9 @@ document.addEventListener("DOMContentLoaded", function() {
     // --- HTMX события ---
     document.body.addEventListener("htmx:afterSwap", function(event) {
         const swappedEl = event.target;
+
+        // --- Подсветка кода после каждого HTMX swap ---
+        highlightCodeBlocks();
 
         // Если обновилась root форма, оставить её открытой
         if (swappedEl.id === "comment-form-container") {
