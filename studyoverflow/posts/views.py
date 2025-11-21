@@ -2,30 +2,62 @@ import json
 
 from django.contrib import messages
 from django.db import models, transaction
-from django.db.models import Prefetch
+from django.db.models import Count, Prefetch
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
-from posts.forms import CommentCreateForm, CommentUpdateForm, PostCreateForm
+from posts.forms import CommentCreateForm, CommentUpdateForm, PostCreateForm, PostFilterForm
 from posts.models import Comment, Post
 from posts.services.infrastructure import (
     CommentGetMethodMixin,
     HTMXHandle404Mixin,
     LikeAnnotationsMixin,
     LoginRequiredHTMXMixin,
-    PostQuerysetMixin,
+    PostAnnotateQuerysetMixin,
+    PostFilterSortMixin,
     PostTagMixin,
 )
 
 
-class PostListView(PostQuerysetMixin, ListView):
+class PostListView(PostTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMixin, ListView):
     model = Post
     template_name = "posts/post_list.html"
     context_object_name = "posts"
     paginate_by = 7
     extra_context = {"section_of_menu_selected": "posts:list"}
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        # Фильтрация по полям модели (через PostFilterSortMixin)
+        queryset = self.filter_by_model_fields(queryset, self.request)
+
+        # select_related, prefetch_related и аннотации (через PostAnnotateQuerysetMixin)
+        queryset = self.get_annotate_queryset(queryset)
+
+        # Фильтрация и сортировка по аннотированным полям (через PostFilterSortMixin)
+        queryset = self.filter_and_sort_by_annotations(queryset, self.request)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        filter_form = PostFilterForm(self.request.GET or None)
+
+        if filter_form.data.get("author"):
+            filter_form.is_valid()
+
+        context["filter_form"] = filter_form
+
+        get_params = self.request.GET.copy()
+        if "page" in get_params:
+            get_params.pop("page")
+        context["querystring"] = get_params.urlencode()
+
+        return context
 
 
 class PostCreateView(PostTagMixin, LoginRequiredHTMXMixin, CreateView):
@@ -43,10 +75,16 @@ class PostCreateView(PostTagMixin, LoginRequiredHTMXMixin, CreateView):
         return context
 
 
-class PostDetailView(PostQuerysetMixin, DetailView):
+class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
     model = Post
     template_name = "posts/post_detail.html"
     context_object_name = "post"
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        # select_related, prefetch_related и аннотации (через PostAnnotateQuerysetMixin)
+        return super().annotate_queryset(queryset)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -70,7 +108,9 @@ class CommentListView(LikeAnnotationsMixin, ListView):
     def _get_post_object(self):
         if not hasattr(self, "_post_object"):
             post_pk = self.kwargs.get("post_pk")
-            self._post_object = get_object_or_404(Post, pk=post_pk)
+            self._post_object = get_object_or_404(
+                Post.objects.annotate(comments_count=Count("comments")), pk=post_pk
+            )
         return self._post_object
 
     def get_queryset(self):
