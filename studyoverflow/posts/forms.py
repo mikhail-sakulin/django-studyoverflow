@@ -1,7 +1,9 @@
 from django import forms
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from posts.models import MAX_NAME_SLUG_LENGTH_TAG, MAX_TITLE_SLUG_LENGTH_POST, Comment, Post
 from taggit.forms import TagWidget
+from users.services.infrastructure import CustomUsernameValidator
 
 
 class PostCreateForm(forms.ModelForm):
@@ -15,7 +17,7 @@ class PostCreateForm(forms.ModelForm):
             "content": forms.Textarea(
                 attrs={"class": "form-control", "placeholder": "Введите содержимое...", "rows": 5}
             ),
-            "tags": TagWidget(attrs={"class": "form-control", "placeholder": "Введите теги"}),
+            "tags": TagWidget(attrs={"class": "form-control", "placeholder": "Введите теги..."}),
         }
 
     def clean_title(self):
@@ -47,6 +49,27 @@ class PostCreateForm(forms.ModelForm):
                 )
 
         return tags_list
+
+
+class PostFilterForm(forms.Form):
+    author = forms.CharField(required=False)
+
+    def clean_author(self):
+        author = self.cleaned_data["author"].strip()
+
+        if not author:
+            return author
+
+        validator = CustomUsernameValidator()
+        try:
+            validator(author)
+        except ValidationError as e:
+            raise ValidationError(e.messages)
+
+        if not get_user_model().objects.filter(username__iexact=author).exists():
+            raise ValidationError("Указанного автора не существует.")
+
+        return author
 
 
 class CommentCreateForm(forms.ModelForm):
