@@ -1,6 +1,6 @@
-<div class="text-white mb-2 px-2">
+<div class="text-white mb-3 px-2">
   {% if post.comments.all.exists %}
-    <h4>Комментарии:</h4>
+    <h5>Комментариев {{ post.comments_count }}:</h5>
   {% else %}
     <span style="font-size: 1.2rem">Комментариев нет.
       {% if post.author != user %}
