@@ -2,6 +2,8 @@
 Модуль содержит бизнес-логику приложения posts.
 """
 
+import re
+
 import bleach
 import markdown2
 from django.utils.text import slugify
@@ -86,3 +88,10 @@ def render_markdown_safe(markdown_text: str) -> str:
     safe_html = bleach.clean(html, tags=allowed_tags, attributes=allowed_attrs, strip=True)
 
     return safe_html
+
+
+def normalize_tag_name(tag_name: str) -> str:
+    tag_name = tag_name.strip().lower()
+    tag_name = re.sub(r"\s+", "_", tag_name)
+    tag_name = re.sub(r"_+", "_", tag_name)
+    return tag_name
