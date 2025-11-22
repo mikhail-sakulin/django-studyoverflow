@@ -41,7 +41,7 @@
 
     <div class="tags-wrapper mt-3 d-flex flex-wrap gap-2">
       {% for tag in post.tags.all|dictsort:"name" %}
-        <a href="" class="tag-badge">&nbsp;{{ tag.name }}&nbsp;</a>
+        <a href="{{ tag.get_absolute_url }}" class="tag-badge">&nbsp;{{ tag.name }}&nbsp;</a>
       {% endfor %}
     </div>
 
@@ -54,7 +54,7 @@
       {% endwith %}
 
       <div class="d-flex justify-content-end">
-        <a href="{{ post.get_absolute_url }}#comments-wrapper" class="more-link me-4">
+        <a href="{{ post.get_absolute_url }}#comments-wrapper" class="more-link me-3">
           <span>
             Комментарии:
           </span>
