@@ -18,6 +18,8 @@
 
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/comment_card.css' %}">
 
+  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/comment_sort.css' %}">
+
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/like_button.css' %}">
 {% endblock %}
 
@@ -66,7 +68,7 @@
 
           <div class="tags-wrapper mt-4 d-flex flex-wrap gap-2">
             {% for tag in post.tags.all|dictsort:"name" %}
-              <a href="" class="tag-badge">&nbsp;{{ tag.name }}&nbsp;</a>
+              <a href="{{ tag.get_absolute_url }}" class="tag-badge">&nbsp;{{ tag.name }}&nbsp;</a>
             {% endfor %}
           </div>
 

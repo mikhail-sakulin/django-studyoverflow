@@ -1,0 +1,49 @@
+<div class="container px-0 text-white mb-3" id="comments-sort-block">
+  <div class="px-2 py-1 bg-black text-white rounded">
+    <form
+      hx-get="{% url 'posts:comment_list' post.pk post.slug %}"
+      hx-target="#comments-wrapper"
+      hx-swap="innerHTML"
+      hx-indicator="#sort-loading-indicator"
+      class="d-flex align-items-center flex-wrap gap-3">
+
+      <input type="hidden" name="comment_sort" id="comment_sort_input" value="{{ request.GET.comment_sort|default:'date' }}">
+      <input type="hidden" name="comment_order" id="comment_order_input" value="{{ request.GET.comment_order|default:'desc' }}">
+
+      <label class="form-label mb-0 me-1">Сортировать родительские комментарии по</label>
+
+      <div class="btn-group">
+          <button type="button"
+                  class="btn btn-outline-light btn-sm comment-sort-btn shadow-none {% if request.GET.comment_sort == 'date' or not request.GET.comment_sort %}active{% endif %}"
+                  data-value="date">
+              Дата
+          </button>
+          <button type="button"
+                  class="btn btn-outline-light btn-sm comment-sort-btn shadow-none {% if request.GET.comment_sort == 'likes' %}active{% endif %}"
+                  data-value="likes">
+              Лайки
+          </button>
+      </div>
+
+      <div class="d-flex gap-1 ms-2">
+          <button type="button"
+                  class="btn btn-link p-0 order-comment-btn shadow-none {% if request.GET.comment_order == 'desc' or not request.GET.comment_order %}active{% endif %}"
+                  data-value="desc">
+              ↓
+          </button>
+          <button type="button"
+                  class="btn btn-link p-0 order-comment-btn shadow-none {% if request.GET.comment_order == 'asc' %}active{% endif %}"
+                  data-value="asc">
+              ↑
+          </button>
+      </div>
+
+      <button type="submit" class="btn btn-outline-warning btn-sm comment-submit-btn ms-1">Применить</button>
+      <div id="sort-loading-indicator" class="htmx-indicator ms-2">
+          <div class="spinner-border text-white spinner-border-sm" role="status"></div>
+          <span class="px-1">Загрузка...</span>
+      </div>
+
+    </form>
+  </div>
+</div>

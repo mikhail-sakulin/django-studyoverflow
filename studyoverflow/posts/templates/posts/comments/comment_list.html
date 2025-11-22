@@ -1,7 +1,7 @@
 <div class="text-white mb-3 px-2">
-  {% if post.comments.all.exists %}
+  {% if root_comments %}
     <h5>Комментариев {{ post.comments_count }}:</h5>
-  {% else %}
+  {% elif not post.comments.all.exists %}
     <span style="font-size: 1.2rem">Комментариев нет.
       {% if post.author != user %}
         Вы можете оставить первый!
@@ -9,6 +9,10 @@
     </span>
   {% endif %}
 </div>
+
+{% if root_comments %}
+  {% include 'posts/comments/_comment_sort.html' %}
+{% endif %}
 
 <div id="comments-section" class="d-flex flex-column px-0" style="gap: 1.5rem;">
   {% for root_comment in root_comments %}
