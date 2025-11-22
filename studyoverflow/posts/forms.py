@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from posts.models import MAX_NAME_SLUG_LENGTH_TAG, MAX_TITLE_SLUG_LENGTH_POST, Comment, Post
+from posts.models import MAX_NAME_LENGTH_TAG, MAX_TITLE_SLUG_LENGTH_POST, Comment, Post
 from taggit.forms import TagWidget
 from users.services.infrastructure import CustomUsernameValidator
 
@@ -28,7 +28,7 @@ class PostCreateForm(forms.ModelForm):
 
         if len(title) > MAX_TITLE_SLUG_LENGTH_POST:
             raise ValidationError(
-                f"Длина заголовка должна быть не более {MAX_NAME_SLUG_LENGTH_TAG} символов"
+                f"Длина заголовка должна быть не более {MAX_NAME_LENGTH_TAG} символов"
             )
 
         return title
@@ -43,9 +43,9 @@ class PostCreateForm(forms.ModelForm):
             raise ValidationError("Укажите не более 10 тегов.")
 
         for el in tags_list:
-            if len(el) > MAX_NAME_SLUG_LENGTH_TAG:
+            if len(el) > MAX_NAME_LENGTH_TAG:
                 raise ValidationError(
-                    f"Длина тега не может превышать {MAX_NAME_SLUG_LENGTH_TAG} символов."
+                    f"Длина тега не может превышать {MAX_NAME_LENGTH_TAG} символов."
                 )
 
         return tags_list

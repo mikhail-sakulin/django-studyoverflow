@@ -1,4 +1,5 @@
 from typing import Final
+from urllib.parse import urlencode
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -6,13 +7,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
-from posts.services.domain import generate_slug
+from posts.services.domain import generate_slug, normalize_tag_name
 from taggit.managers import TaggableManager
 from taggit.models import GenericTaggedItemBase, TagBase
 
 
 MAX_TITLE_SLUG_LENGTH_POST: Final = 255  # максимальная длина заголовка и slug поста
-MAX_NAME_SLUG_LENGTH_TAG: Final = 50  # максимальная длина заголовка и slug тега
+MAX_NAME_LENGTH_TAG: Final = 50  # максимальная длина имени тега
 
 
 class LowercaseTag(TagBase):
@@ -21,33 +22,28 @@ class LowercaseTag(TagBase):
 
     Атрибуты:
         name (CharField): Имя тега.
-        slug (SlugField): Человекопонятная часть уникального URL-идентификатора /slug/pk/.
 
     Методы:
         - save(*args, **kwargs):
             - преобразует имя тега в нижний регистр перед сохранением с удалением лишних пробелов,
-            - генерирует slug;
-        - get_absolute_url(): Возвращает уникальный URL для тега на основе slug и pk.
+        - get_absolute_url(): Возвращает уникальный URL для тега на основе name.
     """
 
-    name = models.CharField(max_length=MAX_NAME_SLUG_LENGTH_TAG, unique=True, verbose_name="Тег")
-    slug = models.SlugField(max_length=MAX_NAME_SLUG_LENGTH_TAG, verbose_name="Slug")
+    name = models.CharField(max_length=MAX_NAME_LENGTH_TAG, unique=True, verbose_name="Тег")
 
     class Meta:
         verbose_name = "Tag"
         verbose_name_plural = "Tags"
 
     def save(self, *args, **kwargs):
-        self.name = self.name.strip().lower()
-        if not self.slug:
-            self.slug = generate_slug(self.name, max_length=MAX_NAME_SLUG_LENGTH_TAG)
+        self.name = normalize_tag_name(self.name)
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
         """
-        Возвращает уникальный URL для тега на основе slug и pk.
+        Возвращает уникальный URL для тега на основе name.
         """
-        return reverse("tag", kwargs={"tag_slug": self.slug, "pk": self.pk})
+        return f"{reverse('posts:list')}?{urlencode({'tags': self.name})}"
 
 
 class TaggedPost(GenericTaggedItemBase):

@@ -10,6 +10,7 @@ from django.db.models import Count, Exists, OuterRef, Q
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from posts.models import Like, LowercaseTag, Post
+from posts.services.domain import normalize_tag_name
 
 
 class PostTagMixinProtocol(Protocol):
@@ -46,7 +47,7 @@ class PostTagMixin(Generic[T_Parent]):
         tags = form.cleaned_data.get("tags")
         if tags is not None:
             # Обновление связи ManyToMany: сопоставление указанных тегов с постом
-            post.tags.set(tags)
+            post.tags.set([normalize_tag_name(tag) for tag in tags])
 
         return response
 
@@ -172,15 +173,18 @@ class PostFilterSortMixin:
         elif has_comments == "no":
             queryset = queryset.filter(comments_count=0)
 
-        # Сортировка
-        sort = request.GET.get("sort", "created")
-        order = request.GET.get("order", "desc")
-
         ordering_map = {
             "created": "time_create",
             "likes": "likes_count",
             "comments": "comments_count",
         }
+
+        # Сортировка
+        sort = request.GET.get("sort")
+        sort = sort if sort in ordering_map else "created"
+
+        order = request.GET.get("order")
+        order = order if order in ("asc", "desc") else "desc"
 
         ordering_field = ordering_map.get(sort, "time_create")
 
