@@ -129,6 +129,23 @@ class CommentListView(LikeAnnotationsMixin, ListView):
 
         queryset = self.annotate_queryset(queryset)
 
+        ordering_map = {
+            "date": "time_create",
+            "likes": "likes_count",
+        }
+
+        sort = self.request.GET.get("comment_sort")
+        sort = sort if sort in ordering_map else "date"
+
+        order = self.request.GET.get("comment_order")
+        order = order if order in ("asc", "desc") else "desc"
+
+        field = ordering_map.get(sort, "time_create")
+        if order == "desc":
+            field = f"-{field}"
+
+        queryset = queryset.order_by(field, "-time_create")
+
         return queryset
 
     def get_context_data(self, **kwargs):
