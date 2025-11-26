@@ -1,0 +1,43 @@
+{% extends 'users/profile_author.html' %}
+
+
+{% block profile_title %}
+  Ваш профиль
+{% endblock %}
+
+
+{% block profile_header %}
+  Ваш профиль
+{% endblock %}
+
+
+{% block profile_actions %}
+<div class="d-flex flex-column align-items-end gap-2 w-100 mt-auto pt-4">
+  <button type="button"
+          class="btn btn-warning btn-sm profile-btn"
+          id="toggle-edit-btn"
+          style="width: 180px;">
+    Редактировать профиль
+  </button>
+
+  <a href="#" class="btn btn-outline-light btn-sm" style="width: 180px;">
+    Сменить пароль
+  </a>
+</div>
+{% endblock %}
+
+
+{% block danger_zone %}
+<form method="post" action="#" class="d-inline mb-0">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirmDelete();">
+    Удалить аккаунт
+  </button>
+</form>
+{% endblock %}
+
+
+{% block profile_update_form %}
+  <!-- Форма редактирования профиля пользователя -->
+  {% include 'users/profile_update_form.html' %}
+{% endblock %}
