@@ -44,7 +44,7 @@
                class="rounded-circle">
 
           <div>
-            <a id="username" href="" class="author-name d-inline-block mb-1">{{ post.author.username }}</a>
+            <a id="username" href="{% url 'users:profile' post.author.username %}" class="author-name d-inline-block mb-1">{{ post.author.username }}</a>
 
             <div id="time_create-time_update" class="text-secondary">
               Опубликовано: {{ post.time_create|date:"d.m.Y г. H:i" }}
@@ -87,7 +87,15 @@
                   </button>
                 {% else %}
                   <a href="{% url 'posts:edit' post.pk post.slug %}" class="btn btn-outline-warning btn-sm me-3">Редактировать</a>
-                  <button type="button" class="btn btn-outline-danger btn-sm">Удалить</button>
+
+                  <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deletePostModal">
+                      Удалить
+                  </button>
+
+                  {% url 'posts:delete' post.pk post.slug as post_delete_url %}
+
+                  {% include 'posts/_modal_delete.html' with modal_id="deletePostModal" form_action=post_delete_url title="Подтверждение удаления поста" message="Вы уверены, что хотите удалить этот пост?" %}
+
                 {% endif %}
               </div>
 
@@ -138,4 +146,6 @@
 
   <!-- Запуск highlight.js -->
   <script src="{% static 'posts/js/highlight_run.js' %}"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}

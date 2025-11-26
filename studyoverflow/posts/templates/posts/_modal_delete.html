@@ -1,0 +1,34 @@
+<div class="modal fade" id="{{ modal_id }}" tabindex="-1" aria-labelledby="{{ modal_id }}Label" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white">
+
+      <div class="modal-header">
+        <h5 class="modal-title text-warning" id="{{ modal_id }}Label">{{ title|default:"Подтверждение удаления" }}</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+
+      <div class="modal-body">
+        {{ message|default:"Вы уверены, что хотите удалить этот элемент?" }}
+      </div>
+
+      <div class="modal-footer d-flex justify-content-between" style="border-top: none;">
+        <form method="post" action="{{ form_action }}" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn {{ delete_btn_class|default:'btn-danger' }}">
+            {{ delete_button_text|default:'Удалить' }}
+          </button>
+        </form>
+        <button type="button" class="btn {{ cancel_btn_class|default:'btn-secondary' }}" data-bs-dismiss="modal">
+          {{ cancel_button_text|default:'Отмена' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+      body {
+          padding-right: 0 !important;
+      }
+  </style>
+
+</div>
