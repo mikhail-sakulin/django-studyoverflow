@@ -21,6 +21,8 @@
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/comment_sort.css' %}">
 
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/like_button.css' %}">
+
+  <link type="text/css" rel="stylesheet" href="{% static 'users/css/avatar_modal.css' %}">
 {% endblock %}
 
 
@@ -35,13 +37,21 @@
         <div class="d-flex align-items-center mb-2">
 
           <img id="avatar"
-           src="{% if post.author.avatar_small_size2 %}
+               src="{% if post.author.avatar_small_size2 %}
                   {{ post.author.avatar_small_size2.url }}
                 {% elif post.author.avatar %}
                   {{ post.author.avatar.url }}
                 {% endif %}"
                alt="{{ post.author.username }}"
-               class="rounded-circle">
+               class="rounded-circle"
+               style="cursor:pointer;"
+
+               hx-get="{% url 'users:avatar_preview' post.author.username %}"
+               hx-target="#modal-image-container"
+               hx-swap="innerHTML"
+
+               hx-indicator="#modal-loading-indicator"
+               hx-on:htmx:before-request="openModal()">
 
           <div>
             <a id="username" href="{% url 'users:profile' post.author.username %}" class="author-name d-inline-block mb-1">{{ post.author.username }}</a>
@@ -133,6 +143,8 @@
     </div>
   </main>
 
+  {% include 'users/_avatar_modal.html' %}
+
 {% endblock %}
 
 
@@ -146,6 +158,8 @@
 
   <!-- Запуск highlight.js -->
   <script src="{% static 'posts/js/highlight_run.js' %}"></script>
+
+  <script src="{% static 'users/js/avatar_modal.js' %}"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}

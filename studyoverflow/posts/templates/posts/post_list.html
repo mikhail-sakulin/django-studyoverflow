@@ -22,6 +22,8 @@
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/tags.css' %}">
 
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/like_button.css' %}">
+
+  <link type="text/css" rel="stylesheet" href="{% static 'users/css/avatar_modal.css' %}">
 {% endblock %}
 
 
@@ -44,6 +46,8 @@
 
   {% include 'posts/_pagination.html' %}
 
+  {% include 'users/_avatar_modal.html' %}
+
 {% endblock %}
 
 
@@ -63,4 +67,6 @@
 
   <!-- Подключение js-скрипта для эффекта затемнения для content, если не помещается по высоте -->
   <script src="{% static 'posts/js/overflow_gradient.js' %}"></script>
+
+  <script src="{% static 'users/js/avatar_modal.js' %}"></script>
 {% endblock %}

@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.messages.views import SuccessMessageMixin
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, TemplateView, UpdateView
 from users.forms import UserLoginForm, UserProfileUpdateForm, UserRegisterForm
@@ -82,3 +82,8 @@ class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_object(self, queryset=None):
         return self.request.user
+
+
+def avatar_preview(request, username):
+    author = get_object_or_404(get_user_model(), username=username)
+    return render(request, "users/_avatar_only_for_modal.html", {"author": author})

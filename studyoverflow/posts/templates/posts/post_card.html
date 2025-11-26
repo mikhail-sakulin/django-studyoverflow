@@ -7,17 +7,29 @@
     <!-- Автор и время публикации -->
     <div class="d-flex align-items-center mb-2">
 
-      <img id="avatar"
-           src="{% if post.author.avatar_small_size1 %}
-                  {{ post.author.avatar_small_size1.url }}
-                {% elif post.author.avatar %}
-                  {{ post.author.avatar.url }}
-                {% endif %}"
-           alt="{{ post.author.username }}"
-           class="rounded-circle">
+    <img id="avatar"
+         src="{% if post.author.avatar_small_size1 %}
+                {{ post.author.avatar_small_size1.url }}
+              {% elif post.author.avatar %}
+                {{ post.author.avatar.url }}
+              {% endif %}"
+         alt="{{ post.author.username }}"
+         class="rounded-circle"
+         style="cursor:pointer;"
+
+         hx-get="{% url 'users:avatar_preview' post.author.username %}"
+         hx-target="#modal-image-container"
+         hx-swap="innerHTML"
+
+         hx-indicator="#modal-loading-indicator"
+         hx-on:htmx:before-request="openModal()">
+
+      <div class="image-modal-wrapper"></div>
 
       <div>
-        <a id="username" href="{% url 'users:profile' post.author.username %}" class="author-name d-inline-block mb-1">{{ post.author.username }}</a>
+        <a id="username" href="{% url 'users:profile' post.author.username %}" class="author-name d-inline-block mb-1">
+          {{ post.author.username }}
+        </a>
 
         <div id="time_create-time_update" class="text-secondary">
           Опубликовано: {{ post.time_create|date:"d.m.Y г. H:i" }}

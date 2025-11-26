@@ -10,124 +10,141 @@
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'users/css/profile.css' %}">
   <link rel="stylesheet" href="{% static 'users/css/register-login.css' %}">
+  <link type="text/css" rel="stylesheet" href="{% static 'users/css/avatar_modal.css' %}">
 {% endblock %}
 
 
 {% block content %}
-<div class="container my-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-8 col-md-10">
-      <div class="card shadow-lg border-0">
+  <div class="container my-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 col-md-10">
+        <div class="card shadow-lg border-0">
 
-        <div class="card-header bg-warning text-dark p-4">
-          <h4 class="mb-0">
-            {% block profile_header %}
-              Профиль пользователя {{ author.username }}
-            {% endblock %}
-          </h4>
-        </div>
+          <div class="card-header bg-warning text-dark p-4">
+            <h4 class="mb-0">
+              {% block profile_header %}
+                Профиль пользователя {{ author.username }}
+              {% endblock %}
+            </h4>
+          </div>
 
-        <div class="card-body p-4">
+          <div class="card-body p-4">
 
-          <div class="d-flex flex-column d-md-flex flex-md-row align-items-md-start g-4 mb-4">
+            <div class="d-flex flex-column d-md-flex flex-md-row align-items-md-start g-4 mb-4">
 
-            <!-- Аватар -->
-            <div class="d-flex justify-content-center mb-4 mb-md-0 me-md-4" style="flex-shrink: 0;">
-              <img id="avatar"
-                   src="{% if author.avatar_small_size3 %}
-                          {{ author.avatar_small_size3.url }}
-                        {% elif author.avatar %}
-                          {{ author.avatar.url }}
-                        {% endif %}"
-                   alt="{{ author.username }}"
-                   class="rounded">
-            </div>
+              <!-- Аватар -->
+              <div class="d-flex justify-content-center mb-4 mb-md-0 me-md-4" style="flex-shrink: 0;">
+                <img id="avatar"
+                     src="{% if author.avatar_small_size3 %}
+                            {{ author.avatar_small_size3.url }}
+                          {% elif author.avatar %}
+                            {{ author.avatar.url }}
+                          {% endif %}"
+                     alt="{{ author.username }}"
+                     class="rounded"
+                     style="cursor:pointer;"
 
-            <div class="flex-grow-1 d-flex flex-column w-100" style="height: 300px;">
+                     hx-get="{% url 'users:avatar_preview' author.username %}"
+                     hx-target="#modal-image-container"
+                     hx-swap="innerHTML"
 
-              <div class="w-100">
-                <p class="author-name mb-1 fs-5 text-break">{{ author.username }}</p>
-                <p class="text-secondary mb-3 text-break">{{ author.email }}</p>
+                     hx-indicator="#modal-loading-indicator"
+                     hx-on:htmx:before-request="openModal()">
+
               </div>
 
-              <div class="w-100 flex-grow-1 bio-scroll text-white">
-                <div class="mt-1">
-                  <h6 class="fw-bold mb-1">{{ author.first_name }} {{ author.last_name }}</h6>
+              <div class="flex-grow-1 d-flex flex-column w-100" style="height: 300px;">
 
-                  <p class="text-white-secondary small text-break">
-                    {% if author.bio %}
-                      {{ author.bio }}
-                    {% else %}
-                      Информация о пользователе не указана.
-                    {% endif %}
-                  </p>
+                <div class="w-100">
+                  <p class="author-name mb-1 fs-5 text-break">{{ author.username }}</p>
+                  <p class="text-secondary mb-3 text-break">{{ author.email }}</p>
+                </div>
 
-                  <div class="row small mt-2">
-                    <div class="col-5 mb-1">
-                      <span class="fw-bold d-block">Дата рождения:</span>
-                      <span class="text-white-secondary">
-                        {% if author.date_birth %}
-                          {{ author.date_birth|date:"d M Y" }}
-                        {% else %}
-                          Не указана
-                        {% endif %}
-                      </span>
-                    </div>
+                <div class="w-100 flex-grow-1 bio-scroll text-white">
+                  <div class="mt-1">
+                    <h6 class="fw-bold mb-1">{{ author.first_name }} {{ author.last_name }}</h6>
 
-                    <div class="col-5 mb-1">
-                      <span class="fw-bold d-block">На сайте с:</span>
-                      <span class="text-white-secondary">
-                        {{ author.date_joined|date:"Y.m.d" }}
-                      </span>
+                    <p class="text-white-secondary small text-break">
+                      {% if author.bio %}
+                        {{ author.bio }}
+                      {% else %}
+                        Информация о пользователе не указана.
+                      {% endif %}
+                    </p>
+
+                    <div class="row small mt-2">
+                      <div class="col-5 mb-1">
+                        <span class="fw-bold d-block">Дата рождения:</span>
+                        <span class="text-white-secondary">
+                          {% if author.date_birth %}
+                            {{ author.date_birth|date:"d M Y" }}
+                          {% else %}
+                            Не указана
+                          {% endif %}
+                        </span>
+                      </div>
+
+                      <div class="col-5 mb-1">
+                        <span class="fw-bold d-block">На сайте с:</span>
+                        <span class="text-white-secondary">
+                          {{ author.date_joined|date:"Y.m.d" }}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {% block profile_actions %}{% endblock %}
+
               </div>
-
-              {% block profile_actions %}{% endblock %}
-
             </div>
+
+            <hr>
+
+            <div class="row text-center mb-2">
+              <div class="col-4">
+                <p class="mb-0 text-white">Репутация</p>
+                <h6 class="fw-bold text-primary">{{ author.reputation }}</h6>
+              </div>
+              <div class="col-4 border-start border-end">
+                <p class="mb-0 text-white">Опубликовано постов</p>
+                <h6 class="fw-bold text-primary">{{ author.posts_count }}</h6>
+              </div>
+              <div class="col-4">
+                <p class="mb-0 text-white">Оставлено ответов</p>
+                <h6 class="fw-bold text-primary">{{ author.comments_count }}</h6>
+              </div>
+            </div>
+
+            <hr>
+
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-2 gap-2">
+              <p class="text-muted small mb-0">
+                Последний раз был в сети: {{ author.last_login|date:"H:i, d M Y" }}
+              </p>
+
+              {% block danger_zone %}{% endblock %}
+            </div>
+
           </div>
-
-          <hr>
-
-          <div class="row text-center mb-2">
-            <div class="col-4">
-              <p class="mb-0 text-white">Репутация</p>
-              <h6 class="fw-bold text-primary">{{ author.reputation }}</h6>
-            </div>
-            <div class="col-4 border-start border-end">
-              <p class="mb-0 text-white">Опубликовано постов</p>
-              <h6 class="fw-bold text-primary">{{ author.posts_count }}</h6>
-            </div>
-            <div class="col-4">
-              <p class="mb-0 text-white">Оставлено ответов</p>
-              <h6 class="fw-bold text-primary">{{ author.comments_count }}</h6>
-            </div>
-          </div>
-
-          <hr>
-
-          <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-2 gap-2">
-            <p class="text-muted small mb-0">
-              Последний раз был в сети: {{ author.last_login|date:"H:i, d M Y" }}
-            </p>
-
-            {% block danger_zone %}{% endblock %}
-          </div>
-
         </div>
+
+        {% block profile_update_form %}
+        {% endblock %}
+
       </div>
-
-      {% block profile_update_form %}
-      {% endblock %}
-
     </div>
   </div>
-</div>
+
+  {% include 'users/_avatar_modal.html' %}
+
 {% endblock %}
 
 
 {% block extra_js %}
   <script src="{% static 'users/js/profile.js' %}"></script>
+
+  <script src="{% static 'users/js/avatar_modal.js' %}"></script>
+
+  <script src="https://unpkg.com/htmx.org@2.0.7"></script>
 {% endblock %}
