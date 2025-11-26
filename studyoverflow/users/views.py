@@ -3,8 +3,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.messages.views import SuccessMessageMixin
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, TemplateView, UpdateView
+from django.views.generic import CreateView, DetailView, TemplateView, UpdateView
 from users.forms import UserLoginForm, UserProfileUpdateForm, UserRegisterForm
 
 
@@ -54,11 +55,30 @@ class CustomLogoutView(LogoutView):
         return response
 
 
+class AuthorProfileView(DetailView):
+    model = get_user_model()
+    template_name = "users/profile_author.html"
+    context_object_name = "author"
+
+    def get_object(self, queryset=None):
+        return get_object_or_404(get_user_model(), username=self.kwargs.get("username"))
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+
+        if self.object.username == request.user.username:
+            return redirect("users:my_profile")
+
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
+
+
 class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = get_user_model()
     form_class = UserProfileUpdateForm
-    template_name = "users/profile.html"
+    template_name = "users/profile_current_user.html"
     success_url = reverse_lazy("users:profile")
+    context_object_name = "author"
 
     def get_object(self, queryset=None):
         return self.request.user
