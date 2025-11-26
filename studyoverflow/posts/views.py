@@ -100,6 +100,11 @@ class PostUpdateView(LoginRequiredHTMXMixin, PostTagMixin, UpdateView):
     context_object_name = "post"
 
 
+class PostDeleteView(DeleteView):
+    model = Post
+    success_url = reverse_lazy("posts:list")
+
+
 class CommentListView(LikeAnnotationsMixin, ListView):
     model = Comment
     template_name = "posts/comments/comment_list.html"
