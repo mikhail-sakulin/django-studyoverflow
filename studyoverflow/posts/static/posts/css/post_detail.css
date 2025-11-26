@@ -20,6 +20,12 @@
     width: 70px;
     height: 70px;
     object-fit: cover;
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+#avatar:hover {
+    box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.85);
+    cursor: pointer;
 }
 
 #username {
