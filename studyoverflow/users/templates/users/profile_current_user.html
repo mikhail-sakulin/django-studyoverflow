@@ -28,12 +28,18 @@
 
 
 {% block danger_zone %}
-<form method="post" action="#" class="d-inline mb-0">
-  {% csrf_token %}
-  <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirmDelete();">
-    Удалить аккаунт
-  </button>
-</form>
+  <form method="post" action="{% url 'users:delete' %}" class="d-inline mb-0">
+    {% csrf_token %}
+
+    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteUserModal">
+      Удалить
+    </button>
+
+    {% url 'users:delete' as user_delete_url %}
+
+    {% include 'navigation/_modal_delete.html' with modal_id="deleteUserModal" form_action=user_delete_url title="Подтверждение удаления аккаунта" message="Вы уверены, что хотите удалить свой аккаунт? Ваши посты, комментарии и лайки будут удалены!" %}
+
+  </form>
 {% endblock %}
 
 
