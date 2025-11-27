@@ -1,12 +1,17 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, TemplateView, UpdateView
-from users.forms import UserLoginForm, UserProfileUpdateForm, UserRegisterForm
+from users.forms import (
+    UserLoginForm,
+    UserPasswordChangeForm,
+    UserProfileUpdateForm,
+    UserRegisterForm,
+)
 
 
 class UsersTemplateView(TemplateView):
@@ -87,3 +92,10 @@ class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
 def avatar_preview(request, username):
     author = get_object_or_404(get_user_model(), username=username)
     return render(request, "users/_avatar_only_for_modal.html", {"author": author})
+
+
+class UserPasswordChangeView(SuccessMessageMixin, PasswordChangeView):
+    form_class = UserPasswordChangeForm
+    success_url = reverse_lazy("users:my_profile")
+    template_name = "users/password_change.html"
+    success_message = "Пароль успешно изменен!"

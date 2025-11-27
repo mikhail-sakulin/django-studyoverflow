@@ -1,0 +1,41 @@
+{% for f in form %}
+  <div class="form-group mb-3">
+    <label for="{{ f.id_for_label }}" class="form-label text-white">
+      {{ f.label }}
+      {% if show_required and f.field.required %}
+        *
+      {% endif %}
+    </label>
+
+    {{ f }}
+
+    {% if f.help_text %}
+      <small class="form-text text-muted d-block mt-1">
+        {% autoescape off %}
+          {{ f.help_text }}
+        {% endautoescape %}
+      </small>
+    {% endif %}
+
+    {% if f.errors %}
+      <div class="text-danger fs-6">
+        {% for err in f.errors %}
+          <div class="mt-1">
+            {% if "This password is too short" in err %}
+              Пароль слишком короткий. Он должен содержать не менее 8 символов.
+            {% else %}
+              {{ err }}
+            {% endif %}
+            <br>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+{% endfor %}
+
+<div class="text-danger fs-6 mb-3">
+  {% for error in form.non_field_errors %}
+    {{ error }}<br>
+  {% endfor %}
+</div>

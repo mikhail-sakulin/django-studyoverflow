@@ -1,4 +1,4 @@
-{% extends 'users/register-login_base.html' %}
+{% extends 'users/_auth_base.html' %}
 {% load static %}
 
 
@@ -18,48 +18,8 @@
     <form method="post" class="registration-login-card">
       {% csrf_token %}
 
-      {% for f in form %}
-        <div class="form-group mb-3">
-          <!-- label -->
-          <label for="{{ f.id_for_label }}" class="form-label text-white">
-            {{ f.label }}
-          </label>
+      {% include 'users/_form_fields.html' %}
 
-          <!-- Поле формы input -->
-          {{ f }}
-
-          <!-- help_text -->
-          {% if f.help_text %}
-            <small class="form-text text-muted d-block mt-1">
-              {% autoescape off %}
-                {{ f.help_text }}
-              {% endautoescape %}
-            </small>
-          {% endif %}
-
-          <!-- Ошибки поля -->
-          {% if f.errors %}
-            <div class="text-danger fs-6">
-              {% for err in f.errors %}
-                <div class="mt-1">
-                  {{ err }}
-                  <br>
-                </div>
-              {% endfor %}
-            </div>
-          {% endif %}
-        </div>
-
-      {% endfor %}
-
-      <!-- Ошибки формы, не связанные с полями -->
-      <div class="text-danger fs-6 mb-3">
-        {% for error in form.non_field_errors %}
-          {{ error }}<br>
-        {% endfor %}
-      </div>
-
-      <!-- Ссылка создать аккаунт под ошибками -->
       <div class="mb-3">
         <a href="{% url 'users:register' %}" class="create-account-link">
           Создать аккаунт
@@ -67,13 +27,16 @@
       </div>
 
       <div class="d-flex justify-content-between mb-0 mt-4">
+
         <button type="submit" class="btn btn-outline-warning btn-sm btn-form-submit fs-6 px-3">
           Вход
         </button>
+
         <a href="{% url 'home' %}"
            class="btn btn-outline-light">
           Отмена
         </a>
+
       </div>
 
     </form>
