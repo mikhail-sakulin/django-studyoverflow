@@ -16,9 +16,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Функция позиционирования контейнера сообщения под header
     const positionMessages = () => {
-        if (header && container) {
-            // top контейнера равен высоте header + 2rem
-            container.style.top = `calc(${header.offsetHeight}px + 2rem)`;
+        if (container) {
+            if (header) {
+                container.style.top = `calc(${header.offsetHeight}px + 2rem)`;
+            } else {
+                container.style.top = '2rem';
+            }
         }
     };
 
