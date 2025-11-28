@@ -21,6 +21,12 @@
       {% include 'users/_form_fields.html' %}
 
       <div class="mb-3">
+        <a href="{% url 'users:password_reset' %}" class="create-account-link">
+          Восстановить пароль
+        </a>
+      </div>
+
+      <div class="mb-3">
         <a href="{% url 'users:register' %}" class="create-account-link">
           Создать аккаунт
         </a>

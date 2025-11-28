@@ -2,7 +2,13 @@ from typing import Protocol, runtime_checkable
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, UserCreationForm
+from django.contrib.auth.forms import (
+    AuthenticationForm,
+    PasswordChangeForm,
+    PasswordResetForm,
+    SetPasswordForm,
+    UserCreationForm,
+)
 from django.forms import ClearableFileInput
 from django.utils.translation import gettext_lazy
 
@@ -126,6 +132,19 @@ class UserProfileUpdateForm(BootstrapFormMixin, forms.ModelForm):
 
 
 class UserPasswordChangeForm(BootstrapFormMixin, PasswordChangeForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Добавление "is-invalid" к new_password1, если new_password2 "is-invalid"
+        if "new_password2" in self.errors and "new_password1" not in self.errors:
+            self.fields["new_password1"].widget.attrs["class"] += " is-invalid"
+
+
+class UserPasswordResetForm(BootstrapFormMixin, PasswordResetForm):
+    pass
+
+
+class UserSetPasswordForm(BootstrapFormMixin, SetPasswordForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
