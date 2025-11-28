@@ -1,5 +1,6 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
+from django.db.models import Q
 from django.utils.translation import gettext_lazy
 from users.services.domain import (
     generate_new_filename_with_uuid,
@@ -13,6 +14,11 @@ from users.services.infrastructure import (
     generate_default_avatar_in_different_sizes,
     get_old_avatar_names,
 )
+
+
+class CustomUserManager(UserManager):
+    def get_by_natural_key(self, username_or_email):
+        return self.get(Q(username=username_or_email) | Q(email__iexact=username_or_email))
 
 
 class User(AbstractUser):
@@ -46,6 +52,8 @@ class User(AbstractUser):
             "unique": gettext_lazy("A user with that username already exists."),
         },
     )
+
+    email = models.EmailField(unique=True, verbose_name=gettext_lazy("email address"))
 
     first_name = models.CharField(
         max_length=150, blank=True, validators=[first_name_last_name_validator], verbose_name="Имя"
@@ -87,6 +95,8 @@ class User(AbstractUser):
         null=True,
         verbose_name="Был в сети",
     )
+
+    objects = CustomUserManager()
 
     def save(self, *args, **kwargs):
         """

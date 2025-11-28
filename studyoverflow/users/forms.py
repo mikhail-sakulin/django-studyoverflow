@@ -87,15 +87,17 @@ class UserRegisterForm(BootstrapFormMixin, UserCreationForm):
 
 class UserLoginForm(AuthenticationForm):
     username = forms.CharField(
-        label="Имя пользователя",
-        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Имя пользователя"}),
+        label="Имя пользователя или email",
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "Имя пользователя или email"}
+        ),
     )
     password = forms.CharField(
         label="Пароль",
         widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Пароль"}),
     )
     error_messages = {
-        "invalid_login": gettext_lazy("Неверное имя пользователя или неверный пароль."),
+        "invalid_login": gettext_lazy("Неверное имя пользователя (или email) или неверный пароль."),
         "inactive": gettext_lazy("This account is inactive."),
     }
 
