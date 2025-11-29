@@ -16,3 +16,6 @@ __pycache__/
 
 # Медиа-файлы
 media/
+
+# Статические файлы после команды collectstatic
+**/staticfiles/
