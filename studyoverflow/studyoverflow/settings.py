@@ -91,8 +91,18 @@ WSGI_APPLICATION = "studyoverflow.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {"default": env.db("DATABASE_URL")}
-
+DATABASES = {
+    "default": {
+        **env.db("DATABASE_URL"),
+        "OPTIONS": {
+            "pool": {
+                "min_size": 4,
+                "max_size": 16,
+                "timeout": 5,
+            }
+        },
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
