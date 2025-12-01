@@ -9,11 +9,14 @@ from typing import TYPE_CHECKING, Type
 
 import filetype
 from botocore.exceptions import BotoCoreError
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.core.files.base import ContentFile
 from django.core.files.storage import storages
 from django.core.validators import RegexValidator
+from django.db.models import F
+from django.db.models.functions import Greatest
 from django.utils.deconstruct import deconstructible
 from django.utils.translation import gettext_lazy
 from PIL import Image
@@ -172,6 +175,17 @@ class AvatarFileValidator:
                 ),
                 code="invalid_file_aspect_ration",
             )
+
+
+def update_user_counter_field(author_id: int, counter_field: str, value_change: int):
+    author_model = get_user_model()
+
+    if not hasattr(author_model, counter_field):
+        raise ValueError(f"User has no field {counter_field}")
+
+    author_model.objects.filter(pk=author_id).update(
+        **{counter_field: Greatest(F(counter_field) + value_change, 0)}
+    )
 
 
 def generate_avatar_small(user: "User", size_type: int) -> bool | str:
