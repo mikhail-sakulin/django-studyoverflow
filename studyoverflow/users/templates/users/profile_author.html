@@ -9,7 +9,7 @@
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'users/css/profile.css' %}">
-  <link rel="stylesheet" href="{% static 'users/css/register-login.css' %}">
+  <link rel="stylesheet" href="{% static 'users/css/auth_base.css' %}">
   <link type="text/css" rel="stylesheet" href="{% static 'users/css/avatar_modal.css' %}">
 {% endblock %}
 
@@ -103,16 +103,16 @@
 
             <div class="row text-center mb-2">
               <div class="col-4">
-                <p class="mb-0 text-white">Репутация</p>
-                <h6 class="fw-bold text-primary">{{ author.reputation }}</h6>
+                <p class="mb-0 text-cornflowerblue">Репутация</p>
+                <h6 class="fw-bold text-warning mb-0">{{ author.reputation }}</h6>
               </div>
               <div class="col-4 border-start border-end">
-                <p class="mb-0 text-white">Опубликовано постов</p>
-                <h6 class="fw-bold text-primary">{{ author.posts_count }}</h6>
+                <p class="mb-0 text-cornflowerblue">Посты</p>
+                <h6 class="fw-bold text-warning mb-0">{{ author.posts_count }}</h6>
               </div>
               <div class="col-4">
-                <p class="mb-0 text-white">Оставлено ответов</p>
-                <h6 class="fw-bold text-primary">{{ author.comments_count }}</h6>
+                <p class="mb-0 text-cornflowerblue">Комментарии</p>
+                <h6 class="fw-bold text-warning mb-0">{{ author.comments_count }}</h6>
               </div>
             </div>
 
