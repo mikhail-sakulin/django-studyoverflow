@@ -13,6 +13,13 @@ from posts.models import Like, LowercaseTag, Post
 from posts.services.domain import normalize_tag_name
 
 
+class ContextTagMixin:
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)  # type: ignore
+        context["all_tags"] = LowercaseTag.objects.all().order_by("name")
+        return context
+
+
 class PostTagMixinProtocol(Protocol):
     """
     Protocol для миксина, который ожидает реализацию указанных методов в MRO.
@@ -28,7 +35,7 @@ class PostTagMixinProtocol(Protocol):
 T_Parent = TypeVar("T_Parent", bound=PostTagMixinProtocol)
 
 
-class PostTagMixin(Generic[T_Parent]):
+class PostTagMixin(ContextTagMixin, Generic[T_Parent]):
     """
     Миксин для работы с тегами в формах PostCreate/PostUpdate.
     Добавляет обработку тегов при сохранении и список всех тегов в контекст.
@@ -37,24 +44,20 @@ class PostTagMixin(Generic[T_Parent]):
     """
 
     def form_valid(self: T_Parent, form):
-        if self.request.user.is_authenticated:
+        post_creating = form.instance.pk is None
+
+        if post_creating and self.request.user.is_authenticated:
             form.instance.author = self.request.user
 
         # Сохраняется объект post и возвращается response
         response = super().form_valid(form)  # type: ignore
 
-        post = form.instance
         tags = form.cleaned_data.get("tags")
         if tags is not None:
             # Обновление связи ManyToMany: сопоставление указанных тегов с постом
-            post.tags.set([normalize_tag_name(tag) for tag in tags])
+            form.instance.tags.set([normalize_tag_name(tag) for tag in tags])
 
         return response
-
-    def get_context_data(self: T_Parent, **kwargs):
-        context = super().get_context_data(**kwargs)  # type: ignore
-        context["all_tags"] = LowercaseTag.objects.all().order_by("name")
-        return context
 
 
 class LikeAnnotationsMixin:

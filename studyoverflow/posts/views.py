@@ -1,7 +1,7 @@
 import json
 
 from django.contrib import messages
-from django.db import models, transaction
+from django.db import models
 from django.db.models import Count, Prefetch
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
@@ -12,6 +12,7 @@ from posts.forms import CommentCreateForm, CommentUpdateForm, PostCreateForm, Po
 from posts.models import Comment, Post
 from posts.services.infrastructure import (
     CommentGetMethodMixin,
+    ContextTagMixin,
     HTMXHandle404Mixin,
     LikeAnnotationsMixin,
     LoginRequiredHTMXMixin,
@@ -21,7 +22,7 @@ from posts.services.infrastructure import (
 )
 
 
-class PostListView(PostTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMixin, ListView):
+class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMixin, ListView):
     model = Post
     template_name = "posts/post_list.html"
     context_object_name = "posts"
@@ -67,7 +68,7 @@ class PostCreateView(PostTagMixin, LoginRequiredHTMXMixin, CreateView):
 
     form_class = PostCreateForm
     template_name = "posts/post_create.html"
-    success_url = reverse_lazy("home")
+    success_url = reverse_lazy("posts:list")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -304,8 +305,7 @@ class CommentDeleteView(
     model = Comment
     pk_url_kwarg = "comment_pk"
 
-    def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
+    def form_valid(self, form):
         self.object.delete()
         return HttpResponse(headers={"HX-Trigger": "commentsUpdated"})
 
@@ -320,11 +320,10 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, View):
     def post(self, request, *args, **kwargs):
         liked_object = get_object_or_404(self.model, pk=kwargs[self.pk_url_kwarg])
 
-        with transaction.atomic():
-            liked_object = self.model.objects.select_for_update().get(pk=kwargs[self.pk_url_kwarg])
-            like, created = liked_object.likes.get_or_create(user=request.user)
-            if not created:
-                like.delete()
+        like, created = liked_object.likes.get_or_create(user=request.user)
+
+        if not created:
+            like.delete()
 
         context = {
             "toggle_like_url": self._get_toggle_like_url(liked_object),
