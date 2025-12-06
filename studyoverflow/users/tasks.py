@@ -53,24 +53,27 @@ def delete_old_avatars_from_s3_storage(user_pk, old_avatar_names: Optional[list]
         # Логирование
         return
 
-    if old_avatar_names:
-        delete_old_avatar_names(old_avatar_names)
-    else:
-        prefix_for_avatars = f"avatars/{user.pk}"
+    if old_avatar_names is not None:
+        files = [name for name in old_avatar_names if name]
+        if files:
+            delete_old_avatar_names(files)
+        return
 
-        dirs, files_in_avatars_dir = default_storage.listdir(prefix_for_avatars)
+    prefix_for_avatars = f"avatars/{user.pk}"
 
-        avatars_names_list = [
-            user.avatar.name,
-            user.avatar_small_size1.name,
-            user.avatar_small_size2.name,
-            user.avatar_small_size3.name,
-        ]
+    _, files_in_avatars_dir = default_storage.listdir(prefix_for_avatars)
 
-        files_for_delete = [
-            f"{prefix_for_avatars}/{file}"
-            for file in files_in_avatars_dir
-            if f"{prefix_for_avatars}/{file}" not in avatars_names_list
-        ]
+    avatars_names_list = [
+        user.avatar.name,
+        user.avatar_small_size1.name,
+        user.avatar_small_size2.name,
+        user.avatar_small_size3.name,
+    ]
 
-        delete_old_avatar_names(files_for_delete)
+    files_for_delete = [
+        f"{prefix_for_avatars}/{file}"
+        for file in files_in_avatars_dir
+        if f"{prefix_for_avatars}/{file}" not in avatars_names_list
+    ]
+
+    delete_old_avatar_names(files_for_delete)

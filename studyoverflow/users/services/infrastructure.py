@@ -279,13 +279,35 @@ def get_old_avatar_names(user: "User") -> OldAvatarNames:
 
     if user.pk:
         old_user = type(user).objects.get(pk=user.pk)
-        if old_user.avatar and old_user.avatar.name != user.avatar.name:
+
+        if (
+            old_user.avatar
+            and old_user.avatar != user._meta.get_field("avatar").get_default()
+            and old_user.avatar.name != user.avatar.name
+        ):
             old_avatar_names.old_avatar_name = old_user.avatar.name
-        if old_user.avatar_small_size1:
+        else:
+            return old_avatar_names
+
+        if (
+            old_user.avatar_small_size1
+            and old_user.avatar_small_size1
+            != user._meta.get_field("avatar_small_size1").get_default()
+        ):
             old_avatar_names.old_avatar_small_size1_name = old_user.avatar_small_size1.name
-        if old_user.avatar_small_size2:
+
+        if (
+            old_user.avatar_small_size2
+            and old_user.avatar_small_size2
+            != user._meta.get_field("avatar_small_size2").get_default()
+        ):
             old_avatar_names.old_avatar_small_size2_name = old_user.avatar_small_size2.name
-        if old_user.avatar_small_size3:
+
+        if (
+            old_user.avatar_small_size3
+            and old_user.avatar_small_size3
+            != user._meta.get_field("avatar_small_size3").get_default()
+        ):
             old_avatar_names.old_avatar_small_size3_name = old_user.avatar_small_size3.name
 
     return old_avatar_names
