@@ -291,7 +291,7 @@ def get_old_avatar_names(user: "User") -> OldAvatarNames:
     return old_avatar_names
 
 
-def delete_old_avatar_names(old_avatar_names: OldAvatarNames) -> None:
+def delete_old_avatar_names(old_avatar_names: OldAvatarNames | list[str]) -> None:
     """
     Удаляет старые файлы для avatar и avatar_small пользователя из хранилища.
     """
