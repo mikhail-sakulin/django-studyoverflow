@@ -92,7 +92,7 @@ class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = get_user_model()
     form_class = UserProfileUpdateForm
     template_name = "users/profile_current_user.html"
-    success_url = reverse_lazy("users:profile")
+    success_url = reverse_lazy("users:my_profile")
     context_object_name = "author"
 
     def get_object(self, queryset=None):
