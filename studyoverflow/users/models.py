@@ -98,63 +98,92 @@ class User(AbstractUser):
 
     objects = CustomUserManager()
 
-    def save(self, *args, skip_celery_task=False, **kwargs):
-        is_avatar_deleted = False
-        is_avatar_changed = False
+    def save(self, *args, **kwargs):
+        is_creation = not self.pk
+        update_fields = kwargs.get("update_fields")
 
-        # Сохранение старых имен файлов для avatar перед save() для их
-        # последующего удаления
-        old_avatar_names = get_old_avatar_names(self)
+        post_save_context = {}
 
-        if self.pk:
-            is_avatar_deleted = not self.avatar
-
-            if is_avatar_deleted:
-                # Если пользовательский аватар удален, то ему присваивается
-                # стандартный аватар и миниатюры
-                self.avatar.name = self._meta.get_field("avatar").get_default()
-                self.avatar_small_size1.name = self._meta.get_field(
-                    "avatar_small_size1"
-                ).get_default()
-                self.avatar_small_size2.name = self._meta.get_field(
-                    "avatar_small_size2"
-                ).get_default()
-                self.avatar_small_size3.name = self._meta.get_field(
-                    "avatar_small_size3"
-                ).get_default()
-
-            else:
-                is_avatar_changed = self.avatar.name != old_avatar_names.old_avatar_name
-
-                if is_avatar_changed:
-                    # Создание avatar.name с помощью uuid
-                    avatar_name_file = generate_new_filename_with_uuid(self.avatar.name)
-
-                    # Полное имя для avatar в хранилище
-                    self.avatar.name = f"avatars/{self.pk}/{avatar_name_file}"
+        if not is_creation and (not update_fields or "avatar" in update_fields):
+            post_save_context = self._handle_update_avatar()
 
         super().save(*args, **kwargs)
 
-        if skip_celery_task:
+        if is_creation:
+            self._schedule_creation_celery_tasks()
+        elif post_save_context:
+            self._schedule_update_celery_tasks(post_save_context)
+
+    def _handle_update_avatar(self):
+        """
+        Обрабатывает изменения аватара перед обновлением.
+        Возвращает словарь с флагами и данными для пост-обработки.
+        """
+        avatar_name_in_db, avatar_names_for_delete = get_old_avatar_names(self)
+        default_avatar = self._meta.get_field("avatar").get_default()
+
+        is_deleted = not self.avatar
+        is_new_upload = not is_deleted and self.avatar != avatar_name_in_db
+
+        if is_deleted:
+            # Сброс на дефолт
+            self.avatar = default_avatar
+            self._reset_small_avatars(default=True)
+
+        elif is_new_upload:
+            new_avatar_name_file = generate_new_filename_with_uuid(self.avatar.name)
+            self.avatar.name = f"avatars/{self.pk}/{new_avatar_name_file}"
+
+            # Удаление миниатюр, так как основной аватар изменился
+            self._reset_small_avatars(default=False)
+
+        return {
+            "is_new_upload": is_new_upload,
+            "is_deleted": is_deleted,
+            "avatar_names_for_delete": avatar_names_for_delete,
+            "was_default": avatar_name_in_db == default_avatar,
+        }
+
+    def _reset_small_avatars(self, default: bool):
+        for field_name in self.get_small_avatar_fields():
+            if default:
+                value = self._meta.get_field(field_name).get_default()
+            else:
+                value = None
+            setattr(self, field_name, value)
+
+    def _schedule_creation_celery_tasks(self):
+        """Задачи Celery при создании пользователя."""
+        default_avatar = self._meta.get_field("avatar").get_default()
+        if self.avatar != default_avatar:
+            transaction.on_commit(lambda: generate_and_save_avatars_small.delay(self.pk))
+
+    def _schedule_update_celery_tasks(self, context: dict):
+        """Задачи Celery при обновлении пользователя."""
+        if not context:
             return
 
-        if is_avatar_changed:
+        is_new_upload = context.get("is_new_upload")
+        is_deleted = context.get("is_deleted")
+        avatar_names_for_delete = context.get("avatar_names_for_delete")
+        was_default = context.get("was_default")
+
+        if is_new_upload:
             # цепочка celery задач на создание миниатюр и удаление
             tasks = chain(
                 generate_and_save_avatars_small.si(self.pk),
-                delete_old_avatars_from_s3_storage.si(self.pk, list(old_avatar_names)),
+                delete_old_avatars_from_s3_storage.si(self.pk, list(avatar_names_for_delete or [])),
             )
 
             # Запуск задач только после завершения сохранения в БД
             transaction.on_commit(lambda: tasks.apply_async())
 
-        elif (
-            is_avatar_deleted
-            and old_avatar_names.old_avatar_name != self._meta.get_field("avatar").get_default()
-        ):
+        elif is_deleted and not was_default:
             # celery задача на удаление после завершения сохранения в БД
             transaction.on_commit(
-                lambda: delete_old_avatars_from_s3_storage.delay(self.pk, list(old_avatar_names))
+                lambda: delete_old_avatars_from_s3_storage.delay(
+                    self.pk, list(avatar_names_for_delete or [])
+                )
             )
 
     @classmethod
@@ -164,6 +193,10 @@ class User(AbstractUser):
         для всех размеров, указанных в AVATAR_SMALL_SIZES.
         """
         generate_default_avatar_in_different_sizes(cls)
+
+    @classmethod
+    def get_small_avatar_fields(cls) -> list[str]:
+        return [f"avatar_small_{key}" for key in cls.AVATAR_SMALL_SIZES.keys()]
 
     def __str__(self):
         return self.username

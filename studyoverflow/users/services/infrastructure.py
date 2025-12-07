@@ -252,7 +252,7 @@ def save_img_in_storage(buffer: BytesIO, storage_path_to_avatar_small: str) -> N
 
 
 @dataclass(slots=True)
-class OldAvatarNames:
+class AvatarNamesForDelete:
     """
     Dataclass для хранения имен старых файлов аватарок пользователя,
     подлежащих удалению.
@@ -270,50 +270,42 @@ class OldAvatarNames:
         return iter(astuple(self))
 
 
-def get_old_avatar_names(user: "User") -> OldAvatarNames:
+def get_old_avatar_names(user: "User") -> tuple[str | None, AvatarNamesForDelete]:
     """
     Получает старые пути в хранилище для avatar и avatar_small для пользователя
     для их последующего удаления.
     """
-    old_avatar_names = OldAvatarNames()
+    avatar_names_for_delete = AvatarNamesForDelete()
+    avatar_name_in_db = None
 
     if user.pk:
         old_user = type(user).objects.get(pk=user.pk)
+        avatar_name_in_db = old_user.avatar.name
 
         if (
             old_user.avatar
             and old_user.avatar != user._meta.get_field("avatar").get_default()
             and old_user.avatar.name != user.avatar.name
         ):
-            old_avatar_names.old_avatar_name = old_user.avatar.name
+            avatar_names_for_delete.old_avatar_name = old_user.avatar.name
         else:
-            return old_avatar_names
+            return avatar_name_in_db, avatar_names_for_delete
 
-        if (
-            old_user.avatar_small_size1
-            and old_user.avatar_small_size1
-            != user._meta.get_field("avatar_small_size1").get_default()
-        ):
-            old_avatar_names.old_avatar_small_size1_name = old_user.avatar_small_size1.name
+        for avatar_small in user.get_small_avatar_fields():
+            avatar_small_field = getattr(old_user, avatar_small)
 
-        if (
-            old_user.avatar_small_size2
-            and old_user.avatar_small_size2
-            != user._meta.get_field("avatar_small_size2").get_default()
-        ):
-            old_avatar_names.old_avatar_small_size2_name = old_user.avatar_small_size2.name
+            if (
+                avatar_small_field
+                and avatar_small_field != user._meta.get_field(avatar_small).get_default()
+            ):
+                setattr(
+                    avatar_names_for_delete, f"old_{avatar_small}_name", avatar_small_field.name
+                )
 
-        if (
-            old_user.avatar_small_size3
-            and old_user.avatar_small_size3
-            != user._meta.get_field("avatar_small_size3").get_default()
-        ):
-            old_avatar_names.old_avatar_small_size3_name = old_user.avatar_small_size3.name
-
-    return old_avatar_names
+    return avatar_name_in_db, avatar_names_for_delete
 
 
-def delete_old_avatar_names(old_avatar_names: OldAvatarNames | list[str]) -> None:
+def delete_old_avatar_names(old_avatar_names: AvatarNamesForDelete | list[str]) -> None:
     """
     Удаляет старые файлы для avatar и avatar_small пользователя из хранилища.
     """
@@ -335,22 +327,14 @@ def generate_default_avatar_in_different_sizes(user_model: Type["User"]) -> None
     if not storage_default.exists(user_model.DEFAULT_AVATAR_FILENAME):
         return
 
-    # Создание avatar_small уменьшенных размеров
     with storage_default.open(user_model.DEFAULT_AVATAR_FILENAME, "rb") as default_avatar:
-        default_avatar.seek(0)
-        generate_default_avatar_small(
-            user_model, default_avatar, user_model.DEFAULT_AVATAR_SMALL_SIZE1_FILENAME, size_type=1
-        )
-
-        default_avatar.seek(0)
-        generate_default_avatar_small(
-            user_model, default_avatar, user_model.DEFAULT_AVATAR_SMALL_SIZE2_FILENAME, size_type=2
-        )
-
-        default_avatar.seek(0)
-        generate_default_avatar_small(
-            user_model, default_avatar, user_model.DEFAULT_AVATAR_SMALL_SIZE3_FILENAME, size_type=3
-        )
+        for size_type, filename in (
+            (1, user_model.DEFAULT_AVATAR_SMALL_SIZE1_FILENAME),
+            (2, user_model.DEFAULT_AVATAR_SMALL_SIZE2_FILENAME),
+            (3, user_model.DEFAULT_AVATAR_SMALL_SIZE3_FILENAME),
+        ):
+            generate_default_avatar_small(user_model, default_avatar, filename, size_type)
+            default_avatar.seek(0)
 
 
 def generate_default_avatar_small(

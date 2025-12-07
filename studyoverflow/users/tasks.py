@@ -20,31 +20,20 @@ def generate_and_save_avatars_small(user_pk):
         # Логирование
         return
 
-    # Создание avatar_small и получение имен файлов
-    avatar_small_size1_name = generate_avatar_small(user, size_type=1)
-    avatar_small_size2_name = generate_avatar_small(user, size_type=2)
-    avatar_small_size3_name = generate_avatar_small(user, size_type=3)
-
     update_fields_list = []
 
-    # Если avatar_small_name == False, значит avatar_small не создается
-    if avatar_small_size1_name:
-        user.avatar_small_size1.name = avatar_small_size1_name
-        update_fields_list.append("avatar_small_size1")
+    for size_type, avatar_small in enumerate(user.get_small_avatar_fields(), start=1):
+        avatar_small_name = generate_avatar_small(user, size_type=size_type)
 
-    if avatar_small_size2_name:
-        user.avatar_small_size2.name = avatar_small_size2_name
-        update_fields_list.append("avatar_small_size2")
+        if avatar_small_name:
+            setattr(user, avatar_small, avatar_small_name)
+            update_fields_list.append(avatar_small)
 
-    if avatar_small_size3_name:
-        user.avatar_small_size3.name = avatar_small_size3_name
-        update_fields_list.append("avatar_small_size3")
-
-    user.save(skip_celery_task=True, update_fields=update_fields_list)
+    user.save(update_fields=update_fields_list)
 
 
 @app.task
-def delete_old_avatars_from_s3_storage(user_pk, old_avatar_names: Optional[list] = None):
+def delete_old_avatars_from_s3_storage(user_pk, avatar_names_for_delete: Optional[list] = None):
     User = get_user_model()  # noqa: N806
 
     try:
@@ -53,8 +42,8 @@ def delete_old_avatars_from_s3_storage(user_pk, old_avatar_names: Optional[list]
         # Логирование
         return
 
-    if old_avatar_names is not None:
-        files = [name for name in old_avatar_names if name]
+    if avatar_names_for_delete:
+        files = [name for name in avatar_names_for_delete if name]
         if files:
             delete_old_avatar_names(files)
         return
@@ -65,10 +54,12 @@ def delete_old_avatars_from_s3_storage(user_pk, old_avatar_names: Optional[list]
 
     avatars_names_list = [
         user.avatar.name,
-        user.avatar_small_size1.name,
-        user.avatar_small_size2.name,
-        user.avatar_small_size3.name,
     ]
+
+    for avatar_small in user.get_small_avatar_fields():
+        avatar_small_field = getattr(user, avatar_small)
+
+        avatars_names_list.append(avatar_small_field.name)
 
     files_for_delete = [
         f"{prefix_for_avatars}/{file}"
