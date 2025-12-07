@@ -13,7 +13,17 @@
                   {{ comment.author.avatar.url }}
                 {% endif %}"
            alt="{{ comment.author.username }}"
-           class="rounded-circle">
+           class="rounded-circle"
+           style="cursor:pointer;"
+
+           hx-get="{% url 'users:avatar_preview' comment.author.username %}"
+           hx-target="#modal-image-container"
+           hx-swap="innerHTML"
+
+           hx-indicator="#modal-loading-indicator"
+           hx-on:htmx:before-request="openModal()">
+
+      <div class="image-modal-wrapper"></div>
 
       <div>
         <div class="d-flex align-items-center mb-1">
