@@ -1,0 +1,86 @@
+<div id="notification-card-{{ notification.id }}" class="card text-white rounded shadow-sm px-4 {% if not notification.is_read %}border border-warning{% endif %}">
+  <div class="card-body px-0 pb-2">
+
+    <!-- Автор и время -->
+    <div class="d-flex align-items-center mb-2">
+      <img id="avatar-comment"
+           src="{% if notification.actor.avatar_small_size1 %}
+                  {{ notification.actor.avatar_small_size1.url }}
+                {% elif notification.actor.avatar %}
+                  {{ notification.actor.avatar.url }}
+                {% endif %}"
+           alt="{{ notification.actor.username }}"
+           class="rounded-circle"
+           style="cursor:pointer;"
+
+           hx-get="{% url 'users:avatar_preview' notification.actor.username %}"
+           hx-target="#modal-image-container"
+           hx-swap="innerHTML"
+
+           hx-indicator="#modal-loading-indicator"
+           hx-on:htmx:before-request="openModal()">
+
+      <div class="image-modal-wrapper"></div>
+
+      <div>
+        <div class="d-flex align-items-center mb-1">
+          <a href="{% url 'users:profile' notification.actor.username %}" class="username-comment author-name me-1">{{ notification.actor.username }}</a>
+        </div>
+
+        <div id="time_create-time_update-comment" class="text-secondary">
+          Создано: {{ notification.time_create|date:"d.m.Y г. H:i" }}
+        </div>
+      </div>
+    </div>
+
+    <hr class="mt-1 mb-2">
+
+    <!-- Блок содержимого комментария -->
+    <div id="notification-content-{{ notification.id }}" class="text-start text-white mt-1 px-1">
+      {{ notification.message }}
+      {% if notification.content_object %}
+        <a href="{{ notification.content_object.get_absolute_url }}" class="more-link">
+          Посмотреть
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="d-flex justify-content-end align-items-center mt-2">
+
+      <div class="d-flex mb-1">
+          <button type="button"
+                  class="btn btn-sm me-3 mark-read-btn
+                         {% if notification.is_read %}
+                             btn-outline-warning disabled
+                         {% else %}
+                             btn-outline-warning
+                         {% endif %}"
+                  data-notification-id="{{ notification.id }}"
+                  {% if not notification.is_read %}
+                      hx-post="{% url 'notifications:mark_read' notification.id %}"
+                      hx-trigger="click"
+                      hx-swap="none"
+                  {% endif %}>
+              {% if notification.is_read %}
+                  Прочитано
+              {% else %}
+                  Отметить прочитанным
+              {% endif %}
+          </button>
+
+          <button type="button"
+                  class="btn btn-outline-danger btn-sm delete-notification-btn"
+                  data-notification-id="{{ notification.id }}"
+                  hx-post="{% url 'notifications:delete' notification.id %}"
+                  hx-trigger="click"
+                  hx-target="#notification-wrapper-{{ notification.id }}"
+                  hx-swap="delete">
+              Удалить
+          </button>
+
+      </div>
+
+  </div>
+
+  </div>
+</div>

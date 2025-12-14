@@ -1,0 +1,29 @@
+<div class="d-flex justify-content-center gap-5 mt-3 mb-4">
+  <button class="btn btn-warning"
+          hx-post="{% url 'notifications:mark_all_read' %}"
+          hx-trigger="click"
+          hx-swap="none"
+          id="mark-all-read-btn">
+      Отметить все прочитанными
+  </button>
+
+  <button class="btn btn-outline-light px-3"
+          hx-post="{% url 'notifications:delete_all' %}"
+          hx-trigger="click"
+          hx-swap="delete"
+          hx-target="#notification-container">
+      Удалить все оповещения
+  </button>
+</div>
+
+{% if notification_list %}
+  <div id="notification-container" class="d-flex flex-column px-0 col-md-8 mx-auto" style="gap: 1.5rem;">
+    {% for notification in notification_list %}
+
+      <div id="notification-wrapper-{{ notification.id }}">
+        {% include 'notifications/_notification_card.html' %}
+      </div>
+
+    {% endfor %}
+  </div>
+{% endif %}

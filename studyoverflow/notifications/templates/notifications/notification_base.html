@@ -1,0 +1,61 @@
+{% extends 'navigation/base.html' %}
+{% load static %}
+
+
+{% block title %}
+    <title>Уведомления</title>
+{% endblock %}
+
+
+{% block extra_css %}
+  <link type="text/css" rel="stylesheet" href="{% static 'users/css/avatar_modal.css' %}">
+  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/comment_card.css' %}">
+  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_base.css' %}">
+  <link type="text/css" rel="stylesheet" href="{% static 'notifications/css/notification_list.css' %}">
+{% endblock %}
+
+
+{% block content %}
+  <div class="container py-4" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+    <!-- Новые уведомления -->
+    <div class="text-center">
+
+      <h3 class="text-white">
+        Оповещения
+      </h3>
+
+      <div id="notifications-list"
+           hx-get="/notifications/list/"
+           hx-trigger="load"
+           hx-target="#notifications-list"
+           hx-swap="innerHTML">
+
+        <!-- Индикатор загрузки -->
+        <div id="loading-indicator" class="htmx-indicator d-flex flex-column justify-content-center align-items-center py-2">
+          <div class="spinner-border text-light mb-2" role="status"></div>
+          <span class="text-light">Загрузка оповещений...</span>
+        </div>
+
+      </div>
+
+      <div id="container-no-notifications" style="display: none">
+        <h5 class="text-secondary">Нет оповещений</h5>
+      </div>
+
+    </div>
+
+  </div>
+
+  {% include 'users/_avatar_modal.html' %}
+
+{% endblock %}
+
+
+{% block extra_js %}
+  <script src="{% static 'users/js/avatar_modal.js' %}"></script>
+
+  <script src="{% static 'notifications/js/notification_list.js' %}"></script>
+
+  <script src="https://unpkg.com/htmx.org@2.0.7"></script>
+{% endblock %}

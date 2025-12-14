@@ -1,0 +1,75 @@
+from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+from django.db import models
+
+
+User = get_user_model()
+
+
+class NotificationType(models.TextChoices):
+    LIKE_POST = "like_post", "Лайк поста"
+    LIKE_COMMENT = "like_comment", "Лайк комментария"
+    POST = "post_created", "Пост создан"
+    COMMENT = "comment_post", "Комментарий к посту"
+    REPLY = "reply_comment", "Ответ на комментарий"
+    REGISTER = "user_register", "Регистрация пользователя"
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        verbose_name="Пользователь",
+        help_text="Пользователь, которому адресовано уведомление",
+    )
+
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="actor_notifications",
+        verbose_name="Инициатор",
+        help_text="Пользователь, который совершил действие",
+    )
+
+    notification_type = models.CharField(
+        max_length=50,
+        choices=NotificationType.choices,
+        verbose_name="Тип",
+        help_text="Тип уведомления",
+    )
+
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Тип связанного объекта",
+    )
+    object_id = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="ID связанного объекта"
+    )
+    content_object = GenericForeignKey("content_type", "object_id")
+
+    message = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Сообщение",
+        help_text="Текстовое описание уведомления",
+    )
+
+    is_read = models.BooleanField(default=False, verbose_name="Статус")
+    time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
+
+    class Meta:
+        verbose_name = "Уведомление"
+        verbose_name_plural = "Уведомления"
+        ordering = ["-time_create"]
+        indexes = [
+            models.Index(fields=["user", "is_read"]),
+            models.Index(fields=["time_create"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user} <- {self.actor}: {self.get_notification_type_display()}"

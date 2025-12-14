@@ -1,0 +1,21 @@
+#notifications-list button,
+#notifications-list .btn {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+#notifications-list .btn:focus,
+#notifications-list .btn:active,
+#notifications-list .btn:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.more-link {
+    color: cornflowerblue !important;
+    text-decoration: none;
+}
+
+.more-link:hover {
+    color: #0a58ca !important;
+}
