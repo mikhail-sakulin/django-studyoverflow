@@ -36,6 +36,7 @@ DEBUG = env.bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost"])
 
+INTERNAL_IPS = ["127.0.0.1"]
 
 # Application definition
 
@@ -49,9 +50,12 @@ INSTALLED_APPS = [
     "navigation.apps.NavigationConfig",
     "posts.apps.PostsConfig",
     "users.apps.UsersConfig",
+    "notifications.apps.NotificationsConfig",
     "django_extensions",
     "storages",
     "widget_tweaks",
+    "channels",
+    "debug_toolbar",
 ]
 
 MIDDLEWARE = [
@@ -64,6 +68,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
 ROOT_URLCONF = "studyoverflow.urls"
@@ -86,6 +91,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "studyoverflow.wsgi.application"
+
+ASGI_APPLICATION = "studyoverflow.asgi.application"
 
 
 # Database
@@ -205,3 +212,21 @@ CELERY_BROKER_URL = env("CELERY_BROKER_URL")
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND")
 
 CELERY_TIMEZONE = TIME_ZONE
+
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [env("REDIS_CHANNELS_URL")],
+        },
+    },
+}
+
+CELERY_ONCE = {
+    "backend": "celery_once.backends.Redis",
+    "settings": {
+        "url": env("REDIS_CELERY_ONCE_URL"),
+        "default_timeout": 10,
+    },
+}
