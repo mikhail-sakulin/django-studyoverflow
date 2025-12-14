@@ -2,6 +2,7 @@
 Модуль содержит инфраструктурную логику приложения posts.
 """
 
+import json
 from typing import Any, Generic, Protocol, TypeVar
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -209,6 +210,32 @@ class CommentGetMethodMixin:
 
 
 class LoginRequiredHTMXMixin(LoginRequiredMixin):
+    message_text = "Сначала войдите в аккаунт."
+    message_type = "info"
+
+    def htmx_auth_required_response(self, message_text=None, message_type=None):
+        response = HttpResponse("")
+
+        response["HX-Reswap"] = "none"
+        response["HX-Trigger"] = json.dumps(
+            {
+                "showMessage": {
+                    "text": message_text or self.message_text,
+                    "type": message_type or self.message_type,
+                }
+            }
+        )
+
+        return response
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.headers.get("Hx-Request") and not request.user.is_authenticated:
+            return self.htmx_auth_required_response()
+
+        return super().dispatch(request, *args, **kwargs)
+
+
+class LoginRequiredRedirectHTMXMixin(LoginRequiredMixin):
     """
     Расширение LoginRequiredMixin, чтобы HTMX делал редирект на страницу логина.
     """

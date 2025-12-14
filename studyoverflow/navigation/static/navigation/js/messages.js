@@ -39,3 +39,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }, 3000);
 });
+
+
+// --- Обработка кастомного события showMessage для динамических сообщений ---
+document.body.addEventListener("showMessage", (event) => {
+    const data = event.detail;
+
+    const container = document.getElementById("messages-container");
+    if (!container) return;
+
+    // --- Создание нового сообщения ---
+    const div = document.createElement("div");
+    div.className = `alert alert-${data.type} alert-dismissible fade show shadow mx-auto`;
+    div.role = "alert";
+    div.innerHTML = `
+        ${data.text}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    container.appendChild(div);
+
+    // --- Автозакрытие нового сообщения через 3 секунды ---
+    setTimeout(() => {
+        const alert = bootstrap.Alert.getOrCreateInstance(div);
+        alert.close();
+    }, 3000);
+});
