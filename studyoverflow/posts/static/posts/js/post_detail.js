@@ -6,6 +6,7 @@
     - Делегирование событий клика для кнопок управления комментариями
     - Обработка кастомных событий HTMX для успешной отправки/ошибок форм
     - Перезагрузка страницы по кастомному событию
+    - Скролл к комментарию по хэшу (#comment-card-{id}) после HTMX обновления
 */
 
 
@@ -181,6 +182,32 @@ document.addEventListener("DOMContentLoaded", function() {
             // Активация текущей кнопки
             btn.classList.add('active');
             input.value = btn.dataset.value;
+        }
+    });
+});
+
+
+// --- Скролл к комментарию по хэшу после HTMX обновления ---
+
+// Если в URL есть хэш вида #comment-card-{id}, страница прокручивается к этому комментарию после загрузки
+let scrolledToAnchor = false;
+
+document.addEventListener("DOMContentLoaded", () => {
+    const commentsWrapper = document.getElementById("comments-wrapper");
+    if (!commentsWrapper) return;
+
+    commentsWrapper.addEventListener("htmx:afterSwap", function(event) {
+        if (scrolledToAnchor) return;
+
+        const hash = window.location.hash;
+        if (!hash) return;
+
+        const el = document.querySelector(hash);
+        // Проверка, что элемент является комментарием
+        if (el && el.id.startsWith("comment-card-")) {
+            // Плавная прокрутка к комментарию
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+            scrolledToAnchor = true;
         }
     });
 });
