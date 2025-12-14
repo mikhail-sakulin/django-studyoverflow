@@ -5,14 +5,24 @@
   <div class="image-modal-body">
     <span class="close-modal" onclick="closeModal()">&times;</span>
 
-    <div id="modal-image-container">
-
-      <div id="modal-loading-indicator" class="htmx-indicator ms-2">
-          <div class="spinner-border text-white spinner-border-sm" role="status"></div>
-          <span class="px-1 text-white">Загрузка...</span>
+      <div id="modal-loading-indicator" class="ms-2">
+        <div class="spinner-border text-white spinner-border-sm" role="status"></div>
+        <span class="px-1 text-white">Загрузка...</span>
       </div>
 
-    </div>
+      <style>
+        #modal-loading-indicator {
+          display: none;
+          align-items: center;
+        }
+
+        #modal-loading-indicator.htmx-request {
+          display: flex;
+        }
+      </style>
+
+    <div id="modal-image-container"></div>
+
   </div>
 
 </div>
