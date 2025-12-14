@@ -1,5 +1,6 @@
 {% load static %}
 {% load navigation_tags %}
+{% load notifications_tags %}
 
 
 <!-- Базовый html-шаблон с header, не предназначен для использования без дочерних html-шаблонов -->
@@ -8,7 +9,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=0.8">
+  <meta name="viewport" content="width=device-width, initial-scale=0.75">
 
   <!-- Блок с названием страницы -->
   {% block title %}
@@ -31,9 +32,9 @@
   <!-- header -->
   <header id="header" class="p-3 bg-black text-white">
     <div class="container">
-      <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+      <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-xl-start">
 
-        <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-2 mb-lg-0 gap-1">
+        <ul class="nav col-12 col-xl-auto me-xl-auto mb-2 justify-content-center mb-2 mb-xl-0 gap-1">
           <li><a id="studyoverflow-button" href="{% url 'home' %}" class="nav-link px-2 text-warning">StudyOverflow</a></li>
           {% get_menu_for_header as menu %}
           {% for element_of_menu in menu %}
@@ -48,12 +49,29 @@
           {% endfor %}
         </ul>
 
-        <form method="GET" action="{% url 'posts:list' %}" class="col-12 col-lg-3 mb-3 mb-lg-0 me-lg-3">
+        <form method="GET" action="{% url 'posts:list' %}" class="col-12 col-xl-3 mb-3 mb-xl-0 me-xl-3">
           <input id="base-search" name="q" type="search" class="form-control form-control-dark" placeholder="Поиск по постам..." aria-label="Search">
         </form>
 
         <div class="text-end">
           {% if user.is_authenticated %}
+
+            {% get_unread_notifications_count user as unread_notifications_count %}
+
+            <a id="notifications-button"
+               href="{% url 'notifications:base' %}"
+               class="btn btn-outline-light border-0 align-items-center position-relative">
+
+                <!-- Иконка уведомлений -->
+                <i id="i-notifications" class="{% if unread_notifications_count > 0 %}bi bi-bell-fill{% else %}bi bi-bell{% endif %}"></i>
+
+                <!-- Счётчик уведомлений -->
+                <span id="notifications-count" class="{% if unread_notifications_count > 0 %}text-danger{% else %}text-warning{% endif %}" data-user-id="{{ user.id }}">
+                    {{ unread_notifications_count }}
+                </span>
+
+                <div class="notification-particles"></div>
+            </a>
 
             <a href="{% url 'users:my_profile' %}" id="profile-button" class="btn btn-warning me-2">
               <i id="profile-icon" class="bi bi-person-circle"></i>
@@ -91,6 +109,8 @@
 
   <!-- Подключение JS-скрипта для управления отображением сообщений -->
   <script src="{% static 'navigation/js/messages.js' %}"></script>
+
+  <script src="{% static 'notifications/js/websocket_notifications.js' %}"></script>
 
   <!-- Блок с загрузкой дополнительных js-файлов в дочерних html-шаблонах -->
   {% block extra_js %}
