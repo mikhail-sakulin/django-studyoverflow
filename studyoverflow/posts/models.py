@@ -7,6 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
+from notifications.models import Notification
 from posts.services.domain import generate_slug, normalize_tag_name
 from taggit.managers import TaggableManager
 from taggit.models import GenericTaggedItemBase, TagBase
@@ -92,6 +93,12 @@ class Post(models.Model):
     likes = GenericRelation(
         "Like", content_type_field="content_type", object_id_field="object_id", verbose_name="Лайк"
     )
+    notifications = GenericRelation(
+        Notification,
+        content_type_field="content_type",
+        object_id_field="object_id",
+        verbose_name="Уведомления",
+    )
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
@@ -170,6 +177,12 @@ class Comment(models.Model):
     likes = GenericRelation(
         "Like", content_type_field="content_type", object_id_field="object_id", verbose_name="Лайк"
     )
+    notifications = GenericRelation(
+        Notification,
+        content_type_field="content_type",
+        object_id_field="object_id",
+        verbose_name="Уведомления",
+    )
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
@@ -230,6 +243,9 @@ class Comment(models.Model):
         """
         return (self.time_update - self.time_create).total_seconds() > 5
 
+    def get_absolute_url(self):
+        return f"{self.post.get_absolute_url()}#comment-card-{self.pk}"
+
 
 class LikeManager(models.Manager):
     def is_liked(self, user, obj):
@@ -251,6 +267,13 @@ class Like(models.Model):
     object_id = models.PositiveIntegerField(verbose_name="ID объекта")
     content_object = GenericForeignKey("content_type", "object_id")
 
+    notifications = GenericRelation(
+        Notification,
+        content_type_field="content_type",
+        object_id_field="object_id",
+        verbose_name="Уведомления",
+    )
+
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
 
     objects = LikeManager()
@@ -263,3 +286,6 @@ class Like(models.Model):
 
     def __str__(self):
         return f"Like by {self.user} on {self.content_object}"
+
+    def get_absolute_url(self):
+        return self.content_object.get_absolute_url()

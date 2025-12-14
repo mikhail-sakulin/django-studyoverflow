@@ -2,6 +2,7 @@ from celery import chain
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
 from django.db.models import Q
+from django.urls import reverse
 from django.utils.translation import gettext_lazy
 from users.services.domain import (
     generate_new_filename_with_uuid,
@@ -203,3 +204,6 @@ class User(AbstractUser):
 
     class Meta:
         ordering = ["username"]
+
+    def get_absolute_url(self):
+        return reverse("users:profile", kwargs={"username": self.username})
