@@ -41,10 +41,10 @@ document.addEventListener('DOMContentLoaded', function() {
         return confirm("Вы уверены, что хотите удалить свой аккаунт? Это действие необратимо!");
     };
 
-    // Проверка наличия ошибок в форме (элементы с классами .alert-danger или .text-danger)
-    const hasErrors = Array.from(
-        document.querySelectorAll('.alert-danger, .text-danger')
-    ).some(el => el.textContent.trim() !== '');
+    // Проверка наличия ошибок в форме
+    const hasErrors =
+        editFormContainer.querySelector('.alert-danger') !== null ||
+        editFormContainer.querySelector('.text-danger div') !== null;
 
     // Если в форме есть ошибки — показать форму и прокрутить к ней
     if (hasErrors) {
