@@ -150,7 +150,7 @@
   width: 100%;
 }
 
-footer a.text-muted:hover {
+footer a.text-secondary:hover {
     color: #a23e3e !important;
 }
 

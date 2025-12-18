@@ -166,23 +166,27 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!btn) return;
 
         const isSort = btn.classList.contains('comment-sort-btn');
-        const input = document.getElementById(isSort ? 'comment_sort_input' : 'comment_order_input');
+        const input = document.getElementById(
+            isSort ? 'comment_sort_input' : 'comment_order_input'
+        );
 
         if (!input) return;
 
-        // Если кнопка активна — снимается активность и сбрасывается input
-        if (btn.classList.contains('active')) {
-            btn.classList.remove('active');
-            input.value = '';
-        } else {
-            // Деактивация всех кнопок этой группы
-            const groupClass = isSort ? '.comment-sort-btn' : '.order-comment-btn';
-            btn.closest('form').querySelectorAll(groupClass).forEach(b => b.classList.remove('active'));
+        // если кнопка уже активна — ничего не происходит
+        if (btn.classList.contains('active')) return;
 
-            // Активация текущей кнопки
-            btn.classList.add('active');
-            input.value = btn.dataset.value;
-        }
+        // Деактивация всех кнопок этой группы
+        const groupClass = isSort
+            ? '.comment-sort-btn'
+            : '.order-comment-btn';
+
+        btn.closest('form')
+            .querySelectorAll(groupClass)
+            .forEach(b => b.classList.remove('active'));
+
+        // Активация текущей кнопки
+        btn.classList.add('active');
+        input.value = btn.dataset.value;
     });
 });
 

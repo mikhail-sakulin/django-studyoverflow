@@ -118,3 +118,8 @@ html {
 .pulse {
     animation: icon-pulse 0.5s ease-out;
 }
+
+.form-control::placeholder {
+    color: rgba(var(--bs-secondary-rgb), 1);
+    opacity: 1;
+}

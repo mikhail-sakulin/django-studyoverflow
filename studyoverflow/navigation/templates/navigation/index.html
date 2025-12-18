@@ -80,7 +80,7 @@
         <!-- Блок 'о сайте' -->
         <div class="col-md-4 d-flex flex-column align-items-center align-items-md-start text-center text-md-start">
           <h5 class="text-white-muted">StudyOverflow</h5>
-          <p class="mt-3 text-muted" style="text-align: justify;">
+          <p class="mt-3 text-secondary" style="text-align: justify;">
             StudyOverflow - это платформа для разработчиков, где можно задавать вопросы,
             делиться знаниями и находить решения вопросов по программированию.
           </p>
@@ -91,10 +91,10 @@
           <div class="text-start">
             <h5 class="text-white-muted">Навигация</h5>
             <ul class="list-unstyled mt-4">
-              <li><a href="{% url 'home' %}" class="text-muted">Главная</a></li>
+              <li><a href="{% url 'home' %}" class="text-secondary">Главная</a></li>
               {% get_menu_for_header as menu %}
               {% for element_of_menu in menu %}
-                <li><a href="{% url element_of_menu.url %}" class="text-muted">
+                <li><a href="{% url element_of_menu.url %}" class="text-secondary">
                       {{ element_of_menu.name }}
                     </a>
                 </li>
@@ -106,7 +106,7 @@
         <!-- Блок контактов -->
         <div class="col-md-4 d-flex flex-column align-items-center">
           <h5 class="text-white-muted">Контакты</h5>
-          <p class="mt-3 text-muted">Email: mv.sakulin@yandex.ru</p>
+          <p class="mt-3 text-secondary">Email: mv.sakulin@yandex.ru</p>
         </div>
       </div>
 
@@ -117,7 +117,7 @@
       <!-- Копирайт -->
       <div class="row">
         <div class="col text-center">
-          <p class="mb-0 text-muted">&copy; 2025 StudyOverflow. Все права защищены.</p>
+          <p class="mb-0 text-secondary">&copy; 2025 StudyOverflow. Все права защищены.</p>
         </div>
       </div>
     </div>
