@@ -19,6 +19,7 @@ from django.db.models import F
 from django.db.models.functions import Greatest
 from django.utils.deconstruct import deconstructible
 from django.utils.translation import gettext_lazy
+from django_redis import get_redis_connection
 from PIL import Image
 from users.services.domain import generate_image, generate_new_filename_with_uuid
 
@@ -364,3 +365,39 @@ def generate_default_avatar_small(
     except BotoCoreError:
         # Ошибка при обращении к хранилищу
         return
+
+
+REDIS_KEY_PREFIX = "online_user"
+ONLINE_TTL = 120
+
+
+def get_redis_conn_with_key(user_id: int):
+    """
+    Возвращает объект-соединение с Redis и ключ в Redis для статуса онлайна пользователя.
+    """
+    redis_conn = get_redis_connection("default")
+    key = f"{REDIS_KEY_PREFIX}:{user_id}"
+    return redis_conn, key
+
+
+def set_user_online(user_id: int):
+    """
+    Установка ключа в Redis с TTL, что пользователь онлайн.
+    """
+    redis_conn, key = get_redis_conn_with_key(user_id)
+    redis_conn.set(key, "1", ex=ONLINE_TTL)
+
+
+def is_user_online(user_id: int) -> bool:
+    """
+    Проверка, что пользователь онлайн.
+    """
+    redis_conn, key = get_redis_conn_with_key(user_id)
+    return redis_conn.exists(key) == 1
+
+
+def get_online_user_ids():
+    redis_conn = get_redis_connection("default")
+    keys = redis_conn.keys("online_user:*")
+
+    return [int(key.decode().split(":")[1]) for key in keys]

@@ -1,5 +1,6 @@
 {% extends 'navigation/base.html' %}
 {% load static %}
+{% load users_tags %}
 
 
 {% block title %}
@@ -56,7 +57,16 @@
               <div class="flex-grow-1 d-flex flex-column w-100" style="height: 300px;">
 
                 <div class="w-100">
-                  <p class="author-name mb-1 fs-5 text-break">{{ author.username }}</p>
+                  <p class="author-name mb-1 text-break d-flex align-items-center">
+                    <span class="fs-5">{{ author.username }}</span>
+
+                    {% online_status_tag author as online_status %}
+                    {% if online_status == True %}
+                      <span class="online-status d-flex align-items-center">
+                        <span class="online-dot me-1"></span>Онлайн
+                      </span>
+                    {% endif %}
+                  </p>
                   <p class="text-secondary mb-3 text-break">{{ author.email }}</p>
                 </div>
 
@@ -104,23 +114,30 @@
             <div class="row text-center mb-2">
               <div class="col-4">
                 <p class="mb-0 text-cornflowerblue">Репутация</p>
-                <h6 class="fw-bold text-warning mb-0">{{ author.reputation }}</h6>
+                <h6 class="text-warning mb-0">{{ author.reputation }}</h6>
               </div>
               <div class="col-4 border-start border-end">
                 <p class="mb-0 text-cornflowerblue">Посты</p>
-                <h6 class="fw-bold text-warning mb-0">{{ author.posts_count }}</h6>
+                <h6 class="text-warning mb-0">{{ author.posts_count }}</h6>
               </div>
               <div class="col-4">
                 <p class="mb-0 text-cornflowerblue">Комментарии</p>
-                <h6 class="fw-bold text-warning mb-0">{{ author.comments_count }}</h6>
+                <h6 class="text-warning mb-0">{{ author.comments_count }}</h6>
               </div>
             </div>
 
             <hr>
 
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-2 gap-2">
-              <p class="text-muted small mb-0">
-                Последний раз был в сети: {{ author.last_login|date:"H:i, d M Y" }}
+            <div class="d-flex justify-content-between align-items-center mt-2 gap-2">
+              <p class="mb-0">
+                <span class="text-secondary small ">
+                  {% if online_status == True %}
+                    Сейчас в сети
+                  {% else %}
+                    Последний раз был в сети: {{ online_status|date:"d.m.Y г. H:i" }}
+                  {% endif %}
+                </span>
+
               </p>
 
               {% block danger_zone %}{% endblock %}

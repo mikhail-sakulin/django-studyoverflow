@@ -19,3 +19,8 @@ media/
 
 # Статические файлы после команды collectstatic
 **/staticfiles/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+celerybeat-schedule.*

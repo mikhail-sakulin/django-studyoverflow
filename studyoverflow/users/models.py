@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
 from django.db.models import Q
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import gettext_lazy
 from users.services.domain import (
     generate_new_filename_with_uuid,
@@ -93,7 +94,7 @@ class User(AbstractUser):
     comments_count = models.PositiveIntegerField(default=0, verbose_name="Количество комментариев")
 
     last_seen = models.DateTimeField(
-        null=True,
+        default=timezone.now,
         verbose_name="Был в сети",
     )
 

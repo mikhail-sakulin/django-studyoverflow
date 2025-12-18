@@ -6,6 +6,7 @@
     - Анимация частиц при новых уведомлениях
     - Обновление списка уведомлений через HTMX
     - Автоматическое переподключение при обрыве соединения
+    - Heartbeat: периодическое оповещение сервера, что пользователь онлайн
 */
 
 
@@ -24,6 +25,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const wsScheme = location.protocol === "https:" ? "wss" : "ws";
     const wsUrl = `${wsScheme}://${location.host}/ws/notifications/`;
 
+    let socket;
 
     // --------------------------
     // Анимация новых уведомлений
@@ -54,9 +56,21 @@ document.addEventListener("DOMContentLoaded", function () {
     // Подключение WebSocket
     // --------------------------
     function connect() {
-        const socket = new WebSocket(wsUrl);
+        socket = new WebSocket(wsUrl);
 
-        socket.onopen = () => console.log("WS connected");
+        socket.onopen = () => {
+            console.log("WS connected");
+
+            // --------------------------
+            // Heartbeat: каждые 4 минуты сообщается серверу, что пользователь онлайн
+            // --------------------------
+            setInterval(() => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    // type "heartbeat" будет обрабатываться сервером
+                    socket.send(JSON.stringify({ type: "heartbeat" }));
+                }
+            }, 60 * 1000); // 1 минута
+        };
 
         socket.onmessage = event => {
             try {

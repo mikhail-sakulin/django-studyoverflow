@@ -2,9 +2,11 @@ from typing import Optional
 
 from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
+from django.utils import timezone
 from users.services.infrastructure import (
     delete_old_avatar_names,
     generate_avatar_small,
+    get_online_user_ids,
 )
 
 from studyoverflow.celery import app
@@ -68,3 +70,22 @@ def delete_old_avatars_from_s3_storage(user_pk, avatar_names_for_delete: Optiona
     ]
 
     delete_old_avatar_names(files_for_delete)
+
+
+@app.task
+def sync_online_users_to_db():
+    """
+    Проверяет все ключи online_users:
+    """
+    User = get_user_model()  # noqa: N806
+
+    user_ids = get_online_user_ids()
+
+    users = list(User.objects.filter(pk__in=user_ids))
+
+    now = timezone.now()
+
+    for user in users:
+        user.last_seen = now
+
+    User.objects.bulk_update(users, ["last_seen"])

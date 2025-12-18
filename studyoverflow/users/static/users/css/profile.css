@@ -98,3 +98,17 @@ hr {
     height: 100px !important;
     resize: none !important;
 }
+
+.online-status {
+    color: #28a745;
+    font-size: 0.9rem;
+    margin-left: 0.8rem;
+}
+
+.online-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: #28a745;
+    border-radius: 50%;
+}
