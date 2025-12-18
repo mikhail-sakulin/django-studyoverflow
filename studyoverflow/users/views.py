@@ -13,7 +13,7 @@ from django.contrib.auth.views import (
 from django.contrib.messages.views import SuccessMessageMixin
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, DetailView, TemplateView, UpdateView
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from users.forms import (
     UserLoginForm,
     UserPasswordChangeForm,
@@ -22,11 +22,62 @@ from users.forms import (
     UserRegisterForm,
     UserSetPasswordForm,
 )
+from users.services.infrastructure import (
+    UserHTMXPaginationMixin,
+    UserOnlineFilterMixin,
+    UserSortMixin,
+    get_online_user_ids,
+)
 
 
-class UsersTemplateView(TemplateView):
-    template_name = "users/users.html"
+class UsersListView(UserHTMXPaginationMixin, UserSortMixin, UserOnlineFilterMixin, ListView):
+    model = get_user_model()
+    template_name = "users/user_list.html"
+    context_object_name = "users"
     extra_context = {"section_of_menu_selected": "users:list"}
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        queryset = queryset.order_by("-reputation", "id")
+
+        self.remaining = queryset[self.paginate_htmx_by : self.paginate_htmx_by + 1].exists()
+        return queryset[: self.paginate_htmx_by]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "online_ids": get_online_user_ids(),
+                "remaining": self.remaining,
+                "offset": 0,
+                "limit": self.paginate_htmx_by,
+            }
+        )
+        return context
+
+
+class UsersListHTMXView(UserHTMXPaginationMixin, UserSortMixin, UserOnlineFilterMixin, ListView):
+    model = get_user_model()
+    template_name = "users/_user_grid.html"
+    context_object_name = "users"
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        queryset = self.filter_by_online(queryset)
+        queryset = self.apply_sorting(queryset)
+        return self.paginate_queryset(queryset)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "online_ids": self.get_online_ids(),
+                "remaining": self.remaining,
+                "offset": self.offset,
+                "limit": self.limit,
+            }
+        )
+        return context
 
 
 class UserRegisterView(SuccessMessageMixin, CreateView):

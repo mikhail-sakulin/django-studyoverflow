@@ -1,0 +1,50 @@
+<!-- Сетка пользователей -->
+<div class="row g-5 users-grid mb-5">
+
+  {% for user in users %}
+    {% include 'users/_user_card.html' %}
+  {% empty %}
+    <div class="text-center text-secondary py-4">
+      Пользователи не найдены
+    </div>
+  {% endfor %}
+
+</div>
+
+<div id="load-more-container">
+  {% if remaining %}
+  <div class="text-center" id="users-load-buttons">
+      <button
+          class="btn btn-warning-custom text-warning load-more-btn"
+          hx-get="{% url 'users:list_htmx' %}"
+          hx-target="#load-more-container"
+          hx-swap="outerHTML"
+          hx-vals='{
+              "offset": "{{ offset|add:limit }}",
+              "limit": "{{ limit }}",
+              "online": "{{ request.GET.online|default:"any" }}",
+              "user_sort": "{{ request.GET.user_sort|default:"reputation" }}",
+              "user_order": "{{ request.GET.user_order|default:"desc" }}"
+          }'
+          hx-indicator="#users-load-indicator">
+            Загрузить ещё
+      </button>
+
+      <button
+          class="btn btn-warning-custom text-warning load-more-btn"
+          hx-get="{% url 'users:list_htmx' %}"
+          hx-target="#load-more-container"
+          hx-swap="outerHTML"
+          hx-vals='{
+              "offset": "{{ offset|add:limit }}",
+              "limit": -1,
+              "online": "{{ request.GET.online|default:"any" }}",
+              "user_sort": "{{ request.GET.user_sort|default:"reputation" }}",
+              "user_order": "{{ request.GET.user_order|default:"desc" }}"
+          }'
+          hx-indicator="#users-load-indicator">
+            Загрузить всех
+      </button>
+  </div>
+  {% endif %}
+</div>

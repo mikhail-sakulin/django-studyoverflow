@@ -1,0 +1,48 @@
+{% extends 'navigation/base.html' %}
+{% load static %}
+
+
+{% block title %}
+  <title>Пользователи</title>
+{% endblock %}
+
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'users/css/user_card.css' %}">
+  <link rel="stylesheet" href="{% static 'users/css/user_sort.css' %}">
+  <link rel="stylesheet" href="{% static 'users/css/profile.css' %}">
+  <link rel="stylesheet" href="{% static 'users/css/auth_base.css' %}">
+  <link type="text/css" rel="stylesheet" href="{% static 'users/css/avatar_modal.css' %}">
+{% endblock %}
+
+
+{% block content %}
+
+  <div class="container my-5">
+
+    <h3 class="text-white text-center mb-4">
+      Пользователи
+    </h3>
+
+    {% include 'users/_user_sort.html' %}
+
+    <div id="users-grid">
+      {% include "users/_user_grid.html" %}
+    </div>
+
+  </div>
+
+  {% include 'users/_avatar_modal.html' %}
+
+{% endblock %}
+
+
+{% block extra_js %}
+  <script src="{% static 'users/js/profile.js' %}"></script>
+
+  <script src="{% static 'users/js/user_sort.js' %}"></script>
+
+  <script src="{% static 'users/js/avatar_modal.js' %}"></script>
+
+  <script src="https://unpkg.com/htmx.org@2.0.7"></script>
+{% endblock %}

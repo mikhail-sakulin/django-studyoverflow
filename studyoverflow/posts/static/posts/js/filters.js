@@ -23,17 +23,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const isHidden = form.classList.contains("filters-hidden");
 
             if (isHidden) {
-                // Показ формы
                 form.classList.remove("filters-hidden");
                 form.classList.add("filters-visible");
-
                 text.textContent = "Скрыть фильтрацию и сортировку";
                 icon.textContent = "⮝";
             } else {
-                // Скрытие формы
                 form.classList.remove("filters-visible");
                 form.classList.add("filters-hidden");
-
                 text.textContent = "Выбрать фильтрацию и сортировку";
                 icon.textContent = "⮟";
             }
@@ -45,16 +41,14 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.addEventListener("click", () => {
             const input = document.getElementById("has_comments_input");
 
-            if (btn.classList.contains("active")) {
-                // Если кнопка уже активна — снимается активность и очищается input
-                btn.classList.remove("active");
-                if (input) input.value = '';
-            } else {
-                // Активация текущей кнопки, деактивация остальных
-                document.querySelectorAll(".comment-btn").forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-                if (input) input.value = btn.dataset.value;
-            }
+            // если уже активна — ничего не делаем
+            if (btn.classList.contains("active")) return;
+
+            document.querySelectorAll(".comment-btn")
+                .forEach(b => b.classList.remove("active"));
+
+            btn.classList.add("active");
+            if (input) input.value = btn.dataset.value;
         });
     });
 
@@ -64,12 +58,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const input = document.getElementById("tag_match_input");
 
             if (btn.classList.contains("active")) {
-                // Снятие выделения (сброс)
                 btn.classList.remove("active");
                 if (input) input.value = '';
             } else {
-                // Активация текущей кнопки, деактивация остальных
-                document.querySelectorAll(".tag-match-btn").forEach(b => b.classList.remove("active"));
+                document.querySelectorAll(".tag-match-btn")
+                    .forEach(b => b.classList.remove("active"));
                 btn.classList.add("active");
                 if (input) input.value = btn.dataset.value;
             }
@@ -84,15 +77,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const cleanTags = tagsInput.value.replace(/[, ]/g, '').trim();
 
         if (cleanTags !== "" && tagMatchInput.value === "") {
-            // Автоматически выбирается режим "any"
             tagMatchInput.value = "any";
 
             document.querySelectorAll(".tag-match-btn").forEach(btn => {
-                if (btn.dataset.value === "any") {
-                    btn.classList.add("active");
-                } else {
-                    btn.classList.remove("active");
-                }
+                btn.classList.toggle("active", btn.dataset.value === "any");
             });
         }
     }
@@ -102,16 +90,13 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.addEventListener("click", () => {
             const input = document.getElementById("sort_input");
 
-            if (btn.classList.contains("active")) {
-                // Деактивация кнопки
-                btn.classList.remove("active");
-                if (input) input.value = '';
-            } else {
-                // Активация текущей кнопки, деактивация остальных
-                document.querySelectorAll(".sort-btn").forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-                if (input) input.value = btn.dataset.value;
-            }
+            if (btn.classList.contains("active")) return;
+
+            document.querySelectorAll(".sort-btn")
+                .forEach(b => b.classList.remove("active"));
+
+            btn.classList.add("active");
+            if (input) input.value = btn.dataset.value;
         });
     });
 
@@ -120,14 +105,13 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.addEventListener("click", () => {
             const input = document.getElementById("order_input");
 
-            if (btn.classList.contains("active")) {
-                btn.classList.remove("active");
-                if (input) input.value = '';
-            } else {
-                document.querySelectorAll(".order-arrow-btn").forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-                if (input) input.value = btn.dataset.value;
-            }
+            if (btn.classList.contains("active")) return;
+
+            document.querySelectorAll(".order-arrow-btn")
+                .forEach(b => b.classList.remove("active"));
+
+            btn.classList.add("active");
+            if (input) input.value = btn.dataset.value;
         });
     });
 
@@ -141,11 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
             toggleTagsBtn.textContent = text;
         }
 
-        toggleTagsBtn.addEventListener('click', () => {
-            updateToggleTagsText();
-        });
-
-        // Инициализация при загрузке
+        toggleTagsBtn.addEventListener('click', updateToggleTagsText);
         updateToggleTagsText();
     }
 
@@ -156,7 +136,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             elements.forEach(el => {
                 if (el.type !== "submit" && (!el.value || el.value.trim() === "")) {
-                    // чтобы пустые поля не попадали в GET-запрос
                     el.disabled = true;
                 }
             });

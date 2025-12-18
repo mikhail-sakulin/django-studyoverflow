@@ -1,0 +1,76 @@
+#users-sort-block .bg-black {
+    background: #000 !important;
+    border-radius: .5rem;
+}
+
+#users-sort-block .btn-outline-light {
+    width: 105px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#users-sort-block .btn-outline-light.active {
+    background-color: white !important;
+    color: black !important;
+    border-color: white !important;
+    font-weight: 600;
+}
+
+#users-sort-block .btn-group {
+    gap: 8px;
+}
+
+.user-sort-btn,
+.user-online-btn {
+    border-radius: .5rem !important;
+    padding: 3px 7px !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.sort-submit-btn {
+    border-radius: .5rem !important;
+    padding: 3px 12px !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.user-order-btn {
+    text-decoration: none;
+    color: white !important;
+    font-size: 1.5rem;
+    line-height: 1;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+}
+
+.user-order-btn.active {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    border-radius: .25rem;
+    color: #ffc107 !important;
+}
+
+.user-order-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3) !important;
+    border-radius: .25rem;
+}
+
+#users-load-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: -1rem;
+}
+
+.btn-warning-custom {
+    font-size: 1.25rem;
+}
+
+.btn-warning-custom:hover {
+    filter: brightness(80%);
+}

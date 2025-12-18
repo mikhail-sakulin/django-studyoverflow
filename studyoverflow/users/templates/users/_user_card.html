@@ -1,0 +1,79 @@
+<div class="col-12 col-md-6 col-xl-4">
+
+  <div class="user-card">
+
+    <!-- Аватар + инфо -->
+    <div class="d-flex align-items-start mb-2">
+
+      <!-- Аватар -->
+      <img
+        src="{% if user.avatar_small_size2 %}
+               {{ user.avatar_small_size2.url }}
+             {% elif user.avatar %}
+               {{ user.avatar.url }}
+             {% endif %}"
+        alt="{{ user.username }}"
+        class="user-avatar rounded-circle"
+
+        hx-get="{% url 'users:avatar_preview' user.username %}"
+        hx-target="#modal-image-container"
+        hx-swap="innerHTML"
+        hx-indicator="#modal-loading-indicator"
+        hx-on:htmx:before-request="openModal()">
+
+      <div class="ms-3 flex-grow-1 min-w-0">
+
+        <!-- Ник + онлайн -->
+        <div class="d-flex align-items-center gap-1">
+          <a href="{{ user.get_absolute_url }}"
+             class="text-break author-name">
+            {{ user.username }}
+          </a>
+
+          {% if user.id in online_ids %}
+            <span class="online-dot-sm"></span>
+          {% endif %}
+        </div>
+
+        <!-- Статус -->
+        {% if user.id in online_ids %}
+          <div class="online-status small ms-0">Онлайн</div>
+        {% else %}
+          <div class="text-secondary small">
+            Был в сети {{ user.last_seen|date:"d.m.y г. H:i" }}
+          </div>
+        {% endif %}
+
+        <!-- Почта -->
+        <div class="text-secondary small text-truncate mt-1">
+          {{ user.email }}
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="user-stats text-center">
+      <div class="user-stat">
+        <div class="user-stat-label text-cornflowerblue">Репутация</div>
+        <div class="user-stat-value text-warning">
+          {{ user.reputation }}
+        </div>
+      </div>
+      <div class="user-stat">
+        <div class="user-stat-label text-cornflowerblue">Посты</div>
+        <div class="user-stat-value text-warning">
+          {{ user.posts_count }}
+        </div>
+      </div>
+      <div class="user-stat">
+        <div class="user-stat-label text-cornflowerblue text-truncate">Комментарии</div>
+        <div class="user-stat-value text-warning">
+          {{ user.comments_count }}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>

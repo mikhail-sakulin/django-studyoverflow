@@ -1,0 +1,99 @@
+<div class="container px-0 text-white mb-4" id="users-sort-block">
+  <div class="px-2 py-2 bg-black text-white rounded">
+
+    <form
+      hx-get="{% url 'users:list_htmx' %}?offset={{ 0 }}&limit={{ 9 }}"
+      hx-target="#users-grid"
+      hx-swap="innerHTML"
+      hx-indicator="#users-sort-loading">
+
+      <!-- hidden -->
+      <input type="hidden" name="online" id="online_input" value="{{ request.GET.online|default:'any' }}">
+      <input type="hidden" name="user_sort" id="user_sort_input" value="{{ request.GET.user_sort|default:'reputation' }}">
+      <input type="hidden" name="user_order" id="user_order_input" value="{{ request.GET.user_order|default:'desc' }}">
+
+      <!-- ===== ОНЛАЙН ===== -->
+      <div class="d-flex align-items-center flex-wrap column-gap-3 row-gap-2 mb-3 px-1">
+
+        <label class="form-label mb-0" style="min-width: 125px;">
+          Сейчас на сайте
+        </label>
+
+        <div class="btn-group me-5">
+          <button type="button"
+                  class="btn btn-outline-light btn-sm user-online-btn {% if request.GET.online == 'any' or not request.GET.online %}active{% endif %}"
+                  data-value="any">
+            Неважно
+          </button>
+          <button type="button"
+                  class="btn btn-outline-light btn-sm user-online-btn {% if request.GET.online == 'online' %}active{% endif %}"
+                  data-value="online">
+            Онлайн
+          </button>
+          <button type="button"
+                  class="btn btn-outline-light btn-sm user-online-btn {% if request.GET.online == 'offline' %}active{% endif %}"
+                  data-value="offline">
+            Не в сети
+          </button>
+        </div>
+      </div>
+
+      <!-- ===== СОРТИРОВКА ===== -->
+      <div class="d-flex align-items-center flex-wrap column-gap-3 row-gap-2 px-1">
+
+        <label class="form-label mb-0" style="min-width: 125px;">
+          Сортировка по
+        </label>
+
+        <div class="btn-group">
+          <button type="button"
+            class="btn btn-outline-light btn-sm user-sort-btn {% if request.GET.user_sort == 'reputation' or not request.GET.user_sort %}active{% endif %}"
+            data-value="reputation">
+            Репутация
+          </button>
+          <button type="button"
+                  class="btn btn-outline-light btn-sm user-sort-btn {% if request.GET.user_sort == 'posts' %}active{% endif %}"
+                  data-value="posts">
+            Посты
+          </button>
+          <button type="button"
+                  class="btn btn-outline-light btn-sm user-sort-btn {% if request.GET.user_sort == 'comments' %}active{% endif %}"
+                  data-value="comments">
+            Комментарии
+          </button>
+          <button type="button"
+            class="btn btn-outline-light btn-sm user-sort-btn {% if request.GET.user_sort == 'name' %}active{% endif %}"
+            data-value="name">
+            Имя
+          </button>
+        </div>
+
+        <!-- стрелки -->
+        <div class="d-flex gap-1">
+          <button type="button"
+                  class="btn btn-link p-0 user-order-btn {% if request.GET.user_order == 'desc' or not request.GET.user_order %}active{% endif %}"
+                  data-value="desc">
+            ↓
+          </button>
+          <button type="button"
+                  class="btn btn-link p-0 user-order-btn {% if request.GET.user_order == 'asc' %}active{% endif %}"
+                  data-value="asc">
+            ↑
+          </button>
+        </div>
+
+        <button type="submit"
+                class="btn btn-outline-warning btn-sm sort-submit-btn">
+          Применить
+        </button>
+
+        <!-- индикатор -->
+        <div id="users-sort-loading" class="htmx-indicator ms-2">
+          <div class="spinner-border spinner-border-sm text-white"></div>
+          <span class="px-1">Загрузка...</span>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
