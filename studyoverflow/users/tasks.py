@@ -179,3 +179,12 @@ def download_and_set_avatar(user_id: int, avatar_url: str):
     except Exception:
         # логирование
         return
+
+
+@app.task
+def delete_files_from_storage_task(file_paths: list[str]):
+    """
+    Универсальная задача для удаления списка файлов из хранилища.
+    """
+    if file_paths:
+        delete_old_avatar_names(file_paths)

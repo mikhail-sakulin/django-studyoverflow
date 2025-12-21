@@ -528,3 +528,30 @@ def get_reputation_map(Post, Comment):  # noqa: N803
             reputation_map[user_id] = reputation_map.get(user_id, 0) + row["total_likes"]
 
     return reputation_map
+
+
+def get_user_avatar_paths_list(user) -> list[str]:
+    """
+    Собирает список всех путей к файлам аватарок пользователя (оригинал + миниатюры).
+    Исключает дефолтные файлы, которые не подлежат удалению.
+    """
+    paths = []
+    # Список дефолтных имен, не удаляются из хранилища
+    defaults = {
+        user.DEFAULT_AVATAR_FILENAME,
+        user.DEFAULT_AVATAR_SMALL_SIZE1_FILENAME,
+        user.DEFAULT_AVATAR_SMALL_SIZE2_FILENAME,
+        user.DEFAULT_AVATAR_SMALL_SIZE3_FILENAME,
+    }
+
+    # Проверка основного аватар
+    if user.avatar and user.avatar.name not in defaults:
+        paths.append(user.avatar.name)
+
+    # Проверка всех миниатюр
+    for field_name in user.get_small_avatar_fields():
+        field_value = getattr(user, field_name)
+        if field_value and field_value.name not in defaults:
+            paths.append(field_value.name)
+
+    return paths

@@ -38,7 +38,7 @@ class UsersListView(UserHTMXPaginationMixin, UserSortMixin, UserOnlineFilterMixi
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        queryset = queryset.order_by("-reputation", "id")
+        queryset = queryset.order_by("-reputation", "username")
 
         self.remaining = queryset[self.paginate_htmx_by : self.paginate_htmx_by + 1].exists()
         return queryset[: self.paginate_htmx_by]
