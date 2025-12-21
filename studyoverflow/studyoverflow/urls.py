@@ -18,6 +18,7 @@ urlpatterns = [
         "favicon.ico",
         RedirectView.as_view(url=settings.STATIC_URL + "img/favicon.ico"),
     ),
+    path("social-auth/", include("users.socialaccount_urls")),
 ]
 
 if settings.DEBUG:
