@@ -1,0 +1,46 @@
+from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from django.db import transaction
+from users.services.social_providers import SOCIAL_HANDLERS
+from users.tasks import download_and_set_avatar
+
+
+class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
+    def populate_user(self, request, sociallogin, data):
+        user = super().populate_user(request, sociallogin, data)
+
+        # Если у пользователя еще нет username
+        if not user.username:
+            email = data.get("email")
+            if email:
+                # Берется часть до @
+                user.username = email.split("@")[0]
+            else:
+                # Если почты нет, используется ID провайдера
+                user.username = f"{sociallogin.account.provider}_{sociallogin.account.uid}"
+
+        if not user.email:
+            # Создается уникальный технический email
+            user.email = f"{sociallogin.account.uid}@noemail{sociallogin.account.provider}.local"
+
+        return user
+
+    def save_user(self, request, sociallogin, form=None):
+        user = super().save_user(request, sociallogin, form)
+
+        user.is_social = True
+
+        avatar_url = None
+
+        provider = sociallogin.account.provider
+        data = sociallogin.account.extra_data
+        handler = SOCIAL_HANDLERS.get(provider)
+
+        if handler:
+            avatar_url = handler(user, data)
+
+        user.save()
+
+        if avatar_url:
+            transaction.on_commit(lambda: download_and_set_avatar.delay(user.pk, avatar_url))
+
+        return user

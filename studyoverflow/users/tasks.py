@@ -1,6 +1,9 @@
 from typing import Optional
 
+import requests
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.utils import timezone
 from users.services.infrastructure import (
@@ -132,3 +135,47 @@ def sync_user_activity_counters(batch_size: int = 1000):
 
     if users_to_update:
         User.objects.bulk_update(users_to_update, ["posts_count", "comments_count", "reputation"])
+
+
+@app.task
+def download_and_set_avatar(user_id: int, avatar_url: str):
+    User = get_user_model()  # noqa: N806
+
+    try:
+        user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        # Логирование
+        return
+
+    default_avatar = user._meta.get_field("avatar").get_default()
+    if user.avatar and user.avatar.name != default_avatar:
+        return
+
+    try:
+        response = requests.get(
+            avatar_url,
+            timeout=5,
+        )
+        response.raise_for_status()
+
+        content = response.content
+
+        file_to_save = ContentFile(content)
+        file_to_save.name = "social_avatar.jpg"
+
+        for validator in user._meta.get_field("avatar").validators:
+            validator(file_to_save)
+
+        user.avatar.save(
+            file_to_save.name,
+            file_to_save,
+            save=True,
+        )
+
+    except ValidationError:
+        # логирование
+        return
+
+    except Exception:
+        # логирование
+        return

@@ -5,15 +5,13 @@ from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy
-from users.services.domain import (
-    generate_new_filename_with_uuid,
-)
 from users.services.infrastructure import (
     AvatarFileValidator,
     CustomUsernameValidator,
     PersonalNameValidator,
     generate_default_avatar_in_different_sizes,
     get_old_avatar_names,
+    user_avatar_upload_path,
 )
 from users.tasks import delete_old_avatars_from_s3_storage, generate_and_save_avatars_small
 
@@ -68,6 +66,7 @@ class User(AbstractUser):
     )
 
     avatar = models.ImageField(
+        upload_to=user_avatar_upload_path,
         blank=True,
         default=DEFAULT_AVATAR_FILENAME,
         validators=[avatar_validator],
@@ -97,6 +96,8 @@ class User(AbstractUser):
         default=timezone.now,
         verbose_name="Был в сети",
     )
+
+    is_social = models.BooleanField(default=False, verbose_name="Через соцсеть")
 
     objects = CustomUserManager()
 
@@ -133,9 +134,6 @@ class User(AbstractUser):
             self._reset_small_avatars(default=True)
 
         elif is_new_upload:
-            new_avatar_name_file = generate_new_filename_with_uuid(self.avatar.name)
-            self.avatar.name = f"avatars/{self.pk}/{new_avatar_name_file}"
-
             # Удаление миниатюр, так как основной аватар изменился
             self._reset_small_avatars(default=False)
 
