@@ -24,3 +24,6 @@ media/
 celerybeat-schedule
 celerybeat.pid
 celerybeat-schedule.*
+
+# SSL-сертификат
+cert.*
