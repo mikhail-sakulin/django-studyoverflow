@@ -2,3 +2,45 @@
   color: cornflowerblue;
   text-decoration: none;
 }
+
+.yandex-btn {
+    background-color: #ffbfb2;
+    color: #000;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+
+.yandex-btn:hover {
+    background-color: #ff9f8f;
+}
+
+.yandex-btn:active,
+.yandex-btn:focus,
+.yandex-btn:focus-visible {
+    background-color: #ff9f8f !important;
+    box-shadow: none !important;
+    color: #000 !important;
+    filter: brightness(0.95);
+}
+
+.vk-btn {
+    background-color: #0077FF;
+    color: #fff;
+    transition: background-color .15s ease, border-color .15s ease;
+    border: 0;
+}
+
+.vk-btn:hover {
+    background-color: #0066DB;
+    color: #fff;
+    border: 0;
+}
+
+.vk-btn:active,
+.vk-btn:focus,
+.vk-btn:focus-visible {
+    background-color: #0066DB !important;
+    box-shadow: none !important;
+    color: #fff !important;
+    filter: brightness(0.95);
+    border: 0;
+}

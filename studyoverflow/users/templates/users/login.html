@@ -9,43 +9,117 @@
 
 {% block extra_css %}
   <link type="text/css" rel="stylesheet" href="{% static 'users/css/login.css' %}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
 {% endblock %}
 
 
 {% block form %}
 
   <div id="register-login-container" class="container">
-    <form method="post" class="registration-login-card">
-      {% csrf_token %}
+    <div class="registration-login-card">
+      <form method="post">
+        {% csrf_token %}
 
-      {% include 'users/_form_fields.html' %}
+        {% include 'users/_form_fields.html' %}
 
-      <div class="mb-3">
-        <a href="{% url 'users:password_reset' %}" class="create-account-link">
-          Восстановить пароль
-        </a>
+        <div class="mb-3">
+          <a href="{% url 'users:password_reset' %}" class="create-account-link">
+            Восстановить пароль
+          </a>
+        </div>
+
+        <div class="mb-3">
+          <a href="{% url 'users:register' %}" class="create-account-link">
+            Создать аккаунт
+          </a>
+        </div>
+
+        <div class="d-flex justify-content-between mb-0 mt-4">
+
+          <button type="submit" class="btn btn-outline-warning btn-sm btn-form-submit fs-6 px-3">
+            Вход
+          </button>
+
+          <a href="{% url 'home' %}"
+             class="btn btn-outline-light">
+            Отмена
+          </a>
+
+        </div>
+
+      </form>
+
+      <div class="text-center mt-3 d-flex flex-column gap-2">
+
+        <div class="text-white fs-5">
+            Войти через соцсети
+        </div>
+
+        <!-- GitHub -->
+        <form action="{% url 'github_login' %}" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.GET.next|default:'/' }}">
+
+          <button type="submit" class="btn btn-dark align-items-center d-flex gap-2 w-100">
+            <i class="bi bi-github" style="scale: 1.4"></i>
+            <span class="ms-1">Войти через GitHub</span>
+          </button>
+        </form>
+
+        <!-- Google -->
+        <form action="{% url 'google_login' %}" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.GET.next|default:'/' }}">
+
+          <button type="submit" class="btn btn-light text-dark align-items-center d-flex gap-2 w-100 border"
+                  style="border-color: #dadce0;">
+            <svg style="margin-left: -0.15rem" width="22" height="22" viewBox="8 8 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M23.8299 16.1823C23.8299 15.615 23.779 15.0695 23.6845 14.5459H16.1499V17.6405H20.4554C20.2699 18.6405 19.7063 19.4877 18.859 20.055V22.0623H21.4445C22.9572 20.6695 23.8299 18.6186 23.8299 16.1823Z" fill="#4285F4"></path>
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M16.1496 23.9995C18.3096 23.9995 20.1205 23.2832 21.4442 22.0614L18.8587 20.0541C18.1423 20.5341 17.226 20.8177 16.1496 20.8177C14.066 20.8177 12.3023 19.4104 11.6732 17.5195H9.00049V19.5923C10.3169 22.2068 13.0223 23.9995 16.1496 23.9995Z" fill="#34A853"></path>
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M11.6735 17.52C11.5135 17.04 11.4226 16.5272 11.4226 16C11.4226 15.4727 11.5135 14.96 11.6735 14.48V12.4072H9.00081C8.45899 13.4872 8.1499 14.709 8.1499 16C8.1499 17.2909 8.45899 18.5127 9.00081 19.5927L11.6735 17.52Z" fill="#FBBC05"></path>
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M16.1496 11.1818C17.3241 11.1818 18.3787 11.5855 19.2078 12.3782L21.5023 10.0836C20.1169 8.79273 18.306 8 16.1496 8C13.0223 8 10.3169 9.79273 9.00049 12.4073L11.6732 14.48C12.3023 12.5891 14.066 11.1818 16.1496 11.1818Z" fill="#EA4335"></path>
+            </svg>
+            <span >Войти через Google</span>
+          </button>
+        </form>
+
+        <!-- Yandex -->
+        <form action="{% url 'yandex_login' %}" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.GET.next|default:'/' }}">
+
+          <button type="submit"
+                  class="btn d-flex align-items-center gap-2 w-100 yandex-btn">
+            <svg style="margin-left:-0.18rem" width="24" height="24"
+                 viewBox="0 0 40 40" fill="none"
+                 xmlns="http://www.w3.org/2000/svg">
+              <rect width="40" height="40" rx="20" fill="#F8604A"/>
+              <path fill="#fff"
+                    d="M22.776 31.5h4.178v-24h-6.078c-6.112 0-9.324 3.142-9.324 7.77
+                       0 3.695 1.762 5.87 4.904 8.115L11 31.5h4.524l6.077-9.082
+                       -2.106-1.416c-2.555-1.726-3.799-3.073-3.799-5.974
+                       0-2.555 1.796-4.282 5.215-4.282h1.864V31.5Z"/>
+            </svg>
+            <span>Войти через Яндекс</span>
+          </button>
+        </form>
+
+        <!-- VK -->
+        <form action="{% url 'vk_login' %}" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.GET.next|default:'/' }}">
+          <button type="submit" class="vk-btn btn align-items-center d-flex gap-2 w-100 mb-2">
+            <svg style="margin-left:-0.19rem" width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15.0001 2H9.00013C4.00013 2 2.00013 4 2.00013 9V15C2.00013 20 4.00013 22 9.00013 22H15.0001C20.0001 22 22.0001 20 22.0001 15V9C22.0001 4 20.0001 2 15.0001 2Z" fill="white"/>
+              <path d="M13.162 15.692C10.057 15.692 8.289 13.568 8.214 10H9.771C9.823 12.615 10.974 13.722 11.888 13.951V10H13.353V12.256C14.249 12.16 15.19 11.137 15.508 10H16.974C16.742 11.66 15.524 12.683 14.665 13.182C15.524 13.585 16.899 14.467 17.378 15.692H15.759C15.385 14.522 14.453 13.621 13.353 13.515V15.692H13.162Z" fill="#0077FF"/>
+            </svg>
+            <span>Войти через ВКонтакте</span>
+          </button>
+        </form>
+
       </div>
 
-      <div class="mb-3">
-        <a href="{% url 'users:register' %}" class="create-account-link">
-          Создать аккаунт
-        </a>
-      </div>
-
-      <div class="d-flex justify-content-between mb-0 mt-4">
-
-        <button type="submit" class="btn btn-outline-warning btn-sm btn-form-submit fs-6 px-3">
-          Вход
-        </button>
-
-        <a href="{% url 'home' %}"
-           class="btn btn-outline-light">
-          Отмена
-        </a>
-
-      </div>
-
-    </form>
+    </div>
   </div>
 
 {% endblock %}
