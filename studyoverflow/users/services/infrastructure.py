@@ -15,7 +15,7 @@ from django.core.files import File
 from django.core.files.base import ContentFile
 from django.core.files.storage import storages
 from django.core.validators import RegexValidator
-from django.db.models import F
+from django.db.models import Count, F
 from django.db.models.functions import Greatest
 from django.http import HttpRequest
 from django.utils.deconstruct import deconstructible
@@ -34,6 +34,19 @@ storage_default = storages["default"]
 
 def avatar_upload_to(instance: "User", filename: str) -> str:
     return f"avatars/{generate_new_filename_with_uuid(filename)}"
+
+
+def user_avatar_upload_path(instance, filename):
+    """
+    Генерирует путь: avatars/tmp/uuid.jpg (если нет PK)
+    или avatars/123/uuid.jpg (если есть PK).
+    """
+    new_filename = generate_new_filename_with_uuid(filename)
+
+    if instance.pk:
+        return f"avatars/{instance.pk}/{new_filename}"
+
+    return f"avatars/tmp/{new_filename}"
 
 
 @deconstructible
@@ -122,8 +135,8 @@ class AvatarFileValidator:
 
     def __init__(self, max_size: int = 10 * 1024 * 1024):
         self.max_size = max_size
-        self.min_height = 200
-        self.min_width = 200
+        self.min_height = 100
+        self.min_width = 100
         self.min_aspect_ration = 0.25
         self.max_aspect_ration = 4
 
@@ -401,7 +414,7 @@ def get_online_user_ids():
     redis_conn = get_redis_connection("default")
     keys = redis_conn.keys("online_user:*")
 
-    return [int(key.decode().split(":")[1]) for key in keys]
+    return [int(k.decode().split(":")[1]) for k in keys if k.decode().split(":")[1].isdigit()]
 
 
 class UserOnlineFilterMixin:
@@ -482,3 +495,36 @@ class UserHTMXPaginationMixin:
 
         self.remaining = False
         return queryset[offset:]
+
+
+def get_counts_map(model, group_field):
+    """
+    Функция для подсчета объектов (posts/comments)
+    """
+    return {
+        row[group_field]: row["count"]
+        for row in model.objects.values(group_field).annotate(count=Count("id"))
+        if row[group_field] is not None
+    }
+
+
+def get_reputation_map(Post, Comment):  # noqa: N803
+    """
+    Функция для агрегации лайков из разных моделей.
+    """
+    reputation_map = {}
+
+    post_likes_stats = Post.objects.values("author_id").annotate(total_likes=Count("likes"))
+
+    for row in post_likes_stats:
+        if row["author_id"]:
+            reputation_map[row["author_id"]] = row["total_likes"]
+
+    comment_likes_stats = Comment.objects.values("author_id").annotate(total_likes=Count("likes"))
+
+    for row in comment_likes_stats:
+        user_id = row["author_id"]
+        if row["author_id"]:
+            reputation_map[user_id] = reputation_map.get(user_id, 0) + row["total_likes"]
+
+    return reputation_map

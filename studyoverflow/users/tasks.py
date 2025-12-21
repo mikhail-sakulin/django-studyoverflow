@@ -6,7 +6,9 @@ from django.utils import timezone
 from users.services.infrastructure import (
     delete_old_avatar_names,
     generate_avatar_small,
+    get_counts_map,
     get_online_user_ids,
+    get_reputation_map,
 )
 
 from studyoverflow.celery import app
@@ -89,3 +91,44 @@ def sync_online_users_to_db():
         user.last_seen = now
 
     User.objects.bulk_update(users, ["last_seen"])
+
+
+@app.task
+def sync_user_activity_counters(batch_size: int = 1000):
+    # ленивый импорт
+    from posts.models import Comment, Post
+
+    User = get_user_model()  # noqa: N806
+
+    posts_map = get_counts_map(Post, "author_id")
+    comments_map = get_counts_map(Comment, "author_id")
+    reputation_map = get_reputation_map(Post, Comment)
+
+    users_to_update = []
+
+    users_queryset = User.objects.only("id", "posts_count", "comments_count", "reputation")
+
+    for user in users_queryset.iterator(chunk_size=batch_size):
+        new_posts_count = posts_map.get(user.id, 0)
+        new_comments_count = comments_map.get(user.id, 0)
+        new_reputation = reputation_map.get(user.id, 0)
+
+        if (
+            user.posts_count != new_posts_count
+            or user.comments_count != new_comments_count
+            or user.reputation != new_reputation
+        ):
+
+            user.posts_count = new_posts_count
+            user.comments_count = new_comments_count
+            user.reputation = new_reputation
+            users_to_update.append(user)
+
+        if len(users_to_update) >= batch_size:
+            User.objects.bulk_update(
+                users_to_update, ["posts_count", "comments_count", "reputation"]
+            )
+            users_to_update.clear()
+
+    if users_to_update:
+        User.objects.bulk_update(users_to_update, ["posts_count", "comments_count", "reputation"])
