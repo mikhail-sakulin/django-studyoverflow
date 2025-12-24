@@ -1,5 +1,5 @@
 from celery import chain
-from django.contrib.auth.models import AbstractUser, UserManager
+from django.contrib.auth.models import AbstractUser, Group, UserManager
 from django.db import models, transaction
 from django.db.models import Q
 from django.urls import reverse
@@ -22,6 +22,12 @@ class CustomUserManager(UserManager):
 
 
 class User(AbstractUser):
+    class Role(models.TextChoices):
+        ADMIN = "ADMIN", "Администратор"
+        MODERATOR = "MODERATOR", "Модератор"
+        STAFF_VIEWER = "STAFF_VIEWER", "Персонал (просмотр)"
+        USER = "USER", "Пользователь"
+
     # Константы
     DEFAULT_AVATAR_FILENAME = "avatars/default_avatar.jpg"
     DEFAULT_AVATAR_SMALL_SIZE1_FILENAME = "avatars/default_avatar_small_size1.jpg"
@@ -31,6 +37,17 @@ class User(AbstractUser):
         "size1": (100, 100),
         "size2": (170, 170),
         "size3": (800, 800),
+    }
+
+    ROLE_FLAGS_MAP = {
+        Role.ADMIN: {"is_staff": True, "is_superuser": True},
+        Role.MODERATOR: {"is_staff": True, "is_superuser": False},
+        Role.STAFF_VIEWER: {"is_staff": True, "is_superuser": False},
+        Role.USER: {"is_staff": False, "is_superuser": False},
+    }
+    ROLE_GROUPS_MAP = {
+        Role.MODERATOR: ["Moderators", "StaffViewers"],
+        Role.STAFF_VIEWER: ["StaffViewers"],
     }
 
     # Валидаторы
@@ -99,23 +116,108 @@ class User(AbstractUser):
 
     is_social = models.BooleanField(default=False, verbose_name="Через соцсеть")
 
+    is_blocked = models.BooleanField(default=False, verbose_name="Заблокирован")
+    blocked_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата и время блокировки")
+    blocked_by = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="blocked_users",
+        verbose_name="Кем заблокирован",
+    )
+
+    role = models.CharField(
+        max_length=20, choices=Role.choices, default=Role.USER, verbose_name="Роль"
+    )
+
     objects = CustomUserManager()
+
+    def __str__(self):
+        return self.username
+
+    class Meta:
+        ordering = ["username"]
+        permissions = [
+            ("block_user", "Can block/unblock users"),
+        ]
+
+    def get_absolute_url(self):
+        return reverse("users:profile", kwargs={"username": self.username})
+
+    @property
+    def is_admin(self):
+        return self.is_superuser
+
+    @property
+    def is_moderator(self):
+        return self.role == self.Role.MODERATOR
+
+    @property
+    def is_staff_viewer(self):
+        return self.role == self.Role.STAFF_VIEWER
+
+    @property
+    def is_user(self):
+        return self.role == self.Role.USER
 
     def save(self, *args, **kwargs):
         is_creation = not self.pk
         update_fields = kwargs.get("update_fields")
 
-        post_save_context = {}
+        if not update_fields or "role" in update_fields:
+            self._sync_role_flags()
 
+        post_save_context = {}
         if not is_creation and (not update_fields or "avatar" in update_fields):
             post_save_context = self._handle_update_avatar()
 
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+
+            if not update_fields or "role" in update_fields:
+                self._sync_role_groups()
 
         if is_creation:
             self._schedule_creation_celery_tasks()
         elif post_save_context:
             self._schedule_update_celery_tasks(post_save_context)
+
+    def _sync_role_flags(self):
+        """
+        Синхронизирует системные флаги и роль.
+        Устанавливает is_staff и is_superuser на основе выбранной роли.
+        """
+        if self.is_superuser and not self.pk:
+            self.role = self.Role.ADMIN
+
+        flags = self.ROLE_FLAGS_MAP.get(self.role)
+
+        if flags:
+            for field, value in flags.items():
+                setattr(self, field, value)
+
+    def _sync_role_groups(self):
+        """
+        Назначает или удаляет группы "Moderators" и "StaffViewers".
+        """
+        managed_group_names = ["Moderators", "StaffViewers"]
+        target_group_names = set(self.ROLE_GROUPS_MAP.get(self.role, []))
+
+        current_managed_group_names = set(
+            self.groups.filter(name__in=managed_group_names).values_list("name", flat=True)
+        )
+
+        groups_to_add = target_group_names - current_managed_group_names
+        groups_to_remove = current_managed_group_names - target_group_names
+
+        if groups_to_remove:
+            self.groups.remove(*Group.objects.filter(name__in=groups_to_remove))
+
+        if groups_to_add:
+            for group_name in groups_to_add:
+                group, _ = Group.objects.get_or_create(name=group_name)
+                self.groups.add(group)
 
     def _handle_update_avatar(self):
         """
@@ -197,12 +299,3 @@ class User(AbstractUser):
     @classmethod
     def get_small_avatar_fields(cls) -> list[str]:
         return [f"avatar_small_{key}" for key in cls.AVATAR_SMALL_SIZES.keys()]
-
-    def __str__(self):
-        return self.username
-
-    class Meta:
-        ordering = ["username"]
-
-    def get_absolute_url(self):
-        return reverse("users:profile", kwargs={"username": self.username})

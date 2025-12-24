@@ -117,6 +117,7 @@ class Post(models.Model):
         verbose_name_plural = "Посты"
         ordering = ["-time_create"]
         indexes = [models.Index(fields=["-time_create"])]
+        permissions = [("moderate_post", "Can moderate posts")]
 
     def save(self, *args, **kwargs):
         """
@@ -186,6 +187,12 @@ class Comment(models.Model):
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
+    class Meta:
+        verbose_name = "Комментарий"
+        verbose_name_plural = "Комментарии"
+        ordering = ["-time_create"]
+        permissions = [("moderate_comment", "Can moderate comments")]
+
     def clean(self):
         errors = {}
 
@@ -223,11 +230,6 @@ class Comment(models.Model):
 
         if errors:
             raise ValidationError(errors)
-
-    class Meta:
-        verbose_name = "Комментарий"
-        verbose_name_plural = "Комментарии"
-        ordering = ["-time_create"]
 
     def __str__(self):
         return f"{self.author}: {self.content[:30]}"
