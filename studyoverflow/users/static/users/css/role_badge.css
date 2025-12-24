@@ -1,0 +1,19 @@
+.role-badge-separator {
+    color: #6c757d;
+    margin: 0 0.1rem;
+    font-weight: normal;
+    position: relative;
+    bottom: 0.07rem;
+}
+
+.role-admin {
+    color: #dc3545;
+}
+
+.role-moderator {
+    color: #198754;
+}
+
+.role-staff {
+    color: lightgray;
+}

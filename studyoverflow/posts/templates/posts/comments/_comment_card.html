@@ -1,4 +1,5 @@
 {% load posts_tags %}
+{% load users_tags %}
 {% load widget_tweaks %}
 
 <div id="comment-card-{{ comment.id }}" class="card text-white rounded shadow-sm px-4">
@@ -27,10 +28,15 @@
 
       <div>
         <div class="d-flex align-items-center mb-1">
-          <a href="{% url 'users:profile' comment.author.username %}" class="username-comment author-name me-1">{{ comment.author.username }}</a>
+          <a href="{% url 'users:profile' comment.author.username %}" class="username-comment author-name">
+            {{ comment.author.username }} {% user_role_badge comment.author %}
+          </a>
+
           {% if comment.reply_to %}
-            <span class="text-warning me-1">ответил пользователю</span>
-            <a href="{% url 'users:profile' comment.reply_to.author.username %}" class="username-comment author-name">{{ comment.reply_to.author.username }}</a>
+            <span class="text-warning ms-2 me-2" style="margin-bottom: 0.09rem">ответил</span>
+            <a href="{% url 'users:profile' comment.reply_to.author.username %}" class="username-comment author-name me-1">
+              {{ comment.reply_to.author.username }} {% user_role_badge comment.reply_to.author %}
+            </a>
           {% endif %}
         </div>
 

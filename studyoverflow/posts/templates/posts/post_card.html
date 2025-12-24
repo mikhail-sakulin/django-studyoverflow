@@ -1,4 +1,5 @@
 {% load posts_tags %}
+{% load users_tags %}
 
 
 <div class="card text-white rounded shadow-sm px-4">
@@ -28,7 +29,7 @@
 
       <div>
         <a id="username" href="{% url 'users:profile' post.author.username %}" class="author-name d-inline-block mb-1">
-          {{ post.author.username }}
+          {{ post.author.username }} {% user_role_badge post.author %}
         </a>
 
         <div id="time_create-time_update" class="text-secondary">

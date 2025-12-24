@@ -57,8 +57,8 @@
               <div class="flex-grow-1 d-flex flex-column w-100" style="height: 300px;">
 
                 <div class="w-100">
-                  <p class="author-name mb-1 text-break d-flex align-items-center">
-                    <span class="fs-5">{{ author.username }}</span>
+                  <p class="mb-1 text-break d-flex align-items-center">
+                    <span class="fs-5 author-name">{{ author.username }} {% user_role_badge author %}</span>
 
                     {% online_status_tag author as online_status %}
                     {% if online_status == True %}

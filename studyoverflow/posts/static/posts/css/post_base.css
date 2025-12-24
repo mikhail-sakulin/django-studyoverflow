@@ -12,6 +12,10 @@
     color: skyblue;
 }
 
+.author-name:hover .role {
+    filter: brightness(1.2);
+}
+
 pre, code.hljs {
     border-radius: 0.5rem!important;
 }

@@ -1,6 +1,7 @@
 {% extends 'navigation/base.html' %}
 {% load static %}
 {% load posts_tags %}
+{% load users_tags %}
 
 
 {% block title %}
@@ -54,7 +55,9 @@
                hx-on:htmx:before-request="openModal()">
 
           <div>
-            <a id="username" href="{% url 'users:profile' post.author.username %}" class="author-name d-inline-block mb-1">{{ post.author.username }}</a>
+            <a id="username" href="{% url 'users:profile' post.author.username %}" class="author-name d-inline-block mb-1">
+              {{ post.author.username }} {% user_role_badge post.author %}
+            </a>
 
             <div id="time_create-time_update" class="text-secondary">
               Опубликовано: {{ post.time_create|date:"d.m.Y г. H:i" }}
