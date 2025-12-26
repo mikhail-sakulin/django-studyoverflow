@@ -94,14 +94,15 @@
             {% endwith %}
 
               <div class="d-flex justify-content-end">
-                {% if post.author != user %}
-                  <button id="show-comment-form" type="button" class="btn btn-outline-light btn-sm">
-                    Комментировать
-                  </button>
-                {% else %}
-                  <a href="{% url 'posts:edit' post.pk post.slug %}" class="btn btn-outline-warning btn-sm me-3">Редактировать</a>
+                {% if post.author == user or perms.posts.moderate_post %}
+                  <a href="{% url 'posts:edit' post.pk post.slug %}" class="btn btn-outline-warning btn-sm me-3">
+                    Редактировать
+                  </a>
 
-                  <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deletePostModal">
+                  <button type="button"
+                          class="btn btn-outline-danger btn-sm me-3"
+                          data-bs-toggle="modal"
+                          data-bs-target="#deletePostModal">
                       Удалить
                   </button>
 
@@ -110,6 +111,10 @@
                   {% include 'navigation/_modal_delete.html' with modal_id="deletePostModal" form_action=post_delete_url title="Подтверждение удаления поста" message="Вы уверены, что хотите удалить этот пост?" %}
 
                 {% endif %}
+
+                <button id="show-comment-form" type="button" class="btn btn-outline-light btn-sm">
+                  Комментировать
+                </button>
               </div>
 
           </div>

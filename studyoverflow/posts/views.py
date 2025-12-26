@@ -1,6 +1,7 @@
 import json
 
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import models
 from django.db.models import Count, Prefetch
 from django.http import HttpResponse
@@ -20,6 +21,7 @@ from posts.services.infrastructure import (
     PostFilterSortMixin,
     PostTagMixin,
 )
+from users.services.infrastructure import IsAuthorOrModeratorMixin
 
 
 class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMixin, ListView):
@@ -94,16 +96,18 @@ class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
         return context
 
 
-class PostUpdateView(LoginRequiredHTMXMixin, PostTagMixin, UpdateView):
+class PostUpdateView(LoginRequiredMixin, IsAuthorOrModeratorMixin, PostTagMixin, UpdateView):
     model = Post
     form_class = PostCreateForm
     template_name = "posts/post_edit.html"
     context_object_name = "post"
+    permission_required = "posts.moderate_post"
 
 
-class PostDeleteView(DeleteView):
+class PostDeleteView(LoginRequiredMixin, IsAuthorOrModeratorMixin, DeleteView):
     model = Post
     success_url = reverse_lazy("posts:list")
+    permission_required = "posts.moderate_post"
 
 
 class CommentListView(LikeAnnotationsMixin, ListView):
@@ -256,8 +260,9 @@ class CommentChildCreateView(CommentRootCreateView):
 
 
 class CommentUpdateView(
-    LikeAnnotationsMixin,
     LoginRequiredHTMXMixin,
+    IsAuthorOrModeratorMixin,
+    LikeAnnotationsMixin,
     HTMXHandle404Mixin,
     CommentGetMethodMixin,
     UpdateView,
@@ -266,6 +271,7 @@ class CommentUpdateView(
     form_class = CommentUpdateForm
     pk_url_kwarg = "comment_pk"
     template_name = "posts/comments/_comment_card.html"
+    permission_required = "posts.moderate_comment"
 
     def get_object(self, queryset=None):
         queryset = queryset or self.model.objects.select_related("author", "post")
@@ -277,7 +283,8 @@ class CommentUpdateView(
         context = super().get_context_data(**kwargs)
         context.pop("form")
         context = {
-            "comment_form": form,
+            "comment_update_form": form,
+            "comment_form": self.form_class(),
             "comment": self.object,
             "post": self.object.post,
         }
@@ -300,10 +307,15 @@ class CommentUpdateView(
 
 
 class CommentDeleteView(
-    LoginRequiredHTMXMixin, HTMXHandle404Mixin, CommentGetMethodMixin, DeleteView
+    LoginRequiredHTMXMixin,
+    HTMXHandle404Mixin,
+    IsAuthorOrModeratorMixin,
+    CommentGetMethodMixin,
+    DeleteView,
 ):
     model = Comment
     pk_url_kwarg = "comment_pk"
+    permission_required = "posts.moderate_comment"
 
     def form_valid(self, form):
         self.object.delete()

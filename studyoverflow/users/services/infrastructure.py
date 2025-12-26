@@ -5,12 +5,12 @@
 import os
 from dataclasses import astuple, dataclass
 from io import BytesIO
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Optional, Type
 
 import filetype
 from botocore.exceptions import BotoCoreError
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files import File
 from django.core.files.base import ContentFile
 from django.core.files.storage import storages
@@ -555,3 +555,39 @@ def get_user_avatar_paths_list(user) -> list[str]:
             paths.append(field_value.name)
 
     return paths
+
+
+class IsAuthorOrModeratorMixin:
+    """
+    Доступ к изменению объекта разрешен, если:
+    - пользователь является автором объекта
+    - ИЛИ имеет permission на модерацию объекта
+    """
+
+    permission_required: Optional[str] = None
+    request: HttpRequest
+
+    def has_permission(self, obj):
+        user = self.request.user
+
+        if not user.is_authenticated:
+            return False
+
+        if hasattr(obj, "author") and obj.author_id == user.id:
+            return True
+
+        if hasattr(obj, "user") and obj.user_id == user.id:
+            return True
+
+        if self.permission_required and user.has_perm(self.permission_required):
+            return True
+
+        return False
+
+    def dispatch(self, request, *args, **kwargs):
+        obj = self.get_object()  # type: ignore[attr-defined]
+
+        if not self.has_permission(obj):
+            raise PermissionDenied("Недостаточно прав для выполнения этого действия.")
+
+        return super().dispatch(request, *args, **kwargs)  # type: ignore[misc]

@@ -112,7 +112,7 @@ class UserLoginView(LoginView):
         return super().form_valid(form)
 
 
-class CustomLogoutView(LogoutView):
+class UserLogoutView(LoginRequiredMixin, LogoutView):
     def post(self, request, *args, **kwargs):
         user_was_authenticated = request.user.is_authenticated
         response = super().post(request, *args, **kwargs)
@@ -168,7 +168,7 @@ class UserDeleteView(LoginRequiredMixin, DeleteView):
         return response
 
 
-class UserPasswordChangeView(SuccessMessageMixin, LoginRequiredMixin, PasswordChangeView):
+class UserPasswordChangeView(LoginRequiredMixin, SuccessMessageMixin, PasswordChangeView):
     form_class = UserPasswordChangeForm
     success_url = reverse_lazy("users:my_profile")
     template_name = "users/password_change.html"

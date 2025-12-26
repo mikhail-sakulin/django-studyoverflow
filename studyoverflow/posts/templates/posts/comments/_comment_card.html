@@ -32,11 +32,13 @@
             {{ comment.author.username }} {% user_role_badge comment.author %}
           </a>
 
-          {% if comment.reply_to %}
+          {% if comment.reply_to and comment.reply_to.author != comment.author %}
             <span class="text-warning ms-2 me-2" style="margin-bottom: 0.09rem">ответил</span>
             <a href="{% url 'users:profile' comment.reply_to.author.username %}" class="username-comment author-name me-1">
               {{ comment.reply_to.author.username }} {% user_role_badge comment.reply_to.author %}
             </a>
+          {% elif comment.reply_to.author == comment.author %}
+            <span class="text-warning ms-2 me-2" style="margin-bottom: 0.09rem">ответил себе</span>
           {% endif %}
         </div>
 
@@ -65,15 +67,7 @@
     {% endwith %}
 
     <div class="d-flex justify-content-end">
-      {% if user != comment.author %}
-        <button type="button"
-                class="btn btn-outline-light btn-sm reply-btn"
-                data-comment-id="{{ comment.id }}">
-          Ответить
-        </button>
-      {% endif %}
-
-      {% if user == comment.author %}
+      {% if user == comment.author or perms.posts.moderate_comment %}
         <button type="button"
                 class="btn btn-outline-warning btn-sm edit-comment-btn me-3"
                 data-comment-id="{{ comment.id }}">
@@ -89,25 +83,31 @@
               hx-confirm="Вы уверены, что хотите удалить этот комментарий?">
           {% csrf_token %}
           <button type="submit"
-                  class="btn btn-outline-danger btn-sm"
+                  class="btn btn-outline-danger btn-sm me-3"
                   title="Удалить комментарий">
             Удалить
           </button>
         </form>
-
       {% endif %}
+
+      <button type="button"
+              class="btn btn-outline-light btn-sm reply-btn"
+              data-comment-id="{{ comment.id }}">
+        Ответить
+      </button>
+
     </div>
 
   </div>
 
-    <!-- Скрытая форма ответа (для других пользователей) -->
+    <!-- Скрытая форма ответа -->
     <div id="reply-form-{{ comment.id }}" class="reply-form-container mt-3 mb-1" style="display:none;">
       {% include 'posts/comments/_comment_child_form.html' %}
     </div>
 
-    <!-- Скрытая форма редактирования (для автора) -->
-    <div id="edit-form-{{ comment.id }}" class="edit-form-container mt-3 mb-1" style="{% if comment_form.errors or comment_form.non_field_errors %}display:block;{% else %}display:none;{% endif %}">
-      {% include 'posts/comments/_comment_edit_form.html' %}
+    <!-- Скрытая форма редактирования -->
+    <div id="edit-form-{{ comment.id }}" class="edit-form-container mt-3 mb-1" style="{% if comment_update_form.errors or comment_form.non_field_errors %}display:block;{% else %}display:none;{% endif %}">
+      {% include 'posts/comments/_comment_edit_form.html' with comment_form=comment_update_form %}
     </div>
 
   </div>
