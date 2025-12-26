@@ -23,6 +23,7 @@ from users.forms import (
     UserSetPasswordForm,
 )
 from users.services.infrastructure import (
+    SocialUserPasswordChangeForbiddenMixin,
     UserHTMXPaginationMixin,
     UserOnlineFilterMixin,
     UserSortMixin,
@@ -168,7 +169,12 @@ class UserDeleteView(LoginRequiredMixin, DeleteView):
         return response
 
 
-class UserPasswordChangeView(LoginRequiredMixin, SuccessMessageMixin, PasswordChangeView):
+class UserPasswordChangeView(
+    LoginRequiredMixin,
+    SocialUserPasswordChangeForbiddenMixin,
+    SuccessMessageMixin,
+    PasswordChangeView,
+):
     form_class = UserPasswordChangeForm
     success_url = reverse_lazy("users:my_profile")
     template_name = "users/password_change.html"

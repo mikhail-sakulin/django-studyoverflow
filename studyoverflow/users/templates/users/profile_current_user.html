@@ -20,9 +20,18 @@
     Редактировать профиль
   </button>
 
-  <a href="{% url 'users:password_change' %}" class="btn btn-outline-light btn-sm" style="width: 180px;">
-    Сменить пароль
-  </a>
+  {% if author.is_social %}
+    <button type="button" class="btn btn-outline-light btn-sm" style="width: 180px;" disabled>
+      Сменить пароль
+    </button>
+    <small class="text-secondary d-block">
+      Сменить пароль невозможно при авторизации через социальную сеть.
+    </small>
+  {% else %}
+    <a href="{% url 'users:password_change' %}" class="btn btn-outline-light btn-sm" style="width: 180px;">
+      Сменить пароль
+    </a>
+  {% endif %}
 </div>
 {% endblock %}
 

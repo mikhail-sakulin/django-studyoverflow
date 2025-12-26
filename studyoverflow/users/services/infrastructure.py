@@ -591,3 +591,17 @@ class IsAuthorOrModeratorMixin:
             raise PermissionDenied("Недостаточно прав для выполнения этого действия.")
 
         return super().dispatch(request, *args, **kwargs)  # type: ignore[misc]
+
+
+class SocialUserPasswordChangeForbiddenMixin:
+    """
+    Запрещает смену пароля для пользователей с авторизацией через соцсеть.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and getattr(request.user, "is_social", False):
+            raise PermissionDenied(
+                "Сменить пароль невозможно при авторизации через социальную сеть."
+            )
+
+        return super().dispatch(request, *args, **kwargs)  # type: ignore[misc]
