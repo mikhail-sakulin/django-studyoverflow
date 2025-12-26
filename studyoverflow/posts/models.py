@@ -196,7 +196,6 @@ class Comment(models.Model):
     def clean(self):
         errors = {}
 
-        author = getattr(self, "author", None)
         post = getattr(self, "post", None)
 
         if not self.content or not self.content.strip():
@@ -207,9 +206,6 @@ class Comment(models.Model):
                 errors["parent_comment"] = "Комментарий не может быть родителем сам себе."
             elif post and self.parent_comment.post != post:
                 errors["parent_comment"] = "Родительский комментарий не принадлежит этому посту."
-
-        if author and post and not self.parent_comment and author == post.author:
-            errors["content"] = "Вы не можете комментировать свой пост."
 
         if self.reply_to:
             if (
@@ -224,9 +220,6 @@ class Comment(models.Model):
 
             elif post and self.reply_to.post != post:
                 errors["reply_to"] = "Комментарий для ответа не принадлежит этому посту."
-
-            elif author and author == self.reply_to.author:
-                errors["reply_to"] = "Вы не можете отвечать на свой комментарий."
 
         if errors:
             raise ValidationError(errors)

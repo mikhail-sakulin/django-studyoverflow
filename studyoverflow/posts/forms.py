@@ -101,21 +101,12 @@ class CommentCreateForm(forms.ModelForm):
                 "Родительский комментарий не принадлежит этому посту."
             )
 
-        # Проверка на комментирование своего поста
-        if self.user == self.post.author and not parent_comment:
-            errors["content"] = ValidationError(
-                "Вы не можете комментировать свой собственный пост."
-            )
-
         # Проверка reply_to
         if reply_to:
             if reply_to.post != self.post:
                 errors["reply_to"] = ValidationError(
                     "Комментарий для ответа не принадлежит этому посту."
                 )
-
-            if self.user == reply_to.author:
-                errors["reply_to"] = ValidationError("Вы не можете отвечать на свой комментарий.")
 
         if errors:
             raise ValidationError(errors)
