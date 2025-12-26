@@ -11,13 +11,13 @@
 
 
 document.addEventListener("DOMContentLoaded", function() {
+
     // --- Подсветка всех блоков <pre><code> ---
     function highlightCodeBlocks() {
         if (window.hljs) {
             hljs.highlightAll();
         }
     }
-    // Подсветка при полной загрузке страницы
     highlightCodeBlocks();
 
     // Показ формы и блокировка кнопки
@@ -34,6 +34,26 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!container) return;
         container.style.display = "none";
         if (toggleBtn) toggleBtn.disabled = false;
+    }
+
+    // --- Закрытие всех reply-форм ---
+    function closeAllReplyForms() {
+        document.querySelectorAll(".reply-form-container").forEach(container => {
+            container.style.display = "none";
+        });
+        document.querySelectorAll(".reply-btn").forEach(btn => {
+            btn.disabled = false;
+        });
+    }
+
+    // --- Закрытие всех edit-форм ---
+    function closeAllEditForms() {
+        document.querySelectorAll(".edit-form-container").forEach(container => {
+            container.style.display = "none";
+        });
+        document.querySelectorAll(".edit-comment-btn").forEach(btn => {
+            btn.disabled = false;
+        });
     }
 
     // --- Общая функция: ошибка редактирования комментария ---
@@ -65,6 +85,11 @@ document.addEventListener("DOMContentLoaded", function() {
         const replyBtn = target.closest(".reply-btn");
         if (replyBtn) {
             const commentId = replyBtn.dataset.commentId.trim();
+
+            // Закрытие всех других форм перед открытием reply
+            closeAllEditForms();
+            closeAllReplyForms();
+
             showForm(`reply-form-${commentId}`, replyBtn);
             return;
         }
@@ -73,7 +98,10 @@ document.addEventListener("DOMContentLoaded", function() {
         const cancelReplyBtn = target.closest(".cancel-reply-btn");
         if (cancelReplyBtn) {
             const commentId = cancelReplyBtn.dataset.commentId.trim();
-            hideForm(`reply-form-${commentId}`, document.querySelector(`.reply-btn[data-comment-id="${commentId}"]`));
+            hideForm(
+                `reply-form-${commentId}`,
+                document.querySelector(`.reply-btn[data-comment-id="${commentId}"]`)
+            );
             return;
         }
 
@@ -81,8 +109,14 @@ document.addEventListener("DOMContentLoaded", function() {
         const editBtn = target.closest(".edit-comment-btn");
         if (editBtn) {
             const commentId = editBtn.dataset.commentId.trim();
+
+            // Закрытие всех других форм перед открытием edit
+            closeAllReplyForms();
+            closeAllEditForms();
+
             const editContainer = document.getElementById(`edit-form-${commentId}`);
             if (!editContainer) return;
+
             editContainer.style.display = "block";
             editBtn.disabled = true;
             return;
@@ -113,7 +147,7 @@ document.addEventListener("DOMContentLoaded", function() {
             showForm("comment-form-container", document.getElementById("show-comment-form"));
         }
 
-         // --- Кастомное событие ошибки при обновлении комментария (после HTMX swap) ---
+        // --- Кастомное событие ошибки при обновлении комментария (после HTMX swap) ---
         const triggers = event.detail.xhr?.getResponseHeader("HX-Trigger");
         if (!triggers) return;
 
@@ -121,8 +155,7 @@ document.addEventListener("DOMContentLoaded", function() {
         try { parsed = JSON.parse(triggers); } catch { return; }
 
         if (parsed.commentUpdateError) {
-            const commentId = parsed.commentUpdateError.commentId;
-            activateEditErrorState(commentId);
+            activateEditErrorState(parsed.commentUpdateError.commentId);
         }
     });
 
@@ -139,13 +172,19 @@ document.addEventListener("DOMContentLoaded", function() {
     document.body.addEventListener("commentChildFormSuccess", function(event) {
         const commentId = event.detail?.commentId;
         if (!commentId) return;
-        hideForm(`reply-form-${commentId}`, document.querySelector(`.reply-btn[data-comment-id="${commentId}"]`));
+        hideForm(
+            `reply-form-${commentId}`,
+            document.querySelector(`.reply-btn[data-comment-id="${commentId}"]`)
+        );
     });
 
     document.body.addEventListener("commentChildFormError", function(event) {
         const commentId = event.detail?.commentId;
         if (!commentId) return;
-        showForm(`reply-form-${commentId}`, document.querySelector(`.reply-btn[data-comment-id="${commentId}"]`));
+        showForm(
+            `reply-form-${commentId}`,
+            document.querySelector(`.reply-btn[data-comment-id="${commentId}"]`)
+        );
     });
 
     // --- Кастомное событие перезагрузки страницы ---
@@ -171,11 +210,8 @@ document.addEventListener("DOMContentLoaded", function() {
         );
 
         if (!input) return;
-
-        // если кнопка уже активна — ничего не происходит
         if (btn.classList.contains('active')) return;
 
-        // Деактивация всех кнопок этой группы
         const groupClass = isSort
             ? '.comment-sort-btn'
             : '.order-comment-btn';
@@ -184,16 +220,13 @@ document.addEventListener("DOMContentLoaded", function() {
             .querySelectorAll(groupClass)
             .forEach(b => b.classList.remove('active'));
 
-        // Активация текущей кнопки
         btn.classList.add('active');
         input.value = btn.dataset.value;
     });
 });
 
-
 // --- Скролл к комментарию по хэшу после HTMX обновления ---
 
-// Если в URL есть хэш вида #comment-card-{id}, страница прокручивается к этому комментарию после загрузки
 let scrolledToAnchor = false;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -207,9 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!hash) return;
 
         const el = document.querySelector(hash);
-        // Проверка, что элемент является комментарием
         if (el && el.id.startsWith("comment-card-")) {
-            // Плавная прокрутка к комментарию
             el.scrollIntoView({ behavior: "smooth", block: "start" });
             scrolledToAnchor = true;
         }
