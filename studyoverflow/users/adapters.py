@@ -1,5 +1,10 @@
+from allauth.account.adapter import DefaultAccountAdapter
+from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from django.contrib import messages
 from django.db import transaction
+from django.shortcuts import redirect
+from django.utils import timezone
 from users.services.social_providers import SOCIAL_HANDLERS
 from users.tasks import download_and_set_avatar
 
@@ -44,3 +49,23 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
             transaction.on_commit(lambda: download_and_set_avatar.delay(user.pk, avatar_url))
 
         return user
+
+
+class BlockedUserAccountAdapter(DefaultAccountAdapter):
+    """
+    Запрещает вход заблокированным пользователям.
+    """
+
+    def login(self, request, user):
+        if getattr(user, "is_blocked", False):
+            if user.blocked_at:
+                local_date_block = timezone.localtime(user.blocked_at)
+                date_str = local_date_block.strftime("%d.%m.%Y г. %H:%M")
+            else:
+                date_str = '"неизвестно"'
+
+            messages.error(request, f"Ваш аккаунт заблокирован {date_str}.")
+
+            raise ImmediateHttpResponse(redirect("home"))
+
+        return super().login(request, user)

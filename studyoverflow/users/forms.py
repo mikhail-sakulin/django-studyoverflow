@@ -117,7 +117,7 @@ class UserLoginForm(AuthenticationForm):
             else:
                 date_str = '"неизвестно"'
 
-            raise ValidationError(f"Ваш аккаунт заблокирован в {date_str}.", code="blocked")
+            raise ValidationError(f"Ваш аккаунт заблокирован {date_str}.", code="blocked")
 
 
 class CustomClearableFileInput(ClearableFileInput):

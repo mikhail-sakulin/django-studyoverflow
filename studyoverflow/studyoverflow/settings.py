@@ -264,6 +264,7 @@ SITE_ID = 1
 
 ACCOUNT_LOGIN_METHODS = {"username", "email"}
 
+ACCOUNT_ADAPTER = "users.adapters.BlockedUserAccountAdapter"
 SOCIALACCOUNT_ADAPTER = "users.adapters.CustomSocialAccountAdapter"
 ACCOUNT_SIGNUP_FIELDS = ["username*", "email*", "password1*", "password2*"]
 
