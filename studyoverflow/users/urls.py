@@ -33,4 +33,6 @@ urlpatterns = [
         views.UserPasswordResetCompleteView.as_view(),
         name="password_reset_complete",
     ),
+    path("block/<int:user_id>/", views.block_user, name="block_user"),
+    path("unblock/<int:user_id>/", views.unblock_user, name="unblock_user"),
 ]

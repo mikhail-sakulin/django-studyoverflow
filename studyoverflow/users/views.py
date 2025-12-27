@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model, logout
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import (
     LoginView,
@@ -13,6 +14,7 @@ from django.contrib.auth.views import (
 from django.contrib.messages.views import SuccessMessageMixin
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from users.forms import (
     UserLoginForm,
@@ -27,6 +29,7 @@ from users.services.infrastructure import (
     UserHTMXPaginationMixin,
     UserOnlineFilterMixin,
     UserSortMixin,
+    can_moderate,
     get_online_user_ids,
 )
 
@@ -201,3 +204,47 @@ class UserPasswordResetConfirmView(SuccessMessageMixin, PasswordResetConfirmView
 
 class UserPasswordResetCompleteView(PasswordResetCompleteView):
     template_name = "users/password_reset_complete.html"
+
+
+@login_required
+@permission_required("users.block_user", raise_exception=True)
+def block_user(request, user_id):
+    UserModel = get_user_model()  # noqa: N806
+    user = get_object_or_404(UserModel, pk=user_id)
+
+    # Проверка возможности заблокировать целевого пользователя
+    can_moderate(request.user, user)
+
+    if user.is_blocked:
+        messages.info(request, f"Пользователь {user.username} уже заблокирован.")
+        return redirect(user.get_absolute_url())
+
+    user.is_blocked = True
+    user.blocked_at = timezone.now()
+    user.blocked_by = request.user
+    user.save(update_fields=["is_blocked", "blocked_at", "blocked_by"])
+
+    messages.success(request, f"Пользователь {user.username} заблокирован.")
+    return redirect(user.get_absolute_url())
+
+
+@login_required
+@permission_required("users.block_user", raise_exception=True)
+def unblock_user(request, user_id):
+    UserModel = get_user_model()  # noqa: N806
+    user = get_object_or_404(UserModel, pk=user_id)
+
+    # Проверка возможности заблокировать целевого пользователя
+    can_moderate(request.user, user)
+
+    if not user.is_blocked:
+        messages.info(request, f"Пользователь {user.username} не заблокирован.")
+        return redirect(user.get_absolute_url())
+
+    user.is_blocked = False
+    user.blocked_at = None
+    user.blocked_by = None
+    user.save(update_fields=["is_blocked", "blocked_at", "blocked_by"])
+
+    messages.success(request, f"Пользователь {user.username} разблокирован.")
+    return redirect(user.get_absolute_url())

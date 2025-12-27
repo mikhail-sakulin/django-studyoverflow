@@ -9,7 +9,9 @@ from django.contrib.auth.forms import (
     SetPasswordForm,
     UserCreationForm,
 )
+from django.core.exceptions import ValidationError
 from django.forms import ClearableFileInput
+from django.utils import timezone
 from django.utils.translation import gettext_lazy
 
 
@@ -104,6 +106,18 @@ class UserLoginForm(AuthenticationForm):
     class Meta:
         model = get_user_model()
         fields = ["username", "password"]
+
+    def confirm_login_allowed(self, user):
+        super().confirm_login_allowed(user)
+
+        if user.is_blocked:
+            if user.blocked_at:
+                local_date_block = timezone.localtime(user.blocked_at)
+                date_str = local_date_block.strftime("%d.%m.%Y г. %H:%M")
+            else:
+                date_str = '"неизвестно"'
+
+            raise ValidationError(f"Ваш аккаунт заблокирован в {date_str}.", code="blocked")
 
 
 class CustomClearableFileInput(ClearableFileInput):
