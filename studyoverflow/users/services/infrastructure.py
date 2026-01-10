@@ -607,7 +607,7 @@ class SocialUserPasswordChangeForbiddenMixin:
         return super().dispatch(request, *args, **kwargs)  # type: ignore[misc]
 
 
-def can_moderate(actor: "User", target: "User") -> None:
+def can_moderate(actor: "User", target: "User") -> bool:
     """
     Проверяет, может ли actor модерировать target.
     Бросает PermissionDenied, если нельзя.
@@ -622,7 +622,9 @@ def can_moderate(actor: "User", target: "User") -> None:
     }
 
     if actor == target:
-        raise PermissionDenied("Нельзя заблокировать самого себя.")
+        return False
 
     if role_priority[actor.role] <= role_priority[target.role]:
-        raise PermissionDenied("Нельзя модерировать пользователя с равной или более высокой ролью.")
+        return False
+
+    return True

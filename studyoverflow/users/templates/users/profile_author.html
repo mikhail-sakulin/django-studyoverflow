@@ -24,8 +24,14 @@
           <div class="card-header bg-warning text-dark p-4">
             <h4 class="mb-0">
               {% block profile_header %}
-                Профиль пользователя {{ author.username }}
+                Профиль {{ author.username }}
               {% endblock %}
+
+              {% if author.is_blocked %}
+                <span class="text-danger">
+                  (заблокирован)
+                </span>
+              {% endif %}
             </h4>
           </div>
 
@@ -104,7 +110,48 @@
                   </div>
                 </div>
 
-                {% block profile_actions %}{% endblock %}
+                {% block profile_actions %}
+                  {% if perms.users.block_user %}
+                    <div class="d-flex flex-column align-items-end gap-2 w-100 mt-auto pt-4">
+                      {% can_actor_moderate_target user author as can_moderate %}
+
+                      {% if can_moderate %}
+
+                        <button type="button"
+                                class="btn {% if author.is_blocked %}btn-outline-light{% else %}btn-outline-danger{% endif %} btn-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#blockUserModal">
+                          {% if author.is_blocked %}Разблокировать{% else %}Заблокировать{% endif %} пользователя
+                        </button>
+
+                        {% if not author.is_blocked %}
+
+                          {% url 'users:block_user' author.pk as user_block_url %}
+
+                          {% include 'navigation/_modal_delete.html' with modal_id="blockUserModal" form_action=user_block_url title="Подтверждение блокировки пользователя" message="Вы уверены, что хотите заблокировать пользователя?" delete_button_text="Заблокировать" %}
+
+                        {% else %}
+
+                          {% url 'users:unblock_user' author.pk as user_unblock_url %}
+
+                          {% include 'navigation/_modal_delete.html' with modal_id="blockUserModal" form_action=user_unblock_url title="Подтверждение разблокировки пользователя" message="Вы уверены, что хотите разблокировать пользователя?" delete_button_text="Разблокировать" %}
+
+                        {% endif %}
+
+                      {% else %}
+                        <button type="button"
+                                class="btn {% if author.is_blocked %}btn-outline-light{% else %}btn-outline-danger{% endif %} btn-sm"
+                                disabled>
+                          {% if author.is_blocked %}Разблокировать{% else %}Заблокировать{% endif %} пользователя
+                        </button>
+                        <small class="text-secondary d-block">
+                          Вы не можете модерировать этого пользователя.
+                        </small>
+                      {% endif %}
+
+                    </div>
+                  {% endif %}
+                {% endblock %}
 
               </div>
             </div>

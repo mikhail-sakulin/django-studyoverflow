@@ -1,9 +1,14 @@
+from typing import TYPE_CHECKING
+
 from django import template
 from django.contrib.auth import get_user_model
-from users.services.infrastructure import is_user_online
+from users.services.infrastructure import can_moderate, is_user_online
 
 
 register = template.Library()
+
+if TYPE_CHECKING:
+    from django.contrib.auth.models import AbstractUser
 
 User = get_user_model()  # noqa: N806
 
@@ -33,3 +38,14 @@ def user_role_badge(user):
         "css_role_badge_class": css_role_badge_class,
         "badge": badge,
     }
+
+
+@register.simple_tag
+def can_actor_moderate_target(actor: "AbstractUser", target: "AbstractUser") -> bool:
+    """
+    Возвращает True, если actor может модерировать target, иначе False.
+    """
+    if not actor.is_authenticated or not target:
+        return False
+
+    return can_moderate(actor, target)

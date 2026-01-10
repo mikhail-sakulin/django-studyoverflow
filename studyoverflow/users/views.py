@@ -12,6 +12,7 @@ from django.contrib.auth.views import (
     PasswordResetView,
 )
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -213,7 +214,11 @@ def block_user(request, user_id):
     user = get_object_or_404(UserModel, pk=user_id)
 
     # Проверка возможности заблокировать целевого пользователя
-    can_moderate(request.user, user)
+    if not can_moderate(request.user, user):
+        raise PermissionDenied(
+            "Нельзя модерировать пользователя с равной или более высокой ролью. / "
+            "Нельзя модерировать самого себя."
+        )
 
     if user.is_blocked:
         messages.info(request, f"Пользователь {user.username} уже заблокирован.")
@@ -234,8 +239,12 @@ def unblock_user(request, user_id):
     UserModel = get_user_model()  # noqa: N806
     user = get_object_or_404(UserModel, pk=user_id)
 
-    # Проверка возможности заблокировать целевого пользователя
-    can_moderate(request.user, user)
+    # Проверка возможности разблокировать целевого пользователя
+    if not can_moderate(request.user, user):
+        raise PermissionDenied(
+            "Нельзя модерировать пользователя с равной или более высокой ролью. / "
+            "Нельзя модерировать самого себя."
+        )
 
     if not user.is_blocked:
         messages.info(request, f"Пользователь {user.username} не заблокирован.")
