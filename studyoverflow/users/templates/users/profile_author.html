@@ -18,7 +18,7 @@
 {% block content %}
   <div class="container my-5">
     <div class="row justify-content-center">
-      <div class="col-lg-8 col-md-10">
+      <div class="col-lg-8 col-xl-10">
         <div class="card shadow-lg border-0">
 
           <div class="card-header bg-warning text-dark p-4">
@@ -37,10 +37,10 @@
 
           <div class="card-body p-4">
 
-            <div class="d-flex flex-column d-md-flex flex-md-row align-items-md-start g-4 mb-4">
+            <div class="d-flex flex-column d-xl-flex flex-xl-row align-items-xl-start g-4 mb-4">
 
               <!-- Аватар -->
-              <div class="d-flex justify-content-center mb-4 mb-md-0 me-md-4" style="flex-shrink: 0;">
+              <div class="d-flex justify-content-center mb-4 mb-xl-0 me-xl-4" style="flex-shrink: 0;">
                 <img id="avatar"
                      src="{% if author.avatar_small_size3 %}
                             {{ author.avatar_small_size3.url }}
@@ -60,10 +60,10 @@
 
               </div>
 
-              <div class="flex-grow-1 d-flex flex-column w-100" style="height: 300px;">
+              <div class="flex-grow-1 d-flex flex-column w-100" style="height: 300px; min-width: 0">
 
                 <div class="w-100">
-                  <p class="mb-1 text-break d-flex align-items-center">
+                  <p class="mb-1 d-flex align-items-center">
                     <span class="fs-5 author-name">{{ author.username }} {% user_role_badge author %}</span>
 
                     {% online_status_tag author as online_status %}
@@ -73,14 +73,14 @@
                       </span>
                     {% endif %}
                   </p>
-                  <p class="text-secondary mb-2 text-break">{{ author.email }}</p>
+                  <p class="text-secondary email mb-2">{{ author.email }}</p>
                 </div>
 
                 <div class="w-100 flex-grow-1 bio-scroll text-white">
                   <div class="mt-1">
-                    <h6 class="fw-bold mb-1">{{ author.first_name }} {{ author.last_name }}</h6>
+                    <h6 class="mb-1">{{ author.first_name }} {{ author.last_name }}</h6>
 
-                    <p class="text-white-secondary small text-break">
+                    <p class="text-white-secondary small text-break mb-1">
                       {% if author.bio %}
                         {{ author.bio }}
                       {% else %}
@@ -89,21 +89,21 @@
                     </p>
 
                     <div class="row small mt-2">
-                      <div class="col-5 mb-1">
+                      <div class="col-5 mb-0">
                         <span class="fw-bold d-block">Дата рождения:</span>
                         <span class="text-white-secondary">
                           {% if author.date_birth %}
-                            {{ author.date_birth|date:"d M Y" }}
+                            {{ author.date_birth|date:"d.m.Y" }}
                           {% else %}
                             Не указана
                           {% endif %}
                         </span>
                       </div>
 
-                      <div class="col-5 mb-1">
+                      <div class="col-5 mb-0">
                         <span class="fw-bold d-block">На сайте с:</span>
                         <span class="text-white-secondary">
-                          {{ author.date_joined|date:"Y.m.d" }}
+                          {{ author.date_joined|date:"d.m.Y" }}
                         </span>
                       </div>
                     </div>

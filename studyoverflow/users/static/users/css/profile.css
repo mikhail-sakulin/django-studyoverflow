@@ -53,7 +53,11 @@
 }
 
 .author-name {
+    min-width: 0;
     color: cornflowerblue;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .text-cornflowerblue {
@@ -83,7 +87,7 @@ hr {
   border-top: 2px solid white;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1199.98px) {
   .bio-scroll {
     overflow-y: visible !important;
     overflow-x: hidden !important;
@@ -111,4 +115,12 @@ hr {
     height: 8px;
     background-color: #28a745;
     border-radius: 50%;
+}
+
+.email {
+    min-width: 0;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
