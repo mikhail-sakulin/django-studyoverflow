@@ -1,5 +1,6 @@
 from celery import chain
 from django.contrib.auth.models import AbstractUser, Group, UserManager
+from django.core.validators import MaxLengthValidator
 from django.db import models, transaction
 from django.db.models import Q
 from django.urls import reverse
@@ -58,7 +59,7 @@ class User(AbstractUser):
     # Поля модели
     username = models.CharField(
         verbose_name="Имя пользователя",
-        max_length=150,
+        max_length=30,
         unique=True,
         help_text=(
             "Имя пользователя должно быть не менее 4 символов и "
@@ -73,10 +74,10 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, verbose_name=gettext_lazy("email address"))
 
     first_name = models.CharField(
-        max_length=150, blank=True, validators=[first_name_last_name_validator], verbose_name="Имя"
+        max_length=50, blank=True, validators=[first_name_last_name_validator], verbose_name="Имя"
     )
     last_name = models.CharField(
-        max_length=150,
+        max_length=50,
         blank=True,
         validators=[first_name_last_name_validator],
         verbose_name="Фамилия",
@@ -100,7 +101,12 @@ class User(AbstractUser):
         blank=True, default=DEFAULT_AVATAR_SMALL_SIZE3_FILENAME, verbose_name="Миниатюра аватара №3"
     )
 
-    bio = models.TextField(blank=True, verbose_name="Информация о пользователе")
+    bio = models.TextField(
+        blank=True,
+        max_length=300,
+        validators=[MaxLengthValidator(300)],
+        verbose_name="Информация о пользователе",
+    )
 
     date_birth = models.DateField(blank=True, null=True, verbose_name="Дата рождения")
     date_joined = models.DateTimeField(auto_now_add=True, verbose_name="Время создания аккаунта")

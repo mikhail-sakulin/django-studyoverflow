@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxLengthValidator
 from django.db import models
 from django.urls import reverse
 from notifications.models import Notification
@@ -88,7 +89,12 @@ class Post(models.Model):
     )
     title = models.CharField(max_length=MAX_TITLE_SLUG_LENGTH_POST, verbose_name="Заголовок")
     slug = models.SlugField(max_length=MAX_TITLE_SLUG_LENGTH_POST, verbose_name="Slug")
-    content = models.TextField(blank=True, verbose_name="Содержимое поста")
+    content = models.TextField(
+        blank=True,
+        max_length=15000,
+        validators=[MaxLengthValidator(15000)],
+        verbose_name="Содержимое поста",
+    )
     tags = TaggableManager(through=TaggedPost, verbose_name="Теги")
     likes = GenericRelation(
         "Like", content_type_field="content_type", object_id_field="object_id", verbose_name="Лайк"
@@ -174,7 +180,9 @@ class Comment(models.Model):
         related_name="replies",
         verbose_name="Ответ на комментарий",
     )
-    content = models.TextField(max_length=5000, verbose_name="Текст комментария")
+    content = models.TextField(
+        max_length=5000, validators=[MaxLengthValidator(5000)], verbose_name="Текст комментария"
+    )
     likes = GenericRelation(
         "Like", content_type_field="content_type", object_id_field="object_id", verbose_name="Лайк"
     )
