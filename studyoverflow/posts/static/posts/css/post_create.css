@@ -17,15 +17,11 @@
 #content-preview {
     font-family: system-ui;
     overflow: auto;
-    white-space: pre-wrap;
+    white-space: normal;
     word-wrap: break-word;
     border: 1px solid white;
     resize: vertical;
     padding-bottom: 0;
-}
-
-#content-preview > * {
-  margin-bottom: 0 !important;
 }
 
 #toggle-preview:focus {

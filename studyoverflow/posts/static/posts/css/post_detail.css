@@ -1,18 +1,13 @@
 .title {
     display: inline-block;
     max-width: 100%;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: normal;
+    word-break: break-word;
     text-decoration: none;
     color: rgba(255, 193, 7, 0.85);
-    font-size: 1.5rem;
-}
-
-.content {
-    font-size: 1rem;
-    position: relative;
-    line-height: 1.8;
+    font-size: 1.4rem;
 }
 
 #avatar {

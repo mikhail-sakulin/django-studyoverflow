@@ -1,20 +1,3 @@
-.content-comment {
-    font-size: 1rem;
-    max-height: 200px;
-    overflow: hidden;
-    position: relative;
-}
-
-.content-comment.overflow::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 3rem;
-    background: linear-gradient(transparent, #202023);
-}
-
 #avatar-comment {
     margin-right: 0.7rem;
     width: 50px;

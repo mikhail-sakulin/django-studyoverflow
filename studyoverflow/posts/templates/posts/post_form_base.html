@@ -8,6 +8,8 @@
 
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_create.css' %}">
 
+  <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_base.css' %}">
+
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/tags.css' %}">
 {% endblock %}
 
@@ -58,7 +60,7 @@
               <div id="preview-wrapper" style="display: none;">
                 <div class="mb-3">
                   <label class="form-label">Предпросмотр Markdown (без обработки отдельных HTML-тегов)</label>
-                  <pre id="content-preview" class="form-control"></pre>
+                  <div id="content-preview" class="form-control content"></div>
                 </div>
               </div>
             {% endif %}

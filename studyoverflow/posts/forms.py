@@ -15,7 +15,7 @@ class PostCreateForm(forms.ModelForm):
                 attrs={"class": "form-control", "placeholder": "Введите заголовок"}
             ),
             "content": forms.Textarea(
-                attrs={"class": "form-control", "placeholder": "Введите содержимое...", "rows": 5}
+                attrs={"class": "form-control", "placeholder": "Введите содержимое...", "rows": 8}
             ),
             "tags": TagWidget(attrs={"class": "form-control", "placeholder": "Введите теги..."}),
         }
