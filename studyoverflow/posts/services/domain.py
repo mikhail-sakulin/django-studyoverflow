@@ -73,6 +73,9 @@ def render_markdown_safe(markdown_text: str) -> str:
         "kbd",
         "details",
         "summary",
+        "u",
+        "s",
+        "input",
     }
 
     # Множество безопасных атрибутов HTML-тегов
@@ -82,6 +85,7 @@ def render_markdown_safe(markdown_text: str) -> str:
         "img": ["src", "alt", "title", "loading"],
         "code": ["class"],
         "details": ["open"],
+        "input": ["class", "type", "checked", "disabled"],
     }
 
     # Очистка HTML от неразрешенных HTML-тегов и их атрибутов
