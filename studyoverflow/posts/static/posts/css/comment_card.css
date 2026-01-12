@@ -1,3 +1,37 @@
+.comment-content {
+    max-height: 200px;
+    overflow: hidden;
+    position: relative;
+    transition: max-height 0.25s ease-in-out;
+}
+
+.comment-expand-btn {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 500;
+    user-select: none;
+    filter: brightness(0.95);
+}
+
+.comment-expand-arrow {
+    transition: transform 0.25s ease;
+}
+
+.comment-expand-btn:hover {
+    filter: brightness(1.1);
+}
+
+.comment-expand-btn:active {
+    filter: brightness(1.2);
+    transform: translateY(1px);
+}
+
+.comment-content.is-expanded {
+    max-height: none;
+}
+
 #avatar-comment {
     margin-right: 0.7rem;
     width: 50px;
@@ -18,4 +52,24 @@
 
 #time_create-time_update-comment {
     font-size: 0.94rem
+}
+
+.comment-content::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 5rem;
+    background: linear-gradient(transparent, #202023);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.comment-content.truncated::after {
+    opacity: 1;
+}
+
+.comment-content.is-expanded::after {
+    opacity: 0;
 }

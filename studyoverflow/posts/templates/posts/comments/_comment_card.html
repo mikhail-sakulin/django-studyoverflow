@@ -58,47 +58,60 @@
       {{ comment.content|markdown_safe|safe }}
     </div>
 
-    <div class="d-flex justify-content-between align-items-center mt-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
 
-    {% url 'posts:toggle_like_comment' comment.post.pk comment.post.slug comment.pk as toggle_like_url %}
+      {% url 'posts:toggle_like_comment' comment.post.pk comment.post.slug comment.pk as toggle_like_url %}
 
-    {% with liked_object=comment user_has_liked=comment.user_has_liked likes_count=comment.likes_count toggle_like_url=toggle_like_url %}
-      {% include 'posts/likes/_like-button.html' %}
-    {% endwith %}
+      {% with liked_object=comment user_has_liked=comment.user_has_liked likes_count=comment.likes_count toggle_like_url=toggle_like_url %}
+        <div class="d-flex align-items-center me-4">
+            {% include 'posts/likes/_like-button.html' %}
+        </div>
+      {% endwith %}
 
-    <div class="d-flex justify-content-end">
-      {% if user == comment.author or perms.posts.moderate_comment %}
-        <button type="button"
-                class="btn btn-outline-warning btn-sm edit-comment-btn me-3"
-                data-comment-id="{{ comment.id }}">
-          Редактировать
-        </button>
+      <div class="comment-expand-wrapper"
+           data-comment-expand
+           data-comment-id="{{ comment.id }}"
+           data-target="comment-content-{{ comment.id }}"
+           data-scroll-anchor="comment-card-{{ comment.id }}"
+           style="display:none;">
+        <span class="comment-expand-btn text-warning">
+          Показать полностью
+          <span class="comment-expand-arrow">▼</span>
+        </span>
+      </div>
 
-        <form class="d-inline-block m-0 p-0"
-              method="POST"
-              action="{% url 'posts:comment_delete' post.pk post.slug comment.pk %}"
-              hx-post="{% url 'posts:comment_delete' post.pk post.slug comment.pk %}"
-              hx-target="#comment-wrapper-{{ comment.id }}"
-              hx-swap="outerHTML"
-              hx-confirm="Вы уверены, что хотите удалить этот комментарий?">
-          {% csrf_token %}
-          <button type="submit"
-                  class="btn btn-outline-danger btn-sm me-3"
-                  title="Удалить комментарий">
-            Удалить
+      <div class="d-flex flex-wrap gap-3 ms-auto ms-sm-0">
+        {% if user == comment.author or perms.posts.moderate_comment %}
+          <button type="button"
+                  class="btn btn-outline-warning btn-sm edit-comment-btn"
+                  data-comment-id="{{ comment.id }}">
+            Редактировать
           </button>
-        </form>
-      {% endif %}
 
-      <button type="button"
-              class="btn btn-outline-light btn-sm reply-btn"
-              data-comment-id="{{ comment.id }}">
-        Ответить
-      </button>
+          <form class="d-inline-block m-0 p-0"
+                method="POST"
+                action="{% url 'posts:comment_delete' post.pk post.slug comment.pk %}"
+                hx-post="{% url 'posts:comment_delete' post.pk post.slug comment.pk %}"
+                hx-target="#comment-wrapper-{{ comment.id }}"
+                hx-swap="outerHTML"
+                hx-confirm="Вы уверены, что хотите удалить этот комментарий?">
+            {% csrf_token %}
+            <button type="submit"
+                    class="btn btn-outline-danger btn-sm"
+                    title="Удалить комментарий">
+              Удалить
+            </button>
+          </form>
+        {% endif %}
+
+        <button type="button"
+                class="btn btn-outline-light btn-sm reply-btn"
+                data-comment-id="{{ comment.id }}">
+          Ответить
+        </button>
+      </div>
 
     </div>
-
-  </div>
 
     <!-- Скрытая форма ответа -->
     <div id="reply-form-{{ comment.id }}" class="reply-form-container mt-3 mb-1" style="display:none;">
