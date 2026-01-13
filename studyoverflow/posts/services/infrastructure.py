@@ -3,7 +3,7 @@
 """
 
 import json
-from typing import Any, Generic, Protocol, TypeVar
+from typing import Any, Generic, Optional, Protocol, TypeVar
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
@@ -28,8 +28,11 @@ class PostTagMixinProtocol(Protocol):
 
     request: HttpRequest
 
-    def form_valid(self, form): ...
-    def get_context_data(self, **kwargs): ...
+    def form_valid(self, form):
+        pass
+
+    def get_context_data(self, **kwargs):
+        pass
 
 
 # Любой класс типа T_Parent обязан соответствовать протоколу PostTagMixinProtocol
@@ -209,28 +212,55 @@ class CommentGetMethodMixin:
         return redirect("posts:detail", pk=post.pk, slug=post.slug)
 
 
-class LoginRequiredHTMXMixin(LoginRequiredMixin):
-    message_text = "Сначала войдите в аккаунт."
-    message_type = "info"
+class HTMXMessageMixin:
+    def htmx_message(
+        self,
+        *,
+        message_text: str,
+        message_type: str = "success",
+        response: Optional[HttpResponse] = None,
+        reswap_none: bool = False,
+    ) -> HttpResponse:
+        response = response or HttpResponse()
 
-    def htmx_auth_required_response(self, message_text=None, message_type=None):
-        response = HttpResponse("")
+        if reswap_none:
+            response["HX-Reswap"] = "none"
 
-        response["HX-Reswap"] = "none"
-        response["HX-Trigger"] = json.dumps(
-            {
-                "showMessage": {
-                    "text": message_text or self.message_text,
-                    "type": message_type or self.message_type,
-                }
-            }
-        )
+        # текущий header
+        hx_trigger = response.get("HX-Trigger")
+
+        # десериализация, если есть данные, иначе пустой словарь
+        if hx_trigger:
+            try:
+                hx_data = json.loads(hx_trigger)
+            except json.JSONDecodeError:
+                hx_data = {}
+        else:
+            hx_data = {}
+
+        # новое событие showMessage
+        hx_data["showMessage"] = {
+            "text": message_text,
+            "type": message_type,
+        }
+
+        # сохранение обратно в response
+        response["HX-Trigger"] = json.dumps(hx_data)
 
         return response
 
+
+class LoginRequiredHTMXMixin(LoginRequiredMixin, HTMXMessageMixin):
+    message_text = "Сначала войдите в аккаунт."
+    message_type = "info"
+
     def dispatch(self, request, *args, **kwargs):
         if request.headers.get("Hx-Request") and not request.user.is_authenticated:
-            return self.htmx_auth_required_response()
+            return self.htmx_message(
+                message_text=self.message_text,
+                message_type=self.message_type,
+                reswap_none=True,
+            )
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -257,6 +287,7 @@ class HTMXHandle404Mixin:
             return super().dispatch(request, *args, **kwargs)  # type: ignore
         except Http404:
             if request.headers.get("Hx-Request"):
-                response = HttpResponse(headers={"HX-Trigger": "commentsUpdated"})
+                response = HttpResponse()
+                response["HX-Trigger"] = json.dumps({"commentsUpdated": {}})
                 return response
             raise
