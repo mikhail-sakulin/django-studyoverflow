@@ -144,12 +144,13 @@ class AuthorProfileView(DetailView):
         return self.render_to_response(context)
 
 
-class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
+class UserProfileUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     model = get_user_model()
     form_class = UserProfileUpdateForm
     template_name = "users/profile_current_user.html"
     success_url = reverse_lazy("users:my_profile")
     context_object_name = "author"
+    success_message = "Профиль успешно изменен!"
 
     def get_object(self, queryset=None):
         return self.request.user
@@ -166,6 +167,10 @@ class UserDeleteView(LoginRequiredMixin, DeleteView):
 
     def get_object(self, queryset=None):
         return self.request.user
+
+    def form_valid(self, form):
+        messages.info(self.request, "Аккаунт удален.")
+        return super().form_valid(form)
 
     def delete(self, request, *args, **kwargs):
         response = super().delete(request, *args, **kwargs)

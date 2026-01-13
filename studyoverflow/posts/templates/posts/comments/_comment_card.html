@@ -83,7 +83,7 @@
       <div class="d-flex flex-wrap gap-3 ms-auto ms-sm-0">
         {% if user == comment.author or perms.posts.moderate_comment %}
           <button type="button"
-                  class="btn btn-outline-warning btn-sm edit-comment-btn"
+                  class="btn btn-outline-warning btn-sm edit-comment-btn mb-2"
                   data-comment-id="{{ comment.id }}">
             Редактировать
           </button>
@@ -97,7 +97,7 @@
                 hx-confirm="Вы уверены, что хотите удалить этот комментарий?">
             {% csrf_token %}
             <button type="submit"
-                    class="btn btn-outline-danger btn-sm"
+                    class="btn btn-outline-danger btn-sm mb-2"
                     title="Удалить комментарий">
               Удалить
             </button>
@@ -105,7 +105,7 @@
         {% endif %}
 
         <button type="button"
-                class="btn btn-outline-light btn-sm reply-btn"
+                class="btn btn-outline-light btn-sm reply-btn mb-2"
                 data-comment-id="{{ comment.id }}">
           Ответить
         </button>

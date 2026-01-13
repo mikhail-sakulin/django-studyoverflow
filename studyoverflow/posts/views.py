@@ -2,6 +2,7 @@ import json
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.messages.views import SuccessMessageMixin
 from django.db import models
 from django.db.models import Count, Prefetch
 from django.http import HttpResponse
@@ -15,6 +16,7 @@ from posts.services.infrastructure import (
     CommentGetMethodMixin,
     ContextTagMixin,
     HTMXHandle404Mixin,
+    HTMXMessageMixin,
     LikeAnnotationsMixin,
     LoginRequiredHTMXMixin,
     PostAnnotateQuerysetMixin,
@@ -63,7 +65,7 @@ class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMix
         return context
 
 
-class PostCreateView(PostTagMixin, LoginRequiredHTMXMixin, CreateView):
+class PostCreateView(PostTagMixin, LoginRequiredHTMXMixin, SuccessMessageMixin, CreateView):
     """
     Класс-представление для создания нового поста.
     """
@@ -71,6 +73,7 @@ class PostCreateView(PostTagMixin, LoginRequiredHTMXMixin, CreateView):
     form_class = PostCreateForm
     template_name = "posts/post_create.html"
     success_url = reverse_lazy("posts:list")
+    success_message = "Пост успешно создан!"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -96,18 +99,25 @@ class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
         return context
 
 
-class PostUpdateView(LoginRequiredMixin, IsAuthorOrModeratorMixin, PostTagMixin, UpdateView):
+class PostUpdateView(
+    LoginRequiredMixin, IsAuthorOrModeratorMixin, PostTagMixin, SuccessMessageMixin, UpdateView
+):
     model = Post
     form_class = PostCreateForm
     template_name = "posts/post_edit.html"
     context_object_name = "post"
     permission_required = "posts.moderate_post"
+    success_message = "Пост успешно изменен!"
 
 
 class PostDeleteView(LoginRequiredMixin, IsAuthorOrModeratorMixin, DeleteView):
     model = Post
     success_url = reverse_lazy("posts:list")
     permission_required = "posts.moderate_post"
+
+    def form_valid(self, form):
+        messages.info(self.request, "Пост удален.")
+        return super().form_valid(form)
 
 
 class CommentListView(LikeAnnotationsMixin, ListView):
@@ -166,7 +176,9 @@ class CommentListView(LikeAnnotationsMixin, ListView):
         return context
 
 
-class CommentRootCreateView(LoginRequiredHTMXMixin, CommentGetMethodMixin, CreateView):
+class CommentRootCreateView(
+    LoginRequiredHTMXMixin, HTMXMessageMixin, CommentGetMethodMixin, CreateView
+):
     model = Comment
     form_class = CommentCreateForm
     template_name = "posts/comments/_comment_root_form.html"
@@ -197,14 +209,18 @@ class CommentRootCreateView(LoginRequiredHTMXMixin, CommentGetMethodMixin, Creat
         context = self.get_context_data(form, form_valid=True)
 
         response = render(self.request, self.template_name, context)
-        response["HX-Trigger"] = "commentsUpdated, commentRootFormSuccess"
-        return response
+        response["HX-Trigger"] = json.dumps({"commentsUpdated": {}, "commentRootFormSuccess": {}})
+
+        return self.htmx_message(
+            message_text="Комментарий создан.", message_type="success", response=response
+        )
 
     def form_invalid(self, form):
         context = self.get_context_data(form, form_valid=False)
 
         response = render(self.request, self.template_name, context)
-        response["HX-Trigger"] = "commentRootFormError"
+        response["HX-Trigger"] = json.dumps({"commentRootFormError": {}})
+
         return response
 
 
@@ -240,7 +256,9 @@ class CommentChildCreateView(CommentRootCreateView):
             {"commentsUpdated": {}, "commentChildFormSuccess": {"commentId": comment_id}}
         )
 
-        return response
+        return self.htmx_message(
+            message_text="Комментарий создан.", message_type="success", response=response
+        )
 
     def form_invalid(self, form):
         response = super().form_invalid(form)
@@ -261,6 +279,7 @@ class CommentChildCreateView(CommentRootCreateView):
 
 class CommentUpdateView(
     LoginRequiredHTMXMixin,
+    HTMXMessageMixin,
     IsAuthorOrModeratorMixin,
     LikeAnnotationsMixin,
     HTMXHandle404Mixin,
@@ -296,7 +315,10 @@ class CommentUpdateView(
 
         response = render(self.request, self.template_name, context)
         response["HX-Trigger"] = json.dumps({"commentUpdateSuccess": {"commentId": self.object.id}})
-        return response
+
+        return self.htmx_message(
+            message_text="Комментарий изменен.", message_type="success", response=response
+        )
 
     def form_invalid(self, form):
         context = self.get_context_data(form)
@@ -308,6 +330,7 @@ class CommentUpdateView(
 
 class CommentDeleteView(
     LoginRequiredHTMXMixin,
+    HTMXMessageMixin,
     HTMXHandle404Mixin,
     IsAuthorOrModeratorMixin,
     CommentGetMethodMixin,
@@ -319,10 +342,15 @@ class CommentDeleteView(
 
     def form_valid(self, form):
         self.object.delete()
-        return HttpResponse(headers={"HX-Trigger": "commentsUpdated"})
+        response = HttpResponse()
+        response["HX-Trigger"] = json.dumps({"commentsUpdated": {}})
+
+        return self.htmx_message(
+            message_text="Комментарий удален.", message_type="info", response=response
+        )
 
 
-class ToggleLikeBaseView(LoginRequiredHTMXMixin, View):
+class ToggleLikeBaseView(LoginRequiredHTMXMixin, HTMXMessageMixin, View):
     model: type[models.Model]
     pk_url_kwarg: str = "pk"
 
@@ -336,6 +364,11 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, View):
 
         if not created:
             like.delete()
+            message_text = "Лайк удален."
+            message_type = "info"
+        else:
+            message_text = "Лайк добавлен."
+            message_type = "success"
 
         context = {
             "toggle_like_url": self._get_toggle_like_url(liked_object),
@@ -346,7 +379,9 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, View):
 
         response = render(request, "posts/likes/_like-button.html", context)
 
-        return response
+        return self.htmx_message(
+            message_text=message_text, message_type=message_type, response=response
+        )
 
 
 class ToggleLikePostView(ToggleLikeBaseView):
