@@ -23,3 +23,7 @@
     transform: scale(0.9);
     transition: all 0.1s ease;
 }
+
+#messages-container .alert {
+    box-shadow: 0 0 8px 5px rgba(0, 0, 0, 0.5) !important;
+}

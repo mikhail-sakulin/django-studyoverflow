@@ -3,65 +3,64 @@
 */
 
 
-document.addEventListener('DOMContentLoaded', () => {
-
-    // Контейнер для сообщений с id="messages-container"
+/* Функция позиционирования */
+const positionMessages = () => {
     const container = document.getElementById('messages-container');
-
-    // Header страницы с id="header", под которым будут отображаться сообщения
     const header = document.getElementById('header');
-
-    // Если контейнера нет, выполнение прекращается
     if (!container) return;
 
-    // Функция позиционирования контейнера сообщения под header
-    const positionMessages = () => {
-        if (container) {
-            if (header) {
-                container.style.top = `calc(${header.offsetHeight}px + 2rem)`;
-            } else {
-                container.style.top = '2rem';
-            }
-        }
-    };
+    let topOffset = 32;
+    if (header) {
+        const rect = header.getBoundingClientRect();
+        // Если хедер фиксированный или виден, отступ от его низа
+        topOffset = Math.max(0, rect.bottom) + 32;
+    }
+    container.style.top = `${topOffset}px`;
+};
 
-    // Начальное позиционирование
+/* Настройка при загрузке страницы */
+document.addEventListener('DOMContentLoaded', () => {
     positionMessages();
-
-    // Обновление позиционирования при изменении размера окна
     window.addEventListener('resize', positionMessages);
+    window.addEventListener('scroll', positionMessages);
 
-    // Автозакрытие всех сообщений через 3 секунды
-    setTimeout(() => {
-        document.querySelectorAll('.alert').forEach(el => {
+    // Закрытие сообщений, которые уже были в HTML
+    document.querySelectorAll('#messages-container .alert').forEach(el => {
+        setTimeout(() => {
             const alert = bootstrap.Alert.getOrCreateInstance(el);
-            alert.close();
-        });
-    }, 3000);
+            if (alert) alert.close();
+        }, 3000);
+    });
 });
 
-
-// --- Обработка кастомного события showMessage для динамических сообщений ---
+/* Обработка динамических сообщений */
 document.body.addEventListener("showMessage", (event) => {
-    const data = event.detail;
-
     const container = document.getElementById("messages-container");
     if (!container) return;
 
-    // --- Создание нового сообщения ---
+    const { text, type } = event.detail;
+
     const div = document.createElement("div");
-    div.className = `alert alert-${data.type} alert-dismissible fade show shadow mx-auto`;
+    // Используется type или 'info' по умолчанию
+    div.className = `alert alert-${type || 'info'} alert-dismissible fade show shadow mx-auto pe-auto`;
     div.role = "alert";
+    div.style.pointerEvents = "auto";
     div.innerHTML = `
-        ${data.text}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        ${text}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
 
     container.appendChild(div);
 
-    // --- Автозакрытие нового сообщения через 3 секунды ---
+    positionMessages();
+
+    // Автозакрытие
     setTimeout(() => {
-        const alert = bootstrap.Alert.getOrCreateInstance(div);
-        alert.close();
+        if (typeof bootstrap !== 'undefined') {
+            const alert = bootstrap.Alert.getOrCreateInstance(div);
+            if (alert) alert.close();
+        } else {
+            div.remove();
+        }
     }, 3000);
 });
