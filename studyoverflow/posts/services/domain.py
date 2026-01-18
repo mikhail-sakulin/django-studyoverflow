@@ -89,7 +89,19 @@ def render_markdown_safe(markdown_text: str) -> str:
     }
 
     # Очистка HTML от неразрешенных HTML-тегов и их атрибутов
-    safe_html = bleach.clean(html, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+    safe_html = bleach.clean(
+        html,
+        tags=allowed_tags,
+        attributes=allowed_attrs,
+        protocols=["http", "https", "mailto"],
+        strip=True,
+    )
+
+    # Добавление nofollow и noopener к ссылкам
+    safe_html = bleach.linkify(
+        safe_html,
+        callbacks=[bleach.callbacks.nofollow, bleach.callbacks.target_blank],  # rel="noopener"
+    )
 
     return safe_html
 
