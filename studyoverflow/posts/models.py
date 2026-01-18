@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxLengthValidator
 from django.db import models
 from django.urls import reverse
+from django.utils.text import Truncator
 from notifications.models import Notification
 from posts.services.domain import generate_slug, normalize_tag_name
 from taggit.managers import TaggableManager
@@ -31,11 +32,16 @@ class LowercaseTag(TagBase):
         - get_absolute_url(): Возвращает уникальный URL для тега на основе name.
     """
 
-    name = models.CharField(max_length=MAX_NAME_LENGTH_TAG, unique=True, verbose_name="Тег")
+    name = models.CharField(
+        max_length=MAX_NAME_LENGTH_TAG,
+        validators=[MaxLengthValidator(MAX_NAME_LENGTH_TAG)],
+        unique=True,
+        verbose_name="Тег",
+    )
 
     class Meta:
-        verbose_name = "Tag"
-        verbose_name_plural = "Tags"
+        verbose_name = "Тег"
+        verbose_name_plural = "Теги"
 
     def save(self, *args, **kwargs):
         self.name = normalize_tag_name(self.name)
@@ -54,7 +60,12 @@ class TaggedPost(GenericTaggedItemBase):
     постов (Post) с тегами (LowercaseTag).
     """
 
-    tag = models.ForeignKey(LowercaseTag, related_name="posts", on_delete=models.CASCADE)
+    tag = models.ForeignKey(LowercaseTag, related_name="tagged_posts", on_delete=models.CASCADE)
+
+    class Meta:
+        verbose_name = "Тег поста"
+        verbose_name_plural = "Теги постов"
+        unique_together = ("tag", "content_type", "object_id")
 
     def __str__(self):
         return f"{self.object_id} - {self.tag.name}"
@@ -109,14 +120,14 @@ class Post(models.Model):
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
     def __str__(self):
-        return self.title
+        return Truncator(self.title).chars(40, truncate="…")
 
     @property
     def is_edited(self):
         """
         Вычисляемое свойство. Определяет факт редактирования поста.
         """
-        return (self.time_update - self.time_create).total_seconds() > 5
+        return (self.time_update - self.time_create).total_seconds() > 3
 
     class Meta:
         verbose_name = "Пост"
@@ -233,7 +244,7 @@ class Comment(models.Model):
             raise ValidationError(errors)
 
     def __str__(self):
-        return f"{self.author}: {self.content[:30]}"
+        return f"{self.author}: {Truncator(self.content).chars(30, truncate="…")}"
 
     @property
     def has_parent_comment(self):
@@ -244,7 +255,7 @@ class Comment(models.Model):
         """
         Вычисляемое свойство. Определяет факт редактирования комментария.
         """
-        return (self.time_update - self.time_create).total_seconds() > 5
+        return (self.time_update - self.time_create).total_seconds() > 3
 
     def get_absolute_url(self):
         return f"{self.post.get_absolute_url()}#comment-card-{self.pk}"

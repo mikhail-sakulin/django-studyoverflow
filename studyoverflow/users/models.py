@@ -143,6 +143,8 @@ class User(AbstractUser):
         return self.username
 
     class Meta:
+        verbose_name = "Пользователь"
+        verbose_name_plural = "Пользователи"
         ordering = ["username"]
         permissions = [
             ("block_user", "Can block/unblock users"),
