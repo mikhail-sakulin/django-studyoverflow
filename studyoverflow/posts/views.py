@@ -228,6 +228,7 @@ class CommentChildCreateView(CommentRootCreateView):
     template_name = "posts/comments/_comment_child_form.html"
 
     def _add_errors_to_messages(self, form):
+        messages.error(self.request, "Возможно, комментарий был удален.")
         for field, errors in form.errors.items():
             for error in errors:
                 if field == "__all__":
@@ -237,16 +238,10 @@ class CommentChildCreateView(CommentRootCreateView):
                     # ошибки конкретного поля
                     messages.error(self.request, f'Ошибка в "{form.fields[field].label}": {error}')
 
-        # Редирект обратно на страницу поста
-        return form.post.get_absolute_url()
-
     def form_valid(self, form):
         response = super().form_valid(form)
 
         reply_to = form.cleaned_data.get("reply_to")
-
-        if not reply_to:
-            self._add_errors_to_messages(form)
 
         # Определяется commentId для события
         comment_id = reply_to.id
@@ -267,7 +262,7 @@ class CommentChildCreateView(CommentRootCreateView):
 
         if not reply_to:
             self._add_errors_to_messages(form)
-            response["HX-Redirect"] = self.request.path
+            response["HX-Refresh"] = "true"
             return response
 
         comment_id = reply_to.id
@@ -358,7 +353,15 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, HTMXMessageMixin, View):
         return reverse_lazy("home")
 
     def post(self, request, *args, **kwargs):
-        liked_object = get_object_or_404(self.model, pk=kwargs[self.pk_url_kwarg])
+        try:
+            liked_object = self.model.objects.get(pk=kwargs[self.pk_url_kwarg])
+        except self.model.DoesNotExist:
+            response = HttpResponse(status=404)
+            response["HX-Trigger"] = json.dumps({"reloadPage": True})
+
+            messages.error(self.request, "Ресурс был удален.")
+
+            return response
 
         like, created = liked_object.likes.get_or_create(user=request.user)
 

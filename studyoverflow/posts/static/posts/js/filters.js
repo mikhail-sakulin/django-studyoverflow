@@ -142,4 +142,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // --- Кастомное событие перезагрузки страницы ---
+    document.body.addEventListener('reloadPage', function() {
+        window.location.reload();
+    });
+
 });

@@ -223,6 +223,16 @@ document.addEventListener("DOMContentLoaded", function() {
         btn.classList.add('active');
         input.value = btn.dataset.value;
     });
+
+    document.body.addEventListener('htmx:beforeSwap', function(evt) {
+        // Если сервер ответил 404 (Not Found)
+        if(evt.detail.xhr.status === 404){
+            // Отмена вставки контента
+            evt.detail.shouldSwap = false;
+            // Перезагрузка страницы
+            window.location.reload();
+        }
+    });
 });
 
 // --- Скролл к комментарию по хэшу после HTMX обновления ---
