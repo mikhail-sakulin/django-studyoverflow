@@ -146,7 +146,9 @@ class PostFilterSortMixin:
         # Поиск по тексту
         q = request.GET.get("q", "").strip()
         if q:
-            queryset = queryset.filter(Q(title__icontains=q) | Q(content__icontains=q))
+            queryset = queryset.filter(
+                Q(title__icontains=q) | Q(content__icontains=q) | Q(tags__name__icontains=q)
+            ).distinct()
 
         # Фильтр по тегам
         tags = request.GET.get("tags", "").strip()
