@@ -1,0 +1,32 @@
+{% extends 'navigation/base.html' %}
+
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center text-center mt-5">
+        <div class="text-white col-md-8 col-lg-6">
+            {# Код ошибки #}
+            <h1 class="display-1 fw-bold">
+                {% block status_code %}
+                {% endblock %}
+            </h1>
+
+            {# Заголовок ошибки #}
+            <h2 class="mb-4">
+                {% block status_title %}
+                {% endblock %}
+            </h2>
+
+            {# Основной текст #}
+            {% block status_message %}
+            {% endblock %}
+
+            {# Дополнительный текст #}
+            <p class="fs-5">
+                {% block status_additional %}
+                {% endblock %}
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

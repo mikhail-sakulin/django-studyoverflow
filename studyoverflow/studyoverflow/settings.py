@@ -179,6 +179,8 @@ LOGIN_URL = "/users/login/"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "home"
 
+CSRF_FAILURE_VIEW = "navigation.views.csrf_failure"
+
 MESSAGE_TAGS = {messages.SUCCESS: "success", messages.INFO: "info", messages.ERROR: "danger"}
 
 # Конфигурация STORAGES
