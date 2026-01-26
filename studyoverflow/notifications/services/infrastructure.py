@@ -11,12 +11,6 @@ from posts.models import Comment, Like, Post
 User = get_user_model()
 
 
-LIKE_CT_ID = ContentType.objects.get_for_model(Like).id
-POST_CT_ID = ContentType.objects.get_for_model(Post).id
-COMMENT_CT_ID = ContentType.objects.get_for_model(Comment).id
-USER_CT_ID = ContentType.objects.get_for_model(User).id
-
-
 def handle_send_channel_notify_event(notification):
     transaction.on_commit(
         lambda: send_channel_notify_event.apply_async(
@@ -42,7 +36,7 @@ def handle_notification_post_like(like: Like):
             actor_id=like.user_id,
             message=message,
             notification_type=NotificationType.LIKE_POST,
-            content_type_id=LIKE_CT_ID,
+            content_type_id=ContentType.objects.get_for_model(Like).id,
             object_id=like.id,
         )
     )
@@ -65,7 +59,7 @@ def handle_notification_comment_like(like: Like):
             actor_id=like.user_id,
             message=message,
             notification_type=NotificationType.LIKE_COMMENT,
-            content_type_id=LIKE_CT_ID,
+            content_type_id=ContentType.objects.get_for_model(Like).id,
             object_id=like.id,
         )
     )
@@ -80,7 +74,7 @@ def handle_notification_post_created(post: Post):
             actor_id=post.author_id,
             message=message,
             notification_type=NotificationType.POST,
-            content_type_id=POST_CT_ID,
+            content_type_id=ContentType.objects.get_for_model(Post).id,
             object_id=post.id,
         )
     )
@@ -99,7 +93,7 @@ def handle_notification_comment_on_post_created(comment: Comment):
             actor_id=comment.author_id,
             message=message,
             notification_type=NotificationType.COMMENT,
-            content_type_id=COMMENT_CT_ID,
+            content_type_id=ContentType.objects.get_for_model(Comment).id,
             object_id=comment.id,
         )
     )
@@ -118,7 +112,7 @@ def handle_notification_reply_to_comment_created(comment: Comment):
             actor_id=comment.author_id,
             message=message,
             notification_type=NotificationType.REPLY,
-            content_type_id=COMMENT_CT_ID,
+            content_type_id=ContentType.objects.get_for_model(Comment).id,
             object_id=comment.id,
         )
     )
@@ -133,7 +127,7 @@ def handle_notification_user_created(user: AbstractUser):
             actor_id=user.pk,
             message=message,
             notification_type=NotificationType.REGISTER,
-            content_type_id=USER_CT_ID,
+            content_type_id=ContentType.objects.get_for_model(User).id,
             object_id=user.pk,
         )
     )
