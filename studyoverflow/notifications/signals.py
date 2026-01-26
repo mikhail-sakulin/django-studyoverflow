@@ -19,7 +19,10 @@ User = get_user_model()
 
 
 @receiver(post_save, sender=Like)
-def notification_like_created(sender, instance, created, **kwargs):
+def notification_like_created(sender, instance, created, raw, **kwargs):
+    if raw:
+        return
+
     if not created:
         return
 
@@ -31,7 +34,10 @@ def notification_like_created(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Post)
-def notification_post_created(sender, instance, created, **kwargs):
+def notification_post_created(sender, instance, created, raw, **kwargs):
+    if raw:
+        return
+
     if not created:
         return
 
@@ -39,7 +45,10 @@ def notification_post_created(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Comment)
-def notification_comment_created(sender, instance, created, **kwargs):
+def notification_comment_created(sender, instance, created, raw, **kwargs):
+    if raw:
+        return
+
     if not created:
         return
 
@@ -58,7 +67,10 @@ def notification_comment_created(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=User)
-def notification_user_created(sender, instance, created, **kwargs):
+def notification_user_created(sender, instance, created, raw, **kwargs):
+    if raw:
+        return
+
     if not created:
         return
 
@@ -66,7 +78,10 @@ def notification_user_created(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Notification)
-def notification_count_when_notification_created(sender, instance, created, **kwargs):
+def notification_count_when_notification_created(sender, instance, created, raw, **kwargs):
+    if raw:
+        return
+
     handle_send_channel_notify_event(instance)
 
 
