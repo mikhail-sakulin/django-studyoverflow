@@ -1,0 +1,97 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: psgr
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${DATABASE_NAME}
+      - POSTGRES_USER=${DATABASE_USERNAME}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+    ports:
+      - "5434:5432"
+    networks:
+      - dbnet
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    networks:
+      - dbnet
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  studyoverflow:
+    build: ./studyoverflow
+    image: studyoverflow
+    restart: always
+    command: python manage.py runserver 0.0.0.0:8000
+    env_file:
+      - .env.docker
+    networks:
+      - dbnet
+    volumes:
+      - ./studyoverflow:/app/studyoverflow
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-worker:
+    image: studyoverflow
+    restart: always
+    env_file:
+      - .env.docker
+    command: celery -A studyoverflow worker -l info
+    volumes:
+      - ./studyoverflow:/app/studyoverflow
+    networks:
+      - dbnet
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      studyoverflow:
+        condition: service_started
+
+  celery-beat:
+    image: studyoverflow
+    restart: always
+    env_file:
+      - .env.docker
+    command: celery -A studyoverflow beat -l info --schedule=/app/studyoverflow/celerybeat_data/celerybeat-schedule
+    volumes:
+      - ./studyoverflow:/app/studyoverflow
+      - celery_beat_data:/app/studyoverflow/celerybeat_data
+    networks:
+      - dbnet
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      studyoverflow:
+        condition: service_started
+
+networks:
+  dbnet:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  celery_beat_data:
