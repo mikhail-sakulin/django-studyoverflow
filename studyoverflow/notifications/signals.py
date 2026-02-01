@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
@@ -16,6 +18,8 @@ from .models import Notification
 
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=Like)
@@ -88,3 +92,27 @@ def notification_count_when_notification_created(sender, instance, created, raw,
 @receiver(post_delete, sender=Notification)
 def notification_count_when_notification_deleted(sender, instance, **kwargs):
     handle_send_channel_notify_event(instance)
+
+
+@receiver(post_save, sender=Notification)
+def log_notification_created(sender, instance, created, raw, **kwargs):
+    if raw:
+        return
+
+    if not created:
+        return
+
+    related_obj_id = instance.object_id if instance.object_id else None
+    related_obj_type = str(instance.content_type) if instance.content_type else None
+
+    logger.info(
+        f"Создано уведомление: {instance.get_notification_type_display()}",
+        extra={
+            "for_user": instance.user_id,
+            "actor_id": instance.actor_id,
+            "notification_type": instance.notification_type,
+            "related_object_id": related_obj_id,
+            "related_object_type": related_obj_type,
+            "event_type": "notification_created",
+        },
+    )
