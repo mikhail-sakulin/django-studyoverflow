@@ -87,6 +87,46 @@ services:
       studyoverflow:
         condition: service_started
 
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: loki
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/config.yml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/config.yml
+    ports:
+      - "3100:3100"
+    networks:
+      - dbnet
+
+  promtail:
+    image: grafana/promtail:2.9.4
+    container_name: promtail
+    ports:
+      - "9080:9080"
+    volumes:
+      - promtail-data:/run/promtail
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - dbnet
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - dbnet
+    depends_on:
+      - loki
+
 networks:
   dbnet:
     driver: bridge
@@ -95,3 +135,6 @@ volumes:
   postgres-data:
   redis-data:
   celery_beat_data:
+  promtail-data:
+  loki-data:
+  grafana-data:
