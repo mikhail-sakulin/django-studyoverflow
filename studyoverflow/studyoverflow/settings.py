@@ -78,7 +78,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "users.middleware.BlockedUserMiddleware",
     "users.middleware.OnlineStatusMiddleware",
-    # "navigation.middleware.UserActivityMiddleware",
+    "navigation.middleware.UserActivityMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
