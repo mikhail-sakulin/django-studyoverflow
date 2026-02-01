@@ -52,11 +52,30 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
 
 
 class BlockedUserAccountAdapter(DefaultAccountAdapter):
-    """
-    Запрещает вход заблокированным пользователям.
-    """
+    def add_message(
+        self,
+        request,
+        level,
+        message_template=None,
+        message_context=None,
+        extra_tags="",
+        message=None,
+    ):
+        if message_template == "account/messages/logged_in.txt":
+            user = message_context.get("user") if message_context else None
+
+            if user:
+                message = f"Добро пожаловать, {user.get_username()}!"
+                message_template = None
+
+        return super().add_message(
+            request, level, message_template, message_context, extra_tags, message
+        )
 
     def login(self, request, user):
+        """
+        Запрещает вход заблокированным пользователям.
+        """
         if getattr(user, "is_blocked", False):
             if user.blocked_at:
                 local_date_block = timezone.localtime(user.blocked_at)
