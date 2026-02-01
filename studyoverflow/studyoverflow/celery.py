@@ -1,7 +1,11 @@
+import logging.config
 import os
 
 from celery import Celery
 from celery.schedules import crontab
+from celery.signals import after_setup_logger, after_setup_task_logger
+
+from studyoverflow import settings
 
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "studyoverflow.settings")
@@ -23,3 +27,9 @@ app.conf.beat_schedule = {
         "kwargs": {"batch_size": 1000},
     },
 }
+
+
+@after_setup_logger.connect
+@after_setup_task_logger.connect
+def setup_loggers(logger, *args, **kwargs):
+    logging.config.dictConfig(settings.LOGGING)
