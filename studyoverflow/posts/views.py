@@ -1,4 +1,5 @@
 import json
+import logging
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -24,6 +25,9 @@ from posts.services.infrastructure import (
     PostTagMixin,
 )
 from users.services.infrastructure import IsAuthorOrModeratorMixin
+
+
+logger = logging.getLogger(__name__)
 
 
 class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMixin, ListView):
@@ -80,6 +84,19 @@ class PostCreateView(PostTagMixin, LoginRequiredHTMXMixin, SuccessMessageMixin, 
         context["section_of_menu_selected"] = "posts:create"
         return context
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        post = self.object
+        logger.info(
+            f"Пост создан: {post.title} (id: {post.id}).",
+            extra={
+                "post_id": post.id,
+                "author_id": self.request.user.id,
+                "event_type": "post_create",
+            },
+        )
+        return response
+
 
 class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
     model = Post
@@ -109,6 +126,19 @@ class PostUpdateView(
     permission_required = "posts.moderate_post"
     success_message = "Пост успешно изменен!"
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        post = self.object
+        logger.info(
+            f"Пост отредактирован: {post.title} (id: {post.id}).",
+            extra={
+                "post_id": post.id,
+                "editor_id": self.request.user.id,
+                "event_type": "post_update",
+            },
+        )
+        return response
+
 
 class PostDeleteView(LoginRequiredMixin, IsAuthorOrModeratorMixin, DeleteView):
     model = Post
@@ -116,6 +146,16 @@ class PostDeleteView(LoginRequiredMixin, IsAuthorOrModeratorMixin, DeleteView):
     permission_required = "posts.moderate_post"
 
     def form_valid(self, form):
+        post = self.get_object()
+        logger.info(
+            f"Пост удален: {post.title} (id: {post.id}).",
+            extra={
+                "post_id": post.id,
+                "deleter_id": self.request.user.id,
+                "event_type": "post_delete",
+            },
+        )
+
         messages.info(self.request, "Пост удален.")
         return super().form_valid(form)
 
@@ -207,6 +247,16 @@ class CommentRootCreateView(
         self.object = form.save()
 
         context = self.get_context_data(form, form_valid=True)
+
+        logger.info(
+            f"Создан комментарий (id: {self.object.id}) к посту (id: {form.post.id}).",
+            extra={
+                "comment_id": self.object.id,
+                "post_id": form.post.id,
+                "author_id": self.request.user.id,
+                "event_type": "comment_create",
+            },
+        )
 
         response = render(self.request, self.template_name, context)
         response["HX-Trigger"] = json.dumps({"commentsUpdated": {}, "commentRootFormSuccess": {}})
@@ -308,6 +358,17 @@ class CommentUpdateView(
         self.object = form.save()
         context = self.get_context_data(form)
 
+        logger.info(
+            f"Комментарий обновлен (id: {self.object.id}) "
+            f"пользователем {self.request.user.username}.",
+            extra={
+                "comment_id": self.object.id,
+                "post_id": self.object.post.id,
+                "user_id": self.request.user.id,
+                "event_type": "comment_update",
+            },
+        )
+
         response = render(self.request, self.template_name, context)
         response["HX-Trigger"] = json.dumps({"commentUpdateSuccess": {"commentId": self.object.id}})
 
@@ -336,7 +397,20 @@ class CommentDeleteView(
     permission_required = "posts.moderate_comment"
 
     def form_valid(self, form):
+        comment_id = self.object.id
+        post_id = self.object.post.id
         self.object.delete()
+
+        logger.info(
+            f"Комментарий удален (id: {comment_id}).",
+            extra={
+                "comment_id": comment_id,
+                "post_id": post_id,
+                "user_id": self.request.user.id,
+                "event_type": "comment_delete",
+            },
+        )
+
         response = HttpResponse()
         response["HX-Trigger"] = json.dumps({"commentsUpdated": {}})
 
@@ -372,6 +446,18 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, HTMXMessageMixin, View):
         else:
             message_text = "Лайк добавлен."
             message_type = "success"
+
+        event_type = "like_add" if created else "like_remove"
+
+        logger.info(
+            f"Лайк {event_type} для {self.model.__name__} (id: {liked_object.id}).",
+            extra={
+                "object_type": self.model.__name__.lower(),
+                "object_id": liked_object.id,
+                "user_id": request.user.id,
+                "event_type": event_type,
+            },
+        )
 
         context = {
             "toggle_like_url": self._get_toggle_like_url(liked_object),
