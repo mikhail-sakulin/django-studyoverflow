@@ -1,3 +1,6 @@
+import logging
+
+from allauth.account.signals import user_signed_up
 from django.contrib import messages
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.decorators import login_required, permission_required
@@ -33,6 +36,9 @@ from users.services.infrastructure import (
     can_moderate,
     get_online_user_ids,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class UsersListView(UserHTMXPaginationMixin, UserSortMixin, UserOnlineFilterMixin, ListView):
@@ -90,6 +96,14 @@ class UserRegisterView(SuccessMessageMixin, CreateView):
     template_name = "users/register.html"
     success_url = reverse_lazy("home")
     success_message = "Регистрация успешно завершена!"
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+
+        user = self.object
+
+        user_signed_up.send(sender=user.__class__, request=self.request, user=user)
+        return response
 
     def get_success_url(self):
         """
@@ -189,6 +203,19 @@ class UserPasswordChangeView(
     template_name = "users/password_change.html"
     success_message = "Пароль успешно изменен!"
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.request.user
+        logger.info(
+            f"Пользователь {user.username} успешно сменил пароль.",
+            extra={
+                "username": user.username,
+                "user_id": user.id,
+                "event_type": "user_password_change_success",
+            },
+        )
+        return response
+
 
 class UserPasswordResetView(PasswordResetView):
     form_class = UserPasswordResetForm
@@ -206,6 +233,19 @@ class UserPasswordResetConfirmView(SuccessMessageMixin, PasswordResetConfirmView
     template_name = "users/password_reset_confirm.html"
     success_url = reverse_lazy("users:password_reset_complete")
     success_message = "Пароль успешно восстановлен!"
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = form.user
+        logger.info(
+            f"Пользователь {user.username} успешно восстановил пароль через email.",
+            extra={
+                "username": user.username,
+                "user_id": user.id,
+                "event_type": "user_password_reset_confirm_success",
+            },
+        )
+        return response
 
 
 class UserPasswordResetCompleteView(PasswordResetCompleteView):
@@ -234,6 +274,15 @@ def block_user(request, user_id):
     user.blocked_by = request.user
     user.save(update_fields=["is_blocked", "blocked_at", "blocked_by"])
 
+    logger.info(
+        f"Модератор {request.user.username} заблокировал пользователя {user.username}.",
+        extra={
+            "moderator_id": request.user.id,
+            "target_user_id": user.id,
+            "event_type": "user_blocked",
+        },
+    )
+
     messages.success(request, f"Пользователь {user.username} заблокирован.")
     return redirect(user.get_absolute_url())
 
@@ -259,6 +308,15 @@ def unblock_user(request, user_id):
     user.blocked_at = None
     user.blocked_by = None
     user.save(update_fields=["is_blocked", "blocked_at", "blocked_by"])
+
+    logger.info(
+        f"Модератор {request.user.username} разблокировал пользователя {user.username}.",
+        extra={
+            "moderator_id": request.user.id,
+            "target_user_id": user.id,
+            "event_type": "user_unblocked",
+        },
+    )
 
     messages.success(request, f"Пользователь {user.username} разблокирован.")
     return redirect(user.get_absolute_url())
