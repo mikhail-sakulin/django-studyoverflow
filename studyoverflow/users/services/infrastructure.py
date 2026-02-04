@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Optional, Type
 import filetype
 from botocore.exceptions import BotoCoreError
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files import File
 from django.core.files.base import ContentFile
@@ -382,39 +383,94 @@ def generate_default_avatar_small(
 
 
 REDIS_KEY_PREFIX = "online_user"
+ONLINE_SET_KEY = "online_users_set"
 ONLINE_TTL = 120
 
 
-def get_redis_conn_with_key(user_id: int):
-    """
-    Возвращает объект-соединение с Redis и ключ в Redis для статуса онлайна пользователя.
-    """
-    redis_conn = get_redis_connection("default")
-    key = f"{REDIS_KEY_PREFIX}:{user_id}"
-    return redis_conn, key
+def get_user_key_for_redis(user_id: int) -> str:
+    return f"{REDIS_KEY_PREFIX}:{user_id}"
 
 
 def set_user_online(user_id: int):
     """
-    Установка ключа в Redis с TTL, что пользователь онлайн.
+    Помечает пользователя как онлайн.
+    Создает временный user_key и добавляет ID в общее множество.
     """
-    redis_conn, key = get_redis_conn_with_key(user_id)
-    redis_conn.set(key, "1", ex=ONLINE_TTL)
+    redis_conn = get_redis_connection("default")
+    user_key = get_user_key_for_redis(user_id)
+
+    with redis_conn.pipeline() as pipe:
+        # Создание временного ключа user_key
+        pipe.set(user_key, "1", ex=ONLINE_TTL)
+        # Добавление ID пользователя во множество (set)
+        pipe.sadd(ONLINE_SET_KEY, user_id)
+        pipe.execute()
 
 
 def is_user_online(user_id: int) -> bool:
     """
-    Проверка, что пользователь онлайн.
+    Быстрая проверка статуса конкретного пользователя.
     """
-    redis_conn, key = get_redis_conn_with_key(user_id)
-    return redis_conn.exists(key) == 1
-
-
-def get_online_user_ids():
     redis_conn = get_redis_connection("default")
-    keys = redis_conn.keys("online_user:*")
+    user_key = get_user_key_for_redis(user_id)
+    return redis_conn.exists(user_key) == 1
 
-    return [int(k.decode().split(":")[1]) for k in keys if k.decode().split(":")[1].isdigit()]
+
+def remove_user_offline(user_id: int):
+    """
+    Удаляет пользователя из онлайн.
+    """
+    redis_conn = get_redis_connection("default")
+    user_key = get_user_key_for_redis(user_id)
+    with redis_conn.pipeline() as pipe:
+        pipe.delete(user_key)
+        pipe.srem(ONLINE_SET_KEY, user_id)
+        pipe.execute()
+
+
+def get_online_user_ids() -> list:
+    """
+    Возвращает список ID всех пользователей онлайн и чистит устаревшие записи.
+    """
+    redis_conn = get_redis_connection("default")
+
+    all_ids = [int(el) for el in redis_conn.smembers(ONLINE_SET_KEY)]
+    if not all_ids:
+        return []
+
+    with redis_conn.pipeline() as pipe:
+        for u_id in all_ids:
+            pipe.exists(f"{get_user_key_for_redis(u_id)}")
+        result = pipe.execute()
+
+    active_ids = []
+    expired_ids = []
+
+    for u_id, exists in zip(all_ids, result):
+        if exists:
+            active_ids.append(u_id)
+        else:
+            expired_ids.append(u_id)
+
+    if expired_ids:
+        redis_conn.srem(ONLINE_SET_KEY, *expired_ids)
+
+    return active_ids
+
+
+def get_cached_online_user_ids() -> list:
+    """
+    Возвращает список ID всех пользователей онлайн из кеша.
+    """
+    cache_key = "cached_online_users_set"
+    data = cache.get(cache_key)
+
+    if data is None:
+        data = get_online_user_ids()
+        # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
+        cache.set(cache_key, data, timeout=2)
+
+    return data
 
 
 class UserOnlineFilterMixin:
@@ -428,7 +484,7 @@ class UserOnlineFilterMixin:
         if online == "any":
             return queryset
 
-        self.online_ids = get_online_user_ids()
+        self.online_ids = get_cached_online_user_ids()
 
         if online == "online":
             return queryset.filter(id__in=self.online_ids)
@@ -436,7 +492,7 @@ class UserOnlineFilterMixin:
         return queryset.exclude(id__in=self.online_ids)
 
     def get_online_ids(self):
-        return getattr(self, "online_ids", get_online_user_ids())
+        return getattr(self, "online_ids", get_cached_online_user_ids())
 
 
 class UserSortMixin:

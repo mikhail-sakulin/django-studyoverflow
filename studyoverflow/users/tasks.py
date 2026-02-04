@@ -9,8 +9,8 @@ from django.utils import timezone
 from users.services.infrastructure import (
     delete_old_avatar_names,
     generate_avatar_small,
+    get_cached_online_user_ids,
     get_counts_map,
-    get_online_user_ids,
     get_reputation_map,
 )
 
@@ -84,7 +84,7 @@ def sync_online_users_to_db():
     """
     User = get_user_model()  # noqa: N806
 
-    user_ids = get_online_user_ids()
+    user_ids = get_cached_online_user_ids()
 
     users = list(User.objects.filter(pk__in=user_ids))
 

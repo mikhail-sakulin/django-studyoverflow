@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model, user_logged_in, user_logged_out,
 from django.db import transaction
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
-from users.services.infrastructure import get_user_avatar_paths_list
+from users.services.infrastructure import get_user_avatar_paths_list, remove_user_offline
 from users.tasks import delete_files_from_storage_task
 
 
@@ -67,6 +67,11 @@ def log_user_logout(sender, request, user, **kwargs):
             "event_type": "user_logout",
         },
     )
+
+
+@receiver(user_logged_out)
+def remove_user_offline_when_logged_out(sender, request, user, **kwargs):
+    remove_user_offline(user.id)
 
 
 @receiver(post_delete, sender=User)
