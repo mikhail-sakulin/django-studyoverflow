@@ -55,7 +55,7 @@
 
     <!-- Блок содержимого комментария -->
     <div id="comment-content-{{ comment.id }}" class="comment-content content text-white mt-1 px-1">
-      {{ comment.content|markdown_safe|safe }}
+      {{ comment.rendered_content|safe }}
     </div>
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">

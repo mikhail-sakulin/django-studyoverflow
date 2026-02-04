@@ -48,7 +48,7 @@
 
     {% if post.content %}
       <div class="content content-preview text-white mt-1 mb-2">
-        {{ post.content|markdown_safe|safe }}
+        {{ post.rendered_content|safe }}
       </div>
     {% endif %}
 

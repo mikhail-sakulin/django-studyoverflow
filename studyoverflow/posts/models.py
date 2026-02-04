@@ -10,7 +10,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils.text import Truncator
 from notifications.models import Notification
-from posts.services.domain import generate_slug, normalize_tag_name
+from posts.services.domain import generate_slug, normalize_tag_name, render_markdown_safe
 from taggit.managers import TaggableManager
 from taggit.models import GenericTaggedItemBase, TagBase
 
@@ -106,6 +106,10 @@ class Post(models.Model):
         validators=[MaxLengthValidator(15000)],
         verbose_name="Содержимое поста",
     )
+    rendered_content = models.TextField(
+        blank=True,
+        verbose_name="Отрендеренное содержимое (HTML из Markdown)",
+    )
     tags = TaggableManager(through=TaggedPost, verbose_name="Теги")
     likes = GenericRelation(
         "Like", content_type_field="content_type", object_id_field="object_id", verbose_name="Лайк"
@@ -136,19 +140,21 @@ class Post(models.Model):
         indexes = [models.Index(fields=["-time_create"])]
         permissions = [("moderate_post", "Can moderate posts")]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Сохранение записанного в БД значения content для проверки изменения поля
+        self._original_content = self.content
+
     def save(self, *args, **kwargs):
         """
         Переопределение метода save.
-
-        Сохраняет объект в БД с автоматической генерацией slug.
-
-        Slug генерируется на основе title с обрезкой в случае превышения максимальной длины.
-
-        Slug генерируется только 1 раз в момент создания поста.
         """
-
         if not self.slug:
             self.slug = generate_slug(self.title, MAX_TITLE_SLUG_LENGTH_POST)
+
+        if not self.pk or self.content != self._original_content:
+            self.rendered_content = render_markdown_safe(self.content)
+
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
@@ -194,6 +200,10 @@ class Comment(models.Model):
     content = models.TextField(
         max_length=5000, validators=[MaxLengthValidator(5000)], verbose_name="Текст комментария"
     )
+    rendered_content = models.TextField(
+        blank=True,
+        verbose_name="Отрендеренный текст (HTML из Markdown)",
+    )
     likes = GenericRelation(
         "Like", content_type_field="content_type", object_id_field="object_id", verbose_name="Лайк"
     )
@@ -211,6 +221,20 @@ class Comment(models.Model):
         verbose_name_plural = "Комментарии"
         ordering = ["-time_create"]
         permissions = [("moderate_comment", "Can moderate comments")]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Сохранение записанного в БД значения content для проверки изменения поля
+        self._original_content = self.content
+
+    def save(self, *args, **kwargs):
+        """
+        Переопределение метода save.
+        """
+        if not self.pk or self.content != self._original_content:
+            self.rendered_content = render_markdown_safe(self.content)
+
+        super().save(*args, **kwargs)
 
     def clean(self):
         errors = {}
