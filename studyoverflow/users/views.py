@@ -15,6 +15,7 @@ from django.contrib.auth.views import (
     PasswordResetView,
 )
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
@@ -34,31 +35,41 @@ from users.services.infrastructure import (
     UserOnlineFilterMixin,
     UserSortMixin,
     can_moderate,
-    get_online_user_ids,
+    get_cached_online_user_ids,
 )
 
 
 logger = logging.getLogger(__name__)
 
 
-class UsersListView(UserHTMXPaginationMixin, UserSortMixin, UserOnlineFilterMixin, ListView):
+class UsersListView(UserHTMXPaginationMixin, ListView):
     model = get_user_model()
     template_name = "users/user_list.html"
     context_object_name = "users"
     extra_context = {"section_of_menu_selected": "users:list"}
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        queryset = queryset.order_by("-reputation", "username")
+        cache_key = "users_first_page"
+        cache_data = cache.get(cache_key)
 
-        self.remaining = queryset[self.paginate_htmx_by : self.paginate_htmx_by + 1].exists()
-        return queryset[: self.paginate_htmx_by]
+        if cache_data is None:
+            queryset = super().get_queryset()
+            queryset = queryset.order_by("-reputation", "username")
+            result = list(queryset[: self.paginate_htmx_by])
+            remaining = queryset[self.paginate_htmx_by : self.paginate_htmx_by + 1].exists()
+            cache.set(cache_key, {"users": result, "remaining": remaining}, timeout=2)
+        else:
+            result = cache_data["users"]
+            remaining = cache_data["remaining"]
+
+        self.remaining = remaining
+        return result
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(
             {
-                "online_ids": get_online_user_ids(),
+                "online_ids": get_cached_online_user_ids(),
                 "remaining": self.remaining,
                 "offset": 0,
                 "limit": self.paginate_htmx_by,
@@ -146,7 +157,17 @@ class AuthorProfileView(DetailView):
     context_object_name = "author"
 
     def get_object(self, queryset=None):
-        return get_object_or_404(get_user_model(), username=self.kwargs.get("username"))
+        username = self.kwargs.get("username")
+        cache_key = f"user_profile_{username}"
+
+        author = cache.get(cache_key)
+
+        if not author:
+            author = get_object_or_404(get_user_model(), username=username)
+            # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
+            cache.set(cache_key, author, timeout=2)
+
+        return author
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
