@@ -1,7 +1,7 @@
 <div class="text-white mb-3 px-2">
   {% if root_comments %}
     <h5>Комментариев {{ post.comments_count }}:</h5>
-  {% elif not post.comments.all.exists %}
+  {% else %}
     <span style="font-size: 1.2rem">Комментариев нет.
       {% if post.author != user %}
         Вы можете оставить первый!

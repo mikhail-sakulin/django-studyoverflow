@@ -7,6 +7,7 @@ from typing import Any, Generic, Optional, Protocol, TypeVar
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.db.models import Count, Exists, OuterRef, Q
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -17,7 +18,16 @@ from posts.services.domain import normalize_tag_name
 class ContextTagMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)  # type: ignore
-        context["all_tags"] = LowercaseTag.objects.all().order_by("name")
+
+        cache_key = "all_tags_list"
+
+        tags = cache.get(cache_key)
+        if tags is None:
+            tags = list(LowercaseTag.objects.all().order_by("name").values_list("name", flat=True))
+            # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
+            cache.set(cache_key, tags, 2)
+
+        context["all_tags"] = tags
         return context
 
 

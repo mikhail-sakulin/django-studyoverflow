@@ -4,6 +4,7 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core.cache import cache
 from django.db import models
 from django.db.models import Count, Prefetch
 from django.http import HttpResponse
@@ -103,11 +104,23 @@ class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
     template_name = "posts/post_detail.html"
     context_object_name = "post"
 
+    def get_object(self, queryset=None):
+        post_id = self.kwargs.get(self.pk_url_kwarg)
+        user_id = self.request.user.id if self.request.user.is_authenticated else "anon"
+        cache_key = f"post_detail_{post_id}_u{user_id}"
+
+        obj = cache.get(cache_key)
+        if not obj:
+            obj = super().get_object(queryset)
+            # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
+            cache.set(cache_key, obj, 2)
+        return obj
+
     def get_queryset(self):
         queryset = super().get_queryset()
 
         # select_related, prefetch_related и аннотации (через PostAnnotateQuerysetMixin)
-        return super().annotate_queryset(queryset)
+        return super().get_annotate_queryset(queryset)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -183,6 +196,7 @@ class CommentListView(LikeAnnotationsMixin, ListView):
         queryset = (
             post.comments.roots()
             .select_related("author", "post")
+            # prefetch_related для обратного доступа ForeignKey через related_name
             .prefetch_related(Prefetch("child_comments", queryset=child_queryset))
             .order_by("-time_create")
         )
