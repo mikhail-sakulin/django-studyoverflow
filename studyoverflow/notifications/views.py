@@ -1,8 +1,10 @@
+from django.contrib.contenttypes.prefetch import GenericPrefetch
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.views import View
 from django.views.generic import ListView, TemplateView
 from notifications.models import Notification
+from posts.models import Comment, Like, Post
 
 from .tasks import send_channel_notify_event
 
@@ -19,7 +21,28 @@ class NotificationListView(ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        queryset = queryset.filter(user=self.request.user)
+        queryset = (
+            queryset.filter(user=self.request.user)
+            .select_related("user", "actor", "content_type")
+            .prefetch_related(
+                GenericPrefetch(
+                    "content_object",
+                    [
+                        Post.objects.all(),
+                        Comment.objects.select_related("post"),
+                        Like.objects.prefetch_related(
+                            GenericPrefetch(
+                                "content_object",
+                                [
+                                    Post.objects.all(),
+                                    Comment.objects.select_related("post"),
+                                ],
+                            )
+                        ),
+                    ],
+                )
+            )
+        )
 
         return queryset
 
