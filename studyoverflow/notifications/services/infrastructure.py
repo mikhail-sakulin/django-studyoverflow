@@ -81,11 +81,18 @@ def handle_notification_post_created(post: Post):
 
 
 def handle_notification_comment_on_post_created(comment: Comment):
-    message = (
-        f"Пользователь {comment.author.username} оставил комментарий "
-        f'"{Truncator(comment.content).chars(15)}" '
-        f'к вашему посту "{Truncator(comment.post.title).chars(15)}".'
-    )
+    if comment.author_id == comment.post.author_id:
+        message = (
+            f"Вы оставили комментарий "
+            f'"{Truncator(comment.content).chars(15)}" '
+            f'к вашему посту "{Truncator(comment.post.title).chars(15)}".'
+        )
+    else:
+        message = (
+            f"Пользователь {comment.author.username} оставил комментарий "
+            f'"{Truncator(comment.content).chars(15)}" '
+            f'к вашему посту "{Truncator(comment.post.title).chars(15)}".'
+        )
 
     transaction.on_commit(
         lambda: create_notification.delay(
@@ -100,11 +107,18 @@ def handle_notification_comment_on_post_created(comment: Comment):
 
 
 def handle_notification_reply_to_comment_created(comment: Comment):
-    message = (
-        f"Пользователь {comment.author.username} ответил "
-        f'"{Truncator(comment.content).chars(15)}" '
-        f'на ваш комментарий "{Truncator(comment.reply_to.content).chars(15)}".'
-    )
+    if comment.author_id == comment.reply_to.author_id:
+        message = (
+            f"Вы ответили "
+            f'"{Truncator(comment.content).chars(15)}" '
+            f'на ваш комментарий "{Truncator(comment.reply_to.content).chars(15)}".'
+        )
+    else:
+        message = (
+            f"Пользователь {comment.author.username} ответил "
+            f'"{Truncator(comment.content).chars(15)}" '
+            f'на ваш комментарий "{Truncator(comment.reply_to.content).chars(15)}".'
+        )
 
     transaction.on_commit(
         lambda: create_notification.delay(

@@ -64,10 +64,8 @@ def notification_comment_created(sender, instance, created, raw, **kwargs):
             handle_notification_comment_on_post_created(instance)
 
         handle_notification_reply_to_comment_created(instance)
-
     else:
-        if instance.author_id != instance.post.author_id:
-            handle_notification_comment_on_post_created(instance)
+        handle_notification_comment_on_post_created(instance)
 
 
 @receiver(post_save, sender=User)
