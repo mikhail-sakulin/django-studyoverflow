@@ -73,3 +73,7 @@
 .comment-content.is-expanded::after {
     opacity: 0;
 }
+
+div::after {
+    display: none;
+}
