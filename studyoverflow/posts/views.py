@@ -24,6 +24,7 @@ from posts.services.infrastructure import (
     PostAnnotateQuerysetMixin,
     PostFilterSortMixin,
     PostTagMixin,
+    SingleObjectCacheMixin,
 )
 from users.services.infrastructure import IsAuthorOrModeratorMixin
 
@@ -130,7 +131,12 @@ class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
 
 
 class PostUpdateView(
-    LoginRequiredMixin, IsAuthorOrModeratorMixin, PostTagMixin, SuccessMessageMixin, UpdateView
+    LoginRequiredMixin,
+    IsAuthorOrModeratorMixin,
+    SingleObjectCacheMixin,
+    PostTagMixin,
+    SuccessMessageMixin,
+    UpdateView,
 ):
     model = Post
     form_class = PostCreateForm
@@ -138,6 +144,9 @@ class PostUpdateView(
     context_object_name = "post"
     permission_required = "posts.moderate_post"
     success_message = "Пост успешно изменен!"
+
+    def get_queryset(self):
+        return super().get_queryset().select_related("author").prefetch_related("tags")
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -153,7 +162,9 @@ class PostUpdateView(
         return response
 
 
-class PostDeleteView(LoginRequiredMixin, IsAuthorOrModeratorMixin, DeleteView):
+class PostDeleteView(
+    LoginRequiredMixin, IsAuthorOrModeratorMixin, SingleObjectCacheMixin, DeleteView
+):
     model = Post
     success_url = reverse_lazy("posts:list")
     permission_required = "posts.moderate_post"
@@ -190,7 +201,9 @@ class CommentListView(LikeAnnotationsMixin, ListView):
         post = self._get_post_object()
 
         child_queryset = self.annotate_queryset(
-            Comment.objects.select_related("author", "post").order_by("-time_create")
+            Comment.objects.select_related(
+                "author", "post", "reply_to", "reply_to__author"
+            ).order_by("-time_create")
         )
 
         queryset = (
@@ -240,8 +253,9 @@ class CommentRootCreateView(
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
-        post_id = self.kwargs.get("post_pk")
-        kwargs["post"] = get_object_or_404(Post, id=post_id)
+        if not hasattr(self, "_cached_post"):
+            self._cached_post = get_object_or_404(Post, id=self.kwargs.get("post_pk"))
+        kwargs["post"] = self._cached_post
         return kwargs
 
     def get_context_data(self, form, form_valid=True, **kwargs):
@@ -340,6 +354,7 @@ class CommentUpdateView(
     LoginRequiredHTMXMixin,
     HTMXMessageMixin,
     IsAuthorOrModeratorMixin,
+    SingleObjectCacheMixin,
     LikeAnnotationsMixin,
     HTMXHandle404Mixin,
     CommentGetMethodMixin,
@@ -351,11 +366,10 @@ class CommentUpdateView(
     template_name = "posts/comments/_comment_card.html"
     permission_required = "posts.moderate_comment"
 
-    def get_object(self, queryset=None):
-        queryset = queryset or self.model.objects.select_related("author", "post")
-        obj = super().get_object(queryset=queryset)
-        obj = self.annotate_object(obj)
-        return obj
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related("author", "post")
+        queryset = self.annotate_queryset(queryset)
+        return queryset
 
     def get_context_data(self, form, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -403,6 +417,7 @@ class CommentDeleteView(
     HTMXMessageMixin,
     HTMXHandle404Mixin,
     IsAuthorOrModeratorMixin,
+    SingleObjectCacheMixin,
     CommentGetMethodMixin,
     DeleteView,
 ):

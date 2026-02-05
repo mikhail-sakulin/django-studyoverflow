@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from posts.models import MAX_NAME_LENGTH_TAG, MAX_TITLE_SLUG_LENGTH_POST, Comment, Post
+from posts.services.domain import normalize_tag_name
 from taggit.forms import TagWidget
 from users.services.infrastructure import CustomUsernameValidator
 
@@ -42,11 +43,13 @@ class PostCreateForm(forms.ModelForm):
         if len(tags_list) > 10:
             raise ValidationError("Укажите не более 10 тегов.")
 
+        normalized_tags = []
         for el in tags_list:
             if len(el) > MAX_NAME_LENGTH_TAG:
                 raise ValidationError(
                     f"Длина тега не может превышать {MAX_NAME_LENGTH_TAG} символов."
                 )
+            normalized_tags.append(normalize_tag_name(el))
 
         return tags_list
 
@@ -96,14 +99,14 @@ class CommentCreateForm(forms.ModelForm):
         errors = {}
 
         # Проверка принадлежности parent_comment посту
-        if parent_comment and parent_comment.post != self.post:
+        if parent_comment and parent_comment.post.id != self.post.id:
             errors["parent_comment"] = ValidationError(
                 "Родительский комментарий не принадлежит этому посту."
             )
 
         # Проверка reply_to
         if reply_to:
-            if reply_to.post != self.post:
+            if reply_to.post.id != self.post.id:
                 errors["reply_to"] = ValidationError(
                     "Комментарий для ответа не принадлежит этому посту."
                 )

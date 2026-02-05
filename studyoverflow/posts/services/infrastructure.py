@@ -3,6 +3,7 @@
 """
 
 import json
+import logging
 from typing import Any, Generic, Optional, Protocol, TypeVar
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -12,7 +13,9 @@ from django.db.models import Count, Exists, OuterRef, Q
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from posts.models import Like, LowercaseTag, Post
-from posts.services.domain import normalize_tag_name
+
+
+logger = logging.getLogger(__name__)
 
 
 class ContextTagMixin:
@@ -63,15 +66,7 @@ class PostTagMixin(ContextTagMixin, Generic[T_Parent]):
         if post_creating and self.request.user.is_authenticated:
             form.instance.author = self.request.user
 
-        # Сохраняется объект post и возвращается response
-        response = super().form_valid(form)  # type: ignore
-
-        tags = form.cleaned_data.get("tags")
-        if tags is not None:
-            # Обновление связи ManyToMany: сопоставление указанных тегов с постом
-            form.instance.tags.set([normalize_tag_name(tag) for tag in tags])
-
-        return response
+        return super().form_valid(form)  # type: ignore[misc]
 
 
 class LikeAnnotationsMixin:
@@ -102,15 +97,6 @@ class LikeAnnotationsMixin:
             queryset = queryset.annotate(user_has_liked=Exists(Like.objects.none()))
 
         return queryset
-
-    def annotate_object(self, obj):
-        queryset = self.annotate_queryset(obj.__class__.objects.filter(pk=obj.pk))
-        annotated = queryset.first()
-
-        obj.likes_count = annotated.likes_count
-        obj.user_has_liked = annotated.user_has_liked
-
-        return obj
 
 
 class PostAnnotateQuerysetMixin(LikeAnnotationsMixin):
@@ -246,6 +232,10 @@ class HTMXMessageMixin:
             try:
                 hx_data = json.loads(hx_trigger)
             except json.JSONDecodeError:
+                logger.warning(
+                    "Ошибка декодирования HX-Trigger.",
+                    extra={"raw_header": hx_trigger, "event_type": "hx_trigger_decode_error"},
+                )
                 hx_data = {}
         else:
             hx_data = {}
@@ -303,3 +293,14 @@ class HTMXHandle404Mixin:
                 response["HX-Trigger"] = json.dumps({"commentsUpdated": {}})
                 return response
             raise
+
+
+class SingleObjectCacheMixin:
+    """
+    Обеспечивает кеширование объекта внутри одного запроса.
+    """
+
+    def get_object(self, queryset=None):
+        if not hasattr(self, "object") or self.object is None:  # type: ignore[has-type]
+            self.object = super().get_object(queryset)  # type: ignore[misc]
+        return self.object
