@@ -2,6 +2,7 @@
 Модуль содержит инфраструктурную логику приложения users.
 """
 
+import logging
 import os
 from dataclasses import astuple, dataclass
 from io import BytesIO
@@ -28,6 +29,9 @@ from users.services.domain import generate_image, generate_new_filename_with_uui
 
 if TYPE_CHECKING:
     from ..models import User
+
+
+logger = logging.getLogger(__name__)
 
 
 storage_default = storages["default"]
@@ -238,12 +242,30 @@ def generate_avatar_small(user: "User", size_type: int) -> bool | str:
             # Сохранение avatar_small (из BytesIO) в хранилище
             save_img_in_storage(buffer, storage_path_to_avatar_small)
 
-    except (OSError, ValueError):
-        # Ошибка обработки изображения
+    except (OSError, ValueError) as e:
+        logger.error(
+            f"Пользователь: {user.username}: ошибка обработки изображения avatar_small.",
+            extra={
+                "username": user.username,
+                "user_id": user.pk,
+                "size_type": size_type,
+                "error": str(e),
+                "event_type": "avatar_small_processing_error",
+            },
+        )
         return False
 
-    except BotoCoreError:
-        # Ошибка при обращении к хранилищу
+    except BotoCoreError as e:
+        logger.error(
+            f"Пользователь: {user.username}: ошибка при сохранении avatar_small в хранилище.",
+            extra={
+                "username": user.username,
+                "user_id": user.pk,
+                "size_type": size_type,
+                "error": str(e),
+                "event_type": "avatar_small_storage_error",
+            },
+        )
         return False
 
     # Путь к avatar_small в хранилище
@@ -329,8 +351,15 @@ def delete_old_avatar_names(old_avatar_names: AvatarNamesForDelete | list[str]) 
         if name and storage_default.exists(name):
             try:
                 storage_default.delete(name)
-            except BotoCoreError:
-                # Ошибка при обращении к хранилищу
+            except BotoCoreError as e:
+                logger.error(
+                    f"Ошибка при удалении файла '{name}' из хранилища.",
+                    extra={
+                        "file_name": name,
+                        "error": str(e),
+                        "event_type": "avatar_file_delete_error",
+                    },
+                )
                 pass
 
 
@@ -373,12 +402,28 @@ def generate_default_avatar_small(
         # Сохранение avatar_small (из BytesIO) в хранилище
         save_img_in_storage(buffer, storage_path_to_avatar_small)
 
-    except (OSError, ValueError):
-        # Ошибка обработки изображения
+    except (OSError, ValueError) as e:
+        logger.error(
+            f"Ошибка обработки изображения default_avatar для размера size{size_type}.",
+            extra={
+                "size_type": size_type,
+                "path": storage_path_to_avatar_small,
+                "error": str(e),
+                "event_type": "default_avatar_small_processing_error",
+            },
+        )
         return
 
-    except BotoCoreError:
-        # Ошибка при обращении к хранилищу
+    except BotoCoreError as e:
+        logger.error(
+            "Ошибка при сохранении default_avatar_small в хранилище.",
+            extra={
+                "size_type": size_type,
+                "path": storage_path_to_avatar_small,
+                "error": str(e),
+                "event_type": "default_avatar_small_storage_error",
+            },
+        )
         return
 
 
@@ -540,6 +585,16 @@ class UserHTMXPaginationMixin:
             offset = int(offset)
             limit = int(limit)
         except ValueError:
+            logger.warning(
+                "Некорректные параметры пагинации.",
+                extra={
+                    "offset_param": self.offset_param,
+                    "limit_param": self.limit_param,
+                    "offset_value": self.request.GET.get(self.offset_param),
+                    "limit_value": self.request.GET.get(self.limit_param),
+                    "event_type": "htmx_pagination_invalid_params",
+                },
+            )
             return queryset.none()
 
         self.offset = offset

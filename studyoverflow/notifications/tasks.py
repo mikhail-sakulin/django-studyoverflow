@@ -1,3 +1,5 @@
+import logging
+
 from asgiref.sync import async_to_sync
 from celery_once import QueueOnce
 from channels.layers import get_channel_layer
@@ -6,6 +8,9 @@ from django.db import transaction
 from notifications.models import Notification
 
 from studyoverflow.celery import app
+
+
+logger = logging.getLogger(__name__)
 
 
 @app.task
@@ -28,7 +33,17 @@ def create_notification(user_id, actor_id, message, notification_type, content_t
             )
 
         except ContentType.DoesNotExist:
-            # ContentType не найден
+            logger.warning(
+                f"ContentType с id={content_type_id} не найден.",
+                extra={
+                    "user_id": user_id,
+                    "actor_id": actor_id,
+                    "content_type_id": content_type_id,
+                    "object_id": object_id,
+                    "notification_type": notification_type,
+                    "event_type": "notification_content_type_not_found",
+                },
+            )
             return
 
 

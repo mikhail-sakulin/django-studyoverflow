@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 import requests
@@ -17,6 +18,9 @@ from users.services.infrastructure import (
 from studyoverflow.celery import app
 
 
+logger = logging.getLogger(__name__)
+
+
 @app.task
 def generate_and_save_avatars_small(user_pk):
     User = get_user_model()  # noqa: N806
@@ -24,7 +28,13 @@ def generate_and_save_avatars_small(user_pk):
     try:
         user = User.objects.get(pk=user_pk)
     except User.DoesNotExist:
-        # Логирование
+        logger.warning(
+            f"Пользователь с pk={user_pk} не найден, avatar_small не будет сгенерирован.",
+            extra={
+                "user_pk": user_pk,
+                "event_type": "generate_avatar_small_user_not_found",
+            },
+        )
         return
 
     update_fields_list = []
@@ -46,7 +56,13 @@ def delete_old_avatars_from_s3_storage(user_pk, avatar_names_for_delete: Optiona
     try:
         user = User.objects.get(pk=user_pk)
     except User.DoesNotExist:
-        # Логирование
+        logger.warning(
+            f"Пользователь с pk={user_pk} не найден, avatar_small не будет сгенерирован.",
+            extra={
+                "user_pk": user_pk,
+                "event_type": "generate_avatar_small_user_not_found",
+            },
+        )
         return
 
     if avatar_names_for_delete:
@@ -144,7 +160,13 @@ def download_and_set_avatar(user_id: int, avatar_url: str):
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
-        # Логирование
+        logger.warning(
+            f"Пользователь с pk={user_id} не найден, avatar_small не будет сгенерирован.",
+            extra={
+                "user_pk": user_id,
+                "event_type": "generate_avatar_small_user_not_found",
+            },
+        )
         return
 
     default_avatar = user._meta.get_field("avatar").get_default()
@@ -172,12 +194,30 @@ def download_and_set_avatar(user_id: int, avatar_url: str):
             save=True,
         )
 
-    except ValidationError:
-        # логирование
+    except ValidationError as e:
+        logger.warning(
+            f"Файл аватара для пользователя {user.username} не прошел валидацию.",
+            extra={
+                "user_id": user.pk,
+                "username": user.username,
+                "avatar_url": avatar_url,
+                "error": str(e),
+                "event_type": "download_and_set_avatar_validation_error",
+            },
+        )
         return
 
-    except Exception:
-        # логирование
+    except Exception as e:
+        logger.error(
+            f"Неожиданная ошибка при установке avatar пользователя {user.username}.",
+            extra={
+                "user_id": user.id,
+                "username": user.username,
+                "avatar_url": avatar_url,
+                "error": str(e),
+                "event_type": "download_and_set_avatar_unexpected_error",
+            },
+        )
         return
 
 
