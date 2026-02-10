@@ -1,6 +1,7 @@
 {% load widget_tweaks %}
 
 
+{# Универсальный шаблон отрисовки полей формы #}
 {% for f in form %}
   <div class="form-group mb-3">
     <label for="{{ f.id_for_label }}" class="form-label text-white">

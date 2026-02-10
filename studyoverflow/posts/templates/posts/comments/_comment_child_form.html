@@ -1,6 +1,7 @@
 {% load widget_tweaks %}
 
 
+{# Шаблон формы ответа на комментарий (создание дочернего комментария) #}
 <form method="POST"
       action="{% url 'posts:comment_child_create' post.pk post.slug %}"
       hx-post="{% url 'posts:comment_child_create' post.pk post.slug %}"
