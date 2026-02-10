@@ -71,7 +71,6 @@ class User(AbstractUser):
             "unique": gettext_lazy("A user with that username already exists."),
         },
     )
-
     email = models.EmailField(unique=True, verbose_name=gettext_lazy("email address"))
 
     first_name = models.CharField(
@@ -83,6 +82,13 @@ class User(AbstractUser):
         validators=[first_name_last_name_validator],
         verbose_name="Фамилия",
     )
+    bio = models.TextField(
+        blank=True,
+        max_length=300,
+        validators=[MaxLengthValidator(300)],
+        verbose_name="Информация о пользователе",
+    )
+    date_birth = models.DateField(blank=True, null=True, verbose_name="Дата рождения")
 
     avatar = models.ImageField(
         upload_to=user_avatar_upload_path,
@@ -91,7 +97,6 @@ class User(AbstractUser):
         validators=[avatar_validator],
         verbose_name="Аватар",
     )
-
     avatar_small_size1 = models.ImageField(
         blank=True, default=DEFAULT_AVATAR_SMALL_SIZE1_FILENAME, verbose_name="Миниатюра аватара №1"
     )
@@ -102,26 +107,20 @@ class User(AbstractUser):
         blank=True, default=DEFAULT_AVATAR_SMALL_SIZE3_FILENAME, verbose_name="Миниатюра аватара №3"
     )
 
-    bio = models.TextField(
-        blank=True,
-        max_length=300,
-        validators=[MaxLengthValidator(300)],
-        verbose_name="Информация о пользователе",
-    )
-
-    date_birth = models.DateField(blank=True, null=True, verbose_name="Дата рождения")
-    date_joined = models.DateTimeField(auto_now_add=True, verbose_name="Время создания аккаунта")
-
     reputation = models.IntegerField(default=0, verbose_name="Репутация")
     posts_count = models.PositiveIntegerField(default=0, verbose_name="Количество постов")
     comments_count = models.PositiveIntegerField(default=0, verbose_name="Количество комментариев")
 
+    date_joined = models.DateTimeField(auto_now_add=True, verbose_name="Время создания аккаунта")
     last_seen = models.DateTimeField(
         default=timezone.now,
         verbose_name="Был в сети",
     )
 
     is_social = models.BooleanField(default=False, verbose_name="Через соцсеть")
+    role = models.CharField(
+        max_length=20, choices=Role.choices, default=Role.USER, verbose_name="Роль"
+    )
 
     is_blocked = models.BooleanField(default=False, verbose_name="Заблокирован")
     blocked_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата и время блокировки")
@@ -134,14 +133,7 @@ class User(AbstractUser):
         verbose_name="Кем заблокирован",
     )
 
-    role = models.CharField(
-        max_length=20, choices=Role.choices, default=Role.USER, verbose_name="Роль"
-    )
-
     objects = CustomUserManager()
-
-    def __str__(self):
-        return self.username
 
     class Meta:
         verbose_name = "Пользователь"
@@ -172,24 +164,8 @@ class User(AbstractUser):
             models.Index(fields=["-comments_count", "username"]),
         ]
 
-    def get_absolute_url(self):
-        return reverse("users:profile", kwargs={"username": self.username})
-
-    @property
-    def is_admin(self):
-        return self.is_superuser
-
-    @property
-    def is_moderator(self):
-        return self.role == self.Role.MODERATOR
-
-    @property
-    def is_staff_viewer(self):
-        return self.role == self.Role.STAFF_VIEWER
-
-    @property
-    def is_user(self):
-        return self.role == self.Role.USER
+    def __str__(self):
+        return self.username
 
     def save(self, *args, **kwargs):
         is_creation = not self.pk
@@ -212,6 +188,25 @@ class User(AbstractUser):
             self._schedule_creation_celery_tasks()
         elif post_save_context:
             self._schedule_update_celery_tasks(post_save_context)
+
+    def get_absolute_url(self):
+        return reverse("users:profile", kwargs={"username": self.username})
+
+    @property
+    def is_admin(self):
+        return self.is_superuser
+
+    @property
+    def is_moderator(self):
+        return self.role == self.Role.MODERATOR
+
+    @property
+    def is_staff_viewer(self):
+        return self.role == self.Role.STAFF_VIEWER
+
+    @property
+    def is_user(self):
+        return self.role == self.Role.USER
 
     def _sync_role_flags(self):
         """

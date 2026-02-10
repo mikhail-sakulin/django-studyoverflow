@@ -24,7 +24,6 @@ class Notification(models.Model):
         verbose_name="Пользователь",
         help_text="Пользователь, которому адресовано уведомление",
     )
-
     actor = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -39,7 +38,6 @@ class Notification(models.Model):
         verbose_name="Тип",
         help_text="Тип уведомления",
     )
-
     content_type = models.ForeignKey(
         ContentType,
         on_delete=models.CASCADE,

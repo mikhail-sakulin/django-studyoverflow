@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from posts.models import MAX_NAME_LENGTH_TAG, MAX_TITLE_SLUG_LENGTH_POST, Comment, Post
+from posts.models import Comment, LowercaseTag, Post
 from posts.services.domain import normalize_tag_name
 from taggit.forms import TagWidget
 from users.services.infrastructure import CustomUsernameValidator
@@ -27,9 +27,9 @@ class PostCreateForm(forms.ModelForm):
         if len(title) < 10:
             raise ValidationError("Длина заголовка должна быть не менее 10 символов")
 
-        if len(title) > MAX_TITLE_SLUG_LENGTH_POST:
+        if len(title) > Post.MAX_TITLE_SLUG_LENGTH_POST:
             raise ValidationError(
-                f"Длина заголовка должна быть не более {MAX_NAME_LENGTH_TAG} символов"
+                f"Длина заголовка должна быть не более {Post.MAX_TITLE_SLUG_LENGTH_POST} символов"
             )
 
         return title
@@ -45,9 +45,9 @@ class PostCreateForm(forms.ModelForm):
 
         normalized_tags = []
         for el in tags_list:
-            if len(el) > MAX_NAME_LENGTH_TAG:
+            if len(el) > LowercaseTag.MAX_NAME_LENGTH_TAG:
                 raise ValidationError(
-                    f"Длина тега не может превышать {MAX_NAME_LENGTH_TAG} символов."
+                    f"Длина тега не может превышать {LowercaseTag.MAX_NAME_LENGTH_TAG} символов."
                 )
             normalized_tags.append(normalize_tag_name(el))
 

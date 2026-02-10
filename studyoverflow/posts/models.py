@@ -15,10 +15,6 @@ from taggit.managers import TaggableManager
 from taggit.models import GenericTaggedItemBase, TagBase
 
 
-MAX_TITLE_SLUG_LENGTH_POST: Final = 255  # максимальная длина заголовка и slug поста
-MAX_NAME_LENGTH_TAG: Final = 50  # максимальная длина имени тега
-
-
 class LowercaseTag(TagBase):
     """
     Пользовательская модель тега (наследование от taggit.TagBase).
@@ -31,6 +27,8 @@ class LowercaseTag(TagBase):
             - преобразует имя тега в нижний регистр перед сохранением с удалением лишних пробелов,
         - get_absolute_url(): Возвращает уникальный URL для тега на основе name.
     """
+
+    MAX_NAME_LENGTH_TAG: Final = 50  # максимальная длина имени тега
 
     name = models.CharField(
         max_length=MAX_NAME_LENGTH_TAG,
@@ -83,44 +81,26 @@ class TaggedPost(GenericTaggedItemBase):
 
 
 class Post(models.Model):
-    """
-    Модель поста приложения posts.
-
-    Атрибуты:
-        author (User): Автор поста.
-        title (CharField): Заголовок поста.
-        slug (SlugField): Человекопонятная часть уникального URL-идентификатора /pk/slug/.
-        content (TextField): Текст поста.
-        tag (TaggableManager): Теги поста.
-        time_create (DateTimeField): Время создания поста.
-        time_update (DateTimeField): Время последнего обновления поста.
-
-    Вычисляемые свойства:
-        is_edited (bool): Определяет, был ли пост отредактирован.
-            Считается True, если разница между временем обновления и временем создания
-            более 5 секунд.
-
-    Методы:
-        save(*args, **kwargs): Переопределяет стандартный метод сохранения объекта в БД для
-            генерации slug.
-        get_absolute_url(): Возвращает уникальный URL для поста на основе pk и slug.
-    """
+    MAX_TITLE_SLUG_LENGTH_POST: Final = 255  # максимальная длина заголовка и slug поста
+    MAX_CONTENT_LENGTH: Final = 15000  # максимальная длина содержимого поста
 
     author = models.ForeignKey(
         get_user_model(), on_delete=models.CASCADE, related_name="posts", verbose_name="Автор"
     )
     title = models.CharField(max_length=MAX_TITLE_SLUG_LENGTH_POST, verbose_name="Заголовок")
     slug = models.SlugField(max_length=MAX_TITLE_SLUG_LENGTH_POST, verbose_name="Slug")
+
     content = models.TextField(
         blank=True,
-        max_length=15000,
-        validators=[MaxLengthValidator(15000)],
+        max_length=MAX_CONTENT_LENGTH,
+        validators=[MaxLengthValidator(MAX_CONTENT_LENGTH)],
         verbose_name="Содержимое поста",
     )
     rendered_content = models.TextField(
         blank=True,
         verbose_name="Отрендеренное содержимое (HTML из Markdown)",
     )
+
     tags = TaggableManager(through=TaggedPost, verbose_name="Теги")
     likes = GenericRelation(
         "Like", content_type_field="content_type", object_id_field="object_id", verbose_name="Лайк"
@@ -131,23 +111,15 @@ class Post(models.Model):
         object_id_field="object_id",
         verbose_name="Уведомления",
     )
+
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
-
-    def __str__(self):
-        return Truncator(self.title).chars(40, truncate="…")
-
-    @property
-    def is_edited(self):
-        """
-        Вычисляемое свойство. Определяет факт редактирования поста.
-        """
-        return (self.time_update - self.time_create).total_seconds() > 3
 
     class Meta:
         verbose_name = "Пост"
         verbose_name_plural = "Посты"
         ordering = ["-time_create"]
+        permissions = [("moderate_post", "Can moderate posts")]
         indexes = [
             # Индекс для сортировки постов по дате создания
             #   ORDER BY time_create DESC
@@ -158,19 +130,21 @@ class Post(models.Model):
             #       ORDER BY time_create DESC
             models.Index(fields=["author", "-time_create"]),
         ]
-        permissions = [("moderate_post", "Can moderate posts")]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Сохранение записанного в БД значения content для проверки изменения поля
         self._original_content = self.content
 
+    def __str__(self):
+        return Truncator(self.title).chars(40, truncate="…")
+
     def save(self, *args, **kwargs):
         """
         Переопределение метода save.
         """
         if not self.slug:
-            self.slug = generate_slug(self.title, MAX_TITLE_SLUG_LENGTH_POST)
+            self.slug = generate_slug(self.title, self.MAX_TITLE_SLUG_LENGTH_POST)
 
         if not self.pk or self.content != self._original_content:
             self.rendered_content = render_markdown_safe(self.content)
@@ -183,6 +157,13 @@ class Post(models.Model):
         """
         return reverse("posts:detail", kwargs={"pk": self.pk, "slug": self.slug})
 
+    @property
+    def is_edited(self):
+        """
+        Вычисляемое свойство. Определяет факт редактирования поста.
+        """
+        return (self.time_update - self.time_create).total_seconds() > 3
+
 
 class CommentQuerySet(models.QuerySet):
     def roots(self):
@@ -193,7 +174,7 @@ class CommentQuerySet(models.QuerySet):
 
 
 class Comment(models.Model):
-    objects = CommentQuerySet.as_manager()
+    MAX_CONTENT_LENGTH: Final = 5000  # максимальная длина содержимого комментария
 
     post = models.ForeignKey(
         Post, on_delete=models.CASCADE, related_name="comments", verbose_name="Пост"
@@ -217,13 +198,17 @@ class Comment(models.Model):
         related_name="replies",
         verbose_name="Ответ на комментарий",
     )
+
     content = models.TextField(
-        max_length=5000, validators=[MaxLengthValidator(5000)], verbose_name="Текст комментария"
+        max_length=MAX_CONTENT_LENGTH,
+        validators=[MaxLengthValidator(MAX_CONTENT_LENGTH)],
+        verbose_name="Текст комментария",
     )
     rendered_content = models.TextField(
         blank=True,
         verbose_name="Отрендеренный текст (HTML из Markdown)",
     )
+
     likes = GenericRelation(
         "Like", content_type_field="content_type", object_id_field="object_id", verbose_name="Лайк"
     )
@@ -233,13 +218,17 @@ class Comment(models.Model):
         object_id_field="object_id",
         verbose_name="Уведомления",
     )
+
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
+
+    objects = CommentQuerySet.as_manager()
 
     class Meta:
         verbose_name = "Комментарий"
         verbose_name_plural = "Комментарии"
         ordering = ["-time_create"]
+        permissions = [("moderate_comment", "Can moderate comments")]
         indexes = [
             # Индекс для получения комментариев конкретного поста и сортировки их по дате создания,
             # включая возможность фильтрации по родительскому комментарию:
@@ -254,12 +243,14 @@ class Comment(models.Model):
             #       ORDER BY time_create DESC
             models.Index(fields=["parent_comment", "-time_create"]),
         ]
-        permissions = [("moderate_comment", "Can moderate comments")]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Сохранение записанного в БД значения content для проверки изменения поля
         self._original_content = self.content
+
+    def __str__(self):
+        return f"{self.author}: {Truncator(self.content).chars(30, truncate="…")}"
 
     def save(self, *args, **kwargs):
         """
@@ -301,8 +292,8 @@ class Comment(models.Model):
         if errors:
             raise ValidationError(errors)
 
-    def __str__(self):
-        return f"{self.author}: {Truncator(self.content).chars(30, truncate="…")}"
+    def get_absolute_url(self):
+        return f"{self.post.get_absolute_url()}#comment-card-{self.pk}"
 
     @property
     def has_parent_comment(self):
@@ -314,9 +305,6 @@ class Comment(models.Model):
         Вычисляемое свойство. Определяет факт редактирования комментария.
         """
         return (self.time_update - self.time_create).total_seconds() > 3
-
-    def get_absolute_url(self):
-        return f"{self.post.get_absolute_url()}#comment-card-{self.pk}"
 
 
 class LikeManager(models.Manager):
@@ -351,20 +339,21 @@ class Like(models.Model):
     objects = LikeManager()
 
     class Meta:
+        verbose_name = "Лайк"
+        verbose_name_plural = "Лайки"
+        ordering = ["-time_create"]
+
         # Уникальность связи и индекс для фильтрации лайков по пользователю и объекту:
         #   Like.objects.filter(user=user, content_type=ct, object_id=obj.id).exists()
         #       WHERE user_id = ? AND content_type_id = ? AND object_id = ?
         unique_together = ("user", "content_type", "object_id")
 
-        ordering = ["-time_create"]
         indexes = [
             # Индекс для получения всех лайков конкретного объекта (Post, Comment):
             #   Like.objects.filter(content_type=ct, object_id=obj_id)
             #       WHERE content_type_id = ? AND object_id = ?
             models.Index(fields=["content_type_id", "object_id"]),
         ]
-        verbose_name = "Лайк"
-        verbose_name_plural = "Лайки"
 
     def __str__(self):
         return f"Like by {self.user} on {self.content_object}"
