@@ -55,7 +55,7 @@
             Войти через соцсети
         </div>
 
-        <!-- GitHub -->
+        {# GitHub #}
         <form action="{% url 'github_login' %}" method="post">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.GET.next|default:'/' }}">
@@ -66,7 +66,7 @@
           </button>
         </form>
 
-        <!-- Google -->
+        {# Google #}
         <form action="{% url 'google_login' %}" method="post">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.GET.next|default:'/' }}">
@@ -83,7 +83,7 @@
           </button>
         </form>
 
-        <!-- Yandex -->
+        {# Yandex #}
         <form action="{% url 'yandex_login' %}" method="post">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.GET.next|default:'/' }}">
@@ -104,7 +104,7 @@
           </button>
         </form>
 
-        <!-- VK -->
+        {# VK #}
         <form action="{% url 'vk_login' %}" method="post">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.GET.next|default:'/' }}">

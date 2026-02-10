@@ -3,20 +3,20 @@
 {% load navigation_tags %}
 
 
-<!-- Дочерний html-шаблон главной страницы (index), расширяющий 'navigation/base.html' -->
+{# Дочерний html-шаблон главной страницы (index), расширяющий 'navigation/base.html' #}
 
 
-<!-- Блок с названием страницы -->
+{# Блок с названием страницы #}
 {% block title %}
   <title>StudyOverflow</title>
 {% endblock %}
 
-<!-- Блок с загрузкой дополнительных css-стилей в дочерних html-шаблонах -->
+{# Блок с загрузкой дополнительных css-стилей в дочерних html-шаблонах #}
 {% block extra_css %}
   <link type="text/css" rel="stylesheet" href="{% static 'navigation/css/index.css' %}">
 {% endblock %}
 
-<!-- Блок с основным содержимым страницы-->
+{# Блок с основным содержимым страницы#}
 {% block content %}
   <main id="main_index" style="background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)),
                                            url({% static 'navigation/img/background_home_page.png' %}) no-repeat center center;
@@ -24,10 +24,10 @@
 
     <div class="container d-flex flex-column justify-content-center align-items-center text-center">
 
-      <!-- Эмблема сайта-->
+      {# Эмблема сайта#}
       <h1 id="studyoverflow-emblem" class="text-warning mb-4" style="margin-top: 18vh">StudyOverflow</h1>
 
-      <!-- Динамический блок с некоторыми it-профессиями -->
+      {# Динамический блок с некоторыми it-профессиями #}
       <div id="text-title" class="so-title-block mt-4">
         <div class="so-row">У каждого</div>
         <div class="so-row"><span id="changing-text" aria-live="polite" aria-atomic="true"></span></div>
@@ -35,7 +35,7 @@
         <div class="so-row new-line">аккаунт в StudyOverflow</div>
       </div>
 
-      <!-- Три блока статических текстов -->
+      {# Три блока статических текстов #}
       <div id="block-of-texts" class="row w-75 g-0" style="margin-top: 12vh">
         <div class="col-md-4">
           <div class="text-block text-block1">
@@ -71,13 +71,13 @@
     </div>
   </main>
 
-  <!-- Footer -->
+  {# Footer #}
   <footer class="mt-5 py-3 text-white">
     <div class="container">
 
       <div class="row w-75 mx-auto gy-4">
 
-        <!-- Блок 'о сайте' -->
+        {# Блок 'о сайте' #}
         <div class="col-md-4 d-flex flex-column align-items-center align-items-md-start text-center text-md-start">
           <h5 class="text-white-muted">StudyOverflow</h5>
           <p class="mt-3 text-secondary" style="text-align: justify;">
@@ -86,7 +86,7 @@
           </p>
         </div>
 
-        <!-- Блок навигации -->
+        {# Блок навигации #}
         <div class="col-md-4 d-flex justify-content-center">
           <div class="text-start">
             <h5 class="text-white-muted">Навигация</h5>
@@ -103,7 +103,7 @@
           </div>
         </div>
 
-        <!-- Блок контактов -->
+        {# Блок контактов #}
         <div class="col-md-4 d-flex flex-column align-items-center">
           <h5 class="text-white-muted">Контакты</h5>
           <p class="mt-3 text-secondary">Email: mv.sakulin@yandex.ru</p>
@@ -114,7 +114,7 @@
         <hr class="bg-light my-4">
       </div>
 
-      <!-- Копирайт -->
+      {# Копирайт #}
       <div class="row">
         <div class="col text-center">
           <p class="mb-0 text-secondary">&copy; 2025 StudyOverflow. Все права защищены.</p>
@@ -125,7 +125,7 @@
 
 {% endblock %}
 
-<!-- Блок с загрузкой дополнительных js-файлов в дочерних html-шаблонах -->
+{# Блок с загрузкой дополнительных js-файлов в дочерних html-шаблонах #}
 {% block extra_js %}
   <script src="{% static 'navigation/js/index.js' %}"></script>
 {% endblock %}

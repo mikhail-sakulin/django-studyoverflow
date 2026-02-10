@@ -8,7 +8,7 @@
 
 
 {% block extra_css %}
-  <!-- Подключение CSS-темы для подсветки синтаксиса кода -->
+  {# Подключение CSS-темы для подсветки синтаксиса кода #}
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_base.css' %}">
@@ -31,7 +31,7 @@
 
   {% include 'posts/_filters.html' %}
 
-    <!-- Карточки с постами -->
+    {# Карточки с постами #}
     <main class="container px-4 px-lg-2 mb-4" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
       <div class="row g-4 mx-0">
         {% if posts %}
@@ -52,20 +52,20 @@
 
 
 {% block extra_js %}
-  <!-- Подключение JS-скрипта highlight.js для подсветки синтаксиса кода -->
+  {# Подключение JS-скрипта highlight.js для подсветки синтаксиса кода #}
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
-  <!-- Запуск highlight.js -->
+  {# Запуск highlight.js #}
   <script src="{% static 'posts/js/highlight_run.js' %}"></script>
 
   <script src="https://unpkg.com/htmx.org@2.0.7"></script>
 
-  <!-- Подключение локального JS-скрипта для управления тегами и блоком готовых тегов -->
+  {# Подключение локального JS-скрипта для управления тегами и блоком готовых тегов #}
   <script src="{% static 'posts/js/create_post_tags.js' %}"></script>
 
   <script src="{% static 'posts/js/filters.js' %}"></script>
 
-  <!-- Подключение js-скрипта для эффекта затемнения для content, если не помещается по высоте -->
+  {# Подключение js-скрипта для эффекта затемнения для content, если не помещается по высоте #}
   <script src="{% static 'posts/js/overflow_gradient.js' %}"></script>
 
   <script src="{% static 'users/js/avatar_modal.js' %}"></script>

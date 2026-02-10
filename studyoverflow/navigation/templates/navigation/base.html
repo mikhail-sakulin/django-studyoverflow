@@ -3,7 +3,7 @@
 {% load notifications_tags %}
 
 
-<!-- Базовый html-шаблон с header, не предназначен для использования без дочерних html-шаблонов -->
+{# Базовый html-шаблон с header #}
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -11,7 +11,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=0.75">
 
-  <!-- Блок с названием страницы -->
+  {# Блок с названием страницы #}
   {% block title %}
   {% endblock %}
 
@@ -23,14 +23,14 @@
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
 
-  <!-- Блок с загрузкой дополнительных css-стилей в дочерних html-шаблонах -->
+  {# Блок с загрузкой дополнительных css-стилей в дочерних html-шаблонах #}
   {% block extra_css %}
   {% endblock %}
 </head>
 
 <body class="bg-black">
 
-  <!-- header -->
+  {# header #}
   <header id="header" class="p-3 bg-black text-white">
     <div class="container">
       <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-xl-start">
@@ -63,10 +63,10 @@
                href="{% url 'notifications:base' %}"
                class="btn btn-outline-light border-0 align-items-center position-relative">
 
-                <!-- Иконка уведомлений -->
+                {# Иконка уведомлений #}
                 <i id="i-notifications" class="{% if unread_notifications_count > 0 %}bi bi-bell-fill{% else %}bi bi-bell{% endif %}"></i>
 
-                <!-- Счётчик уведомлений -->
+                {# Счётчик уведомлений #}
                 <span id="notifications-count" class="{% if unread_notifications_count > 0 %}text-danger{% else %}text-warning{% endif %}" data-user-id="{{ user.id }}">
                     {{ unread_notifications_count }}
                 </span>
@@ -98,22 +98,22 @@
     </div>
   </header>
 
-  <!-- Подключение html-шаблона для сообщений Django (messages) -->
+  {# Подключение html-шаблона для сообщений Django (messages) #}
   {% include 'navigation/messages.html' %}
 
-  <!-- Блок с основным содержимым дочерних html-шаблонов -->
+  {# Блок с основным содержимым дочерних html-шаблонов #}
   {% block content  %}
   {% endblock %}
 
-  <!-- Подключение JS-скрипта Bootstrap 5 -->
+  {# Подключение JS-скрипта Bootstrap 5 #}
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Подключение JS-скрипта для управления отображением сообщений -->
+  {# Подключение JS-скрипта для управления отображением сообщений #}
   <script src="{% static 'navigation/js/messages.js' %}"></script>
 
   <script src="{% static 'notifications/js/websocket_notifications.js' %}"></script>
 
-  <!-- Блок с загрузкой дополнительных js-файлов в дочерних html-шаблонах -->
+  {# Блок с загрузкой дополнительных js-файлов в дочерних html-шаблонах #}
   {% block extra_js %}
   {% endblock %}
 

@@ -5,7 +5,7 @@
 <div id="comment-card-{{ comment.id }}" class="card text-white rounded shadow-sm px-4">
   <div class="card-body px-0 pb-2">
 
-    <!-- Автор и время -->
+    {# Автор и время #}
     <div class="d-flex align-items-center mb-2">
       <img id="avatar-comment"
            src="{% if comment.author.avatar_small_size1 %}
@@ -53,7 +53,7 @@
 
     <hr class="mt-1 mb-2">
 
-    <!-- Блок содержимого комментария -->
+    {# Блок содержимого комментария #}
     <div id="comment-content-{{ comment.id }}" class="comment-content content text-white mt-1 px-1">
       {{ comment.rendered_content|safe }}
     </div>
@@ -113,12 +113,12 @@
 
     </div>
 
-    <!-- Скрытая форма ответа -->
+    {# Скрытая форма ответа #}
     <div id="reply-form-{{ comment.id }}" class="reply-form-container mt-3 mb-1" style="display:none;">
       {% include 'posts/comments/_comment_child_form.html' %}
     </div>
 
-    <!-- Скрытая форма редактирования -->
+    {# Скрытая форма редактирования #}
     <div id="edit-form-{{ comment.id }}" class="edit-form-container mt-3 mb-1" style="{% if comment_update_form.errors or comment_form.non_field_errors %}display:block;{% else %}display:none;{% endif %}">
       {% include 'posts/comments/_comment_edit_form.html' with comment_form=comment_update_form %}
     </div>

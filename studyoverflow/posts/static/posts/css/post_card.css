@@ -27,6 +27,7 @@
     width: 100%;
     height: 3rem;
     background: linear-gradient(transparent, #202023);
+    pointer-events: none;
 }
 
 #avatar {

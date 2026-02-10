@@ -75,5 +75,5 @@
 }
 
 div::after {
-    display: none;
+    pointer-events: none;
 }

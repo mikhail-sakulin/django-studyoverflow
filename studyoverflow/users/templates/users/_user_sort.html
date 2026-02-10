@@ -7,12 +7,12 @@
       hx-swap="innerHTML"
       hx-indicator="#users-sort-loading">
 
-      <!-- hidden -->
+      {# hidden #}
       <input type="hidden" name="online" id="online_input" value="{{ request.GET.online|default:'any' }}">
       <input type="hidden" name="user_sort" id="user_sort_input" value="{{ request.GET.user_sort|default:'reputation' }}">
       <input type="hidden" name="user_order" id="user_order_input" value="{{ request.GET.user_order|default:'desc' }}">
 
-      <!-- ===== ОНЛАЙН ===== -->
+      {# ===== ОНЛАЙН ===== #}
       <div class="d-flex align-items-center flex-wrap column-gap-3 row-gap-2 mb-3 px-1">
 
         <label class="form-label mb-0" style="min-width: 125px;">
@@ -38,7 +38,7 @@
         </div>
       </div>
 
-      <!-- ===== СОРТИРОВКА ===== -->
+      {# ===== СОРТИРОВКА ===== #}
       <div class="d-flex align-items-center flex-wrap column-gap-3 row-gap-2 px-1">
 
         <label class="form-label mb-0" style="min-width: 125px;">
@@ -68,7 +68,7 @@
           </button>
         </div>
 
-        <!-- стрелки -->
+        {# стрелки #}
         <div class="d-flex gap-1">
           <button type="button"
                   class="btn btn-link p-0 user-order-btn {% if request.GET.user_order == 'desc' or not request.GET.user_order %}active{% endif %}"
@@ -87,7 +87,7 @@
           Применить
         </button>
 
-        <!-- индикатор -->
+        {# индикатор #}
         <div id="users-sort-loading" class="htmx-indicator ms-2">
           <div class="spinner-border spinner-border-sm text-white"></div>
           <span class="px-1">Загрузка...</span>

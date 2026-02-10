@@ -3,7 +3,7 @@
 
 
 {% block extra_css %}
-  <!-- Подключение CSS-темы для подсветки синтаксиса кода -->
+  {# Подключение CSS-темы для подсветки синтаксиса кода #}
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_create.css' %}">
@@ -24,7 +24,7 @@
 
         <hr/>
 
-        <!-- Форма создания поста -->
+        {# Форма создания поста #}
         <form action="" method="POST">
           {% csrf_token %}
 
@@ -72,7 +72,7 @@
                 </button>
               </div>
 
-              <!-- Блок изначально скрыт -->
+              {# Блок изначально скрыт #}
               <div id="tags-wrapper">
                 <input type="text" class="form-control" id="tag-search" placeholder="Поиск готовых тегов...">
 
@@ -108,15 +108,15 @@
 
 
 {% block extra_js %}
-  <!-- Подключение локального JS-скрипта: управление окном предпросмотра, рендер Markdown и запуск подсветки синтаксиса кода -->
+  {# Подключение локального JS-скрипта: управление окном предпросмотра, рендер Markdown и запуск подсветки синтаксиса кода #}
   <script src="{% static 'posts/js/create_post_content-preview.js' %}"></script>
 
-  <!-- Подключение локального JS-скрипта для управления тегами и блоком готовых тегов -->
+  {# Подключение локального JS-скрипта для управления тегами и блоком готовых тегов #}
   <script src="{% static 'posts/js/create_post_tags.js' %}"></script>
 
-  <!-- Подключение JS-библиотеки markdown-it для конвертации текста с Markdown в HTML в браузере -->
+  {# Подключение JS-библиотеки markdown-it для конвертации текста с Markdown в HTML в браузере #}
   <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
 
-  <!-- Подключение JS-скрипта highlight.js для подсветки синтаксиса кода -->
+  {# Подключение JS-скрипта highlight.js для подсветки синтаксиса кода #}
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 {% endblock %}

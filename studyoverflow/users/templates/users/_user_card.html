@@ -5,10 +5,10 @@
 
   <div class="user-card">
 
-    <!-- Аватар + инфо -->
+    {# Аватар + инфо #}
     <div class="d-flex align-items-start mb-2">
 
-      <!-- Аватар -->
+      {# Аватар #}
       <img
         src="{% if user.avatar_small_size2 %}
                {{ user.avatar_small_size2.url }}
@@ -26,7 +26,7 @@
 
       <div class="ms-3 flex-grow-1 min-w-0">
 
-        <!-- Ник + онлайн -->
+        {# Ник + онлайн #}
         <div class="d-flex align-items-center gap-1">
           <a href="{{ user.get_absolute_url }}"
              class="text-break author-name">
@@ -38,7 +38,7 @@
           {% endif %}
         </div>
 
-        <!-- Статус -->
+        {# Статус #}
         {% if user.id in online_ids %}
           <div class="online-status small ms-0">Онлайн</div>
         {% else %}
@@ -47,7 +47,7 @@
           </div>
         {% endif %}
 
-        <!-- Почта -->
+        {# Почта #}
         <div class="text-secondary small text-truncate mt-1">
           {{ user.email }}
         </div>
@@ -55,7 +55,7 @@
       </div>
     </div>
 
-    <!-- Статистика -->
+    {# Статистика #}
     <div class="user-stats text-center">
       <div class="user-stat">
         <div class="user-stat-label text-cornflowerblue">Репутация</div>

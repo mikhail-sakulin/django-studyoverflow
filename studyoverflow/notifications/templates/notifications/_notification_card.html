@@ -1,7 +1,7 @@
 <div id="notification-card-{{ notification.id }}" class="card text-white rounded shadow-sm px-4 {% if not notification.is_read %}border border-warning{% endif %}">
   <div class="card-body px-0 pb-2">
 
-    <!-- Автор и время -->
+    {# Автор и время #}
     <div class="d-flex align-items-center mb-2">
       <img id="avatar-comment"
            src="{% if notification.actor.avatar_small_size1 %}
@@ -35,7 +35,7 @@
 
     <hr class="mt-1 mb-2">
 
-    <!-- Блок содержимого комментария -->
+    {# Блок содержимого комментария #}
     <div id="notification-content-{{ notification.id }}" class="text-start text-white mt-1 px-1">
       {{ notification.message }}
       {% if notification.content_object %}
