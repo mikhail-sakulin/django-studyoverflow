@@ -67,8 +67,15 @@ class Notification(models.Model):
         verbose_name_plural = "Уведомления"
         ordering = ["-time_create"]
         indexes = [
+            # Индекс для непрочитанных уведомлений пользователя:
+            #   Notification.objects.filter(user=user, is_read=False)
+            #       WHERE user_id = ? AND is_read = False
             models.Index(fields=["user", "is_read"]),
-            models.Index(fields=["time_create"]),
+            # Индекс для получения всех уведомлений пользователя с сортировкой по дате создания:
+            #   Notification.objects.filter(user=user).order_by('-time_create')
+            #       WHERE user_id = ?
+            #       ORDER BY time_create DESC
+            models.Index(fields=["user", "-time_create"]),
         ]
 
     def __str__(self):

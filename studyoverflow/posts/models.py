@@ -65,7 +65,18 @@ class TaggedPost(GenericTaggedItemBase):
     class Meta:
         verbose_name = "Тег поста"
         verbose_name_plural = "Теги постов"
+
+        # Уникальность связи и индекс для фильтрации постов по тегам:
+        #   WHERE tag_id = ? AND content_type_id = ?
+        # (через join'ы Post, TaggedPost, LowercaseTag)
         unique_together = ("tag", "content_type", "object_id")
+
+        indexes = [
+            # Индекс используется при получении тегов поста:
+            #   WHERE object_id = ? AND content_type_id = ?
+            # (через join'ы Post, TaggedPost, LowercaseTag)
+            models.Index(fields=["object_id", "content_type_id"]),
+        ]
 
     def __str__(self):
         return f"{self.object_id} - {self.tag.name}"
@@ -137,7 +148,16 @@ class Post(models.Model):
         verbose_name = "Пост"
         verbose_name_plural = "Посты"
         ordering = ["-time_create"]
-        indexes = [models.Index(fields=["-time_create"])]
+        indexes = [
+            # Индекс для сортировки постов по дате создания
+            #   ORDER BY time_create DESC
+            models.Index(fields=["-time_create"]),
+            # Индекс для получения постов конкретного автора в сортировке по дате создания:
+            #   Post.objects.filter(author=...).order_by('-time_create')
+            #       WHERE author_id = 17
+            #       ORDER BY time_create DESC
+            models.Index(fields=["author", "-time_create"]),
+        ]
         permissions = [("moderate_post", "Can moderate posts")]
 
     def __init__(self, *args, **kwargs):
@@ -220,6 +240,20 @@ class Comment(models.Model):
         verbose_name = "Комментарий"
         verbose_name_plural = "Комментарии"
         ordering = ["-time_create"]
+        indexes = [
+            # Индекс для получения комментариев конкретного поста и сортировки их по дате создания,
+            # включая возможность фильтрации по родительскому комментарию:
+            #   Comment.objects.filter(post=post, parent_comment=None).order_by('-time_create')
+            #       WHERE post_id = ? AND parent_comment_id IS NULL
+            #       ORDER BY time_create DESC
+            models.Index(fields=["post", "parent_comment", "-time_create"]),
+            # Индекс для получения всех ответов (дочерних комментариев) на родительский комментарий
+            # и сортировки их по дате создания:
+            #   Comment.objects.filter(parent_comment=parent).order_by('-time_create')
+            #       WHERE parent_comment_id = ?
+            #       ORDER BY time_create DESC
+            models.Index(fields=["parent_comment", "-time_create"]),
+        ]
         permissions = [("moderate_comment", "Can moderate comments")]
 
     def __init__(self, *args, **kwargs):
@@ -317,8 +351,18 @@ class Like(models.Model):
     objects = LikeManager()
 
     class Meta:
+        # Уникальность связи и индекс для фильтрации лайков по пользователю и объекту:
+        #   Like.objects.filter(user=user, content_type=ct, object_id=obj.id).exists()
+        #       WHERE user_id = ? AND content_type_id = ? AND object_id = ?
         unique_together = ("user", "content_type", "object_id")
+
         ordering = ["-time_create"]
+        indexes = [
+            # Индекс для получения всех лайков конкретного объекта (Post, Comment):
+            #   Like.objects.filter(content_type=ct, object_id=obj_id)
+            #       WHERE content_type_id = ? AND object_id = ?
+            models.Index(fields=["content_type_id", "object_id"]),
+        ]
         verbose_name = "Лайк"
         verbose_name_plural = "Лайки"
 

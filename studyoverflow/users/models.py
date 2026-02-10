@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser, Group, UserManager
 from django.core.validators import MaxLengthValidator
 from django.db import models, transaction
 from django.db.models import Q
+from django.db.models.functions import Upper
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy
@@ -148,6 +149,27 @@ class User(AbstractUser):
         ordering = ["username"]
         permissions = [
             ("block_user", "Can block/unblock users"),
+        ]
+        indexes = [
+            # Индекс для поиска пользователя по имени без учета регистра:
+            #   queryset.filter(author__username__iexact=author)
+            #       WHERE UPPER(username) = UPPER(?)
+            models.Index(Upper("username"), name="user_username_upper_idx"),
+            # Индекс для сортировки пользователей по последнему визиту:
+            #   User.objects.order_by('last_seen')
+            #       ORDER BY last_seen DESC
+            models.Index(fields=["last_seen"]),
+            # Индекс для сортировки пользователей по репутации по убыванию и имени по возрастанию:
+            #   User.objects.order_by('-reputation', 'username')
+            models.Index(fields=["-reputation", "username"]),
+            # Индекс для сортировки пользователей по количеству постов по убыванию
+            # и имени по возрастанию:
+            #   User.objects.order_by('-posts_count', 'username')
+            models.Index(fields=["-posts_count", "username"]),
+            # Индекс для сортировки пользователей по количеству комментариев по убыванию
+            # и имени по возрастанию:
+            #   User.objects.order_by('-comments_count', 'username')
+            models.Index(fields=["-comments_count", "username"]),
         ]
 
     def get_absolute_url(self):
