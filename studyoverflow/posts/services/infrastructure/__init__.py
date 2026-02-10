@@ -5,7 +5,12 @@ from .htmx_mixins import (
     LoginRequiredHTMXMixin,
     LoginRequiredRedirectHTMXMixin,
 )
-from .queryset_mixins import LikeAnnotationsMixin, PostAnnotateQuerysetMixin, PostFilterSortMixin
+from .queryset_mixins import (
+    CommentSortMixin,
+    LikeAnnotationsMixin,
+    PostAnnotateQuerysetMixin,
+    PostFilterSortMixin,
+)
 from .tags import ContextTagMixin, PostTagMixin
 
 
@@ -22,6 +27,7 @@ __all__ = [
     "LikeAnnotationsMixin",
     "PostAnnotateQuerysetMixin",
     "PostFilterSortMixin",
+    "CommentSortMixin",
     # tags
     "ContextTagMixin",
     "PostTagMixin",

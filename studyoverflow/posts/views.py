@@ -16,6 +16,7 @@ from posts.forms import CommentCreateForm, CommentUpdateForm, PostCreateForm, Po
 from posts.models import Comment, Post
 from posts.services.infrastructure import (
     CommentGetMethodMixin,
+    CommentSortMixin,
     ContextTagMixin,
     HTMXHandle404Mixin,
     HTMXMessageMixin,
@@ -184,7 +185,7 @@ class PostDeleteView(
         return super().form_valid(form)
 
 
-class CommentListView(LikeAnnotationsMixin, ListView):
+class CommentListView(LikeAnnotationsMixin, CommentSortMixin, ListView):
     model = Comment
     template_name = "posts/comments/comment_list.html"
     context_object_name = "root_comments"
@@ -216,22 +217,7 @@ class CommentListView(LikeAnnotationsMixin, ListView):
 
         queryset = self.annotate_queryset(queryset)
 
-        ordering_map = {
-            "date": "time_create",
-            "likes": "likes_count",
-        }
-
-        sort = self.request.GET.get("comment_sort")
-        sort = sort if sort in ordering_map else "date"
-
-        order = self.request.GET.get("comment_order")
-        order = order if order in ("asc", "desc") else "desc"
-
-        field = ordering_map.get(sort, "time_create")
-        if order == "desc":
-            field = f"-{field}"
-
-        queryset = queryset.order_by(field, "-time_create")
+        queryset = self.sort_comments(queryset)
 
         return queryset
 
