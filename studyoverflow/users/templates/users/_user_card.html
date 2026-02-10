@@ -10,11 +10,7 @@
 
       {# Аватар #}
       <img
-        src="{% if user.avatar_small_size2 %}
-               {{ user.avatar_small_size2.url }}
-             {% elif user.avatar %}
-               {{ user.avatar.url }}
-             {% endif %}"
+        src="{{ user.avatar_small_size2_url }}"
         alt="{{ user.username }}"
         class="user-avatar rounded-circle"
 

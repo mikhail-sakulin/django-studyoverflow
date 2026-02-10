@@ -4,11 +4,7 @@
     {# Автор и время #}
     <div class="d-flex align-items-center mb-2">
       <img id="avatar-comment"
-           src="{% if notification.actor.avatar_small_size1 %}
-                  {{ notification.actor.avatar_small_size1.url }}
-                {% elif notification.actor.avatar %}
-                  {{ notification.actor.avatar.url }}
-                {% endif %}"
+           src="{{ notification.actor.avatar_small_size1_url }}"
            alt="{{ notification.actor.username }}"
            class="rounded-circle"
            style="cursor:pointer;"

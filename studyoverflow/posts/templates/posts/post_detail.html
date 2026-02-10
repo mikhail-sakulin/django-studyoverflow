@@ -38,11 +38,7 @@
         <div class="d-flex align-items-center mb-2">
 
           <img id="avatar"
-               src="{% if post.author.avatar_small_size2 %}
-                  {{ post.author.avatar_small_size2.url }}
-                {% elif post.author.avatar %}
-                  {{ post.author.avatar.url }}
-                {% endif %}"
+               src="{{ post.author.avatar_small_size2_url }}"
                alt="{{ post.author.username }}"
                class="rounded-circle"
                style="cursor:pointer;"

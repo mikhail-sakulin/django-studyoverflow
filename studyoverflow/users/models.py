@@ -192,21 +192,29 @@ class User(AbstractUser):
     def get_absolute_url(self):
         return reverse("users:profile", kwargs={"username": self.username})
 
-    @property
-    def is_admin(self):
-        return self.is_superuser
+    def get_avatar_small_url(self, size="size1"):
+        """Возвращает URL конкретной миниатюры или URL оригинала аватара."""
+        fields = {
+            "size1": self.avatar_small_size1,
+            "size2": self.avatar_small_size2,
+            "size3": self.avatar_small_size3,
+        }
+        target_field = fields.get(size)
+        if target_field:
+            return target_field.url
+        return self.avatar.url if self.avatar else None
 
     @property
-    def is_moderator(self):
-        return self.role == self.Role.MODERATOR
+    def avatar_small_size1_url(self):
+        return self.get_avatar_small_url("size1")
 
     @property
-    def is_staff_viewer(self):
-        return self.role == self.Role.STAFF_VIEWER
+    def avatar_small_size2_url(self):
+        return self.get_avatar_small_url("size2")
 
     @property
-    def is_user(self):
-        return self.role == self.Role.USER
+    def avatar_small_size3_url(self):
+        return self.get_avatar_small_url("size3")
 
     def _sync_role_flags(self):
         """

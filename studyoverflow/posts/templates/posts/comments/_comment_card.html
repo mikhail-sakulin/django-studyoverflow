@@ -2,17 +2,14 @@
 {% load users_tags %}
 {% load widget_tweaks %}
 
+
 <div id="comment-card-{{ comment.id }}" class="card text-white rounded shadow-sm px-4">
   <div class="card-body px-0 pb-2">
 
     {# Автор и время #}
     <div class="d-flex align-items-center mb-2">
       <img id="avatar-comment"
-           src="{% if comment.author.avatar_small_size1 %}
-                  {{ comment.author.avatar_small_size1.url }}
-                {% elif comment.author.avatar %}
-                  {{ comment.author.avatar.url }}
-                {% endif %}"
+           src="{{ comment.author.avatar_small_size1_url }}"
            alt="{{ comment.author.username }}"
            class="rounded-circle"
            style="cursor:pointer;"

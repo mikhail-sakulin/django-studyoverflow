@@ -42,11 +42,7 @@
               {# Аватар #}
               <div class="d-flex justify-content-center mb-4 mb-xl-0 me-xl-4" style="flex-shrink: 0;">
                 <img id="avatar"
-                     src="{% if author.avatar_small_size3 %}
-                            {{ author.avatar_small_size3.url }}
-                          {% elif author.avatar %}
-                            {{ author.avatar.url }}
-                          {% endif %}"
+                     src="{{ author.avatar_small_size3_url }}"
                      alt="{{ author.username }}"
                      class="rounded"
                      style="cursor:pointer;"

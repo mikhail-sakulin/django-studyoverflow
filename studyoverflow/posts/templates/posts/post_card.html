@@ -9,11 +9,7 @@
     <div class="d-flex align-items-center mb-2">
 
     <img id="avatar"
-         src="{% if post.author.avatar_small_size1 %}
-                {{ post.author.avatar_small_size1.url }}
-              {% elif post.author.avatar %}
-                {{ post.author.avatar.url }}
-              {% endif %}"
+         src="{{ post.author.avatar_small_size1_url }}"
          alt="{{ post.author.username }}"
          class="rounded-circle"
          style="cursor:pointer;"
