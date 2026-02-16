@@ -8,6 +8,10 @@ User = get_user_model()
 
 
 class NotificationType(models.TextChoices):
+    """
+    Перечисление типов уведомлений.
+    """
+
     LIKE_POST = "like_post", "Лайк поста"
     LIKE_COMMENT = "like_comment", "Лайк комментария"
     POST = "post_created", "Пост создан"
@@ -17,6 +21,21 @@ class NotificationType(models.TextChoices):
 
 
 class Notification(models.Model):
+    """
+    Модель уведомлений на различные события.
+
+    Поля:
+    - user (ForeignKey): Получатель уведомления.
+    - actor (ForeignKey): Инициатор события (тот, кто совершил действие).
+    - notification_type (CharField): Тип уведомления (LIKE_POST, COMMENT и т.д.).
+    - content_type (ForeignKey): Ссылка на модель связанного объекта (Post, Comment и т.д.).
+    - object_id (PositiveIntegerField): ID записи в связанной модели.
+    - content_object (GenericForeignKey): Экземпляр связанного объекта.
+    - message (CharField): Текстовое сообщение уведомления.
+    - is_read (BooleanField): Флаг прочтения уведомления пользователем.
+    - time_create (DateTimeField): Дата и время автоматической генерации записи.
+    """
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -77,4 +96,5 @@ class Notification(models.Model):
         ]
 
     def __str__(self):
+        """Возвращает строковое представление объекта."""
         return f"{self.user} <- {self.actor}: {self.get_notification_type_display()}"

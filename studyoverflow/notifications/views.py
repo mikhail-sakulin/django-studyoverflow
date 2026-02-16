@@ -10,10 +10,16 @@ from .tasks import send_channel_notify_event
 
 
 class NotificationTemplateView(TemplateView):
+    """Отображает базовый шаблон страницы уведомлений."""
+
     template_name = "notifications/notification_base.html"
 
 
 class NotificationListView(ListView):
+    """
+    Возвращает список уведомлений текущего пользователя.
+    """
+
     model = Notification
     template_name = "notifications/_notification_list.html"
     context_object_name = "notification_list"
@@ -48,6 +54,10 @@ class NotificationListView(ListView):
 
 
 class NotificationMarkReadView(View):
+    """
+    Помечает уведомление как прочитанное, если оно принадлежит текущему пользователю.
+    """
+
     def post(self, request, *args, **kwargs):
         notification = get_object_or_404(Notification, pk=kwargs["pk"])
 
@@ -62,6 +72,12 @@ class NotificationMarkReadView(View):
 
 
 class NotificationMarkAllReadView(View):
+    """
+    Помечает все уведомления текущего пользователя прочитанными и создает
+    Celery задачу для обновления счетчика непрочитанных уведомлений
+    через Channels WebSocket.
+    """
+
     def post(self, request, *args, **kwargs):
         Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
 
@@ -71,6 +87,10 @@ class NotificationMarkAllReadView(View):
 
 
 class NotificationDeleteView(View):
+    """
+    Удаляет уведомление текущего пользователя.
+    """
+
     def post(self, request, *args, **kwargs):
         notification = get_object_or_404(Notification, pk=kwargs["pk"])
 
@@ -83,6 +103,10 @@ class NotificationDeleteView(View):
 
 
 class NotificationDeleteAllView(View):
+    """
+    Удаляет все уведомления текущего пользователя.
+    """
+
     def post(self, request, *args, **kwargs):
         notifications = Notification.objects.filter(user=request.user)
 

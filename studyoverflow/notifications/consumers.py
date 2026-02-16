@@ -1,3 +1,7 @@
+"""
+WebSocket-консьюмеры.
+"""
+
 import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -5,7 +9,14 @@ from users.services.infrastructure import set_user_online
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):
+    """
+    Консьюмер для асинхронной доставки уведомлений и отслеживания онлайн-статуса.
+    """
+
     async def connect(self):
+        """
+        Регистрирует канал в группе пользователя и обновляет статус онлайн.
+        """
         if not self.scope["user"].is_authenticated:
             return await self.close()
 
@@ -17,14 +28,20 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         set_user_online(self.scope["user"].id)
 
     async def disconnect(self, code):
-        await self.channel_layer.group_discard(
-            self.group_name,
-            self.channel_name,
-        )
+        """
+        Отключает текущий канал от группы рассылки,
+        прекращая получение уведомлений для данной сессии.
+        """
+        if hasattr(self, "group_name"):
+            await self.channel_layer.group_discard(
+                self.group_name,
+                self.channel_name,
+            )
 
     async def receive(self, text_data=None, bytes_data=None):
         """
         Получение сообщений от клиента по WebSocket.
+
         Клиент может присылать heartbeat, чтобы сказать, что он онлайн.
         """
         if text_data:
@@ -34,6 +51,10 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 set_user_online(self.scope["user"].id)
 
     async def notify(self, event):
+        """
+        Отправляет обновленные данные о счетчике уведомлений клиенту
+        при получении события из группы.
+        """
         await self.send(
             text_data=json.dumps(
                 {

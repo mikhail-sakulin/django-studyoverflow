@@ -24,6 +24,11 @@ logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=Like)
 def notification_like_created(sender, instance, created, raw, **kwargs):
+    """
+    Инициирует создание уведомления при появлении нового лайка на пост или комментарий.
+
+    Не выполняется для "raw" операций (например, при загрузке fixtures).
+    """
     if raw:
         return
 
@@ -39,6 +44,11 @@ def notification_like_created(sender, instance, created, raw, **kwargs):
 
 @receiver(post_save, sender=Post)
 def notification_post_created(sender, instance, created, raw, **kwargs):
+    """
+    Инициирует создание уведомления для автора при успешной публикации поста.
+
+    Не выполняется для "raw" операций (например, при загрузке fixtures).
+    """
     if raw:
         return
 
@@ -50,6 +60,12 @@ def notification_post_created(sender, instance, created, raw, **kwargs):
 
 @receiver(post_save, sender=Comment)
 def notification_comment_created(sender, instance, created, raw, **kwargs):
+    """
+    Инициирует создание уведомлений для автора поста или автора родительского комментария
+    при новом комментарии к посту или ответу на комментарий.
+
+    Не выполняется для "raw" операций (например, при загрузке fixtures).
+    """
     if raw:
         return
 
@@ -70,6 +86,11 @@ def notification_comment_created(sender, instance, created, raw, **kwargs):
 
 @receiver(post_save, sender=User)
 def notification_user_created(sender, instance, created, raw, **kwargs):
+    """
+    Инициирует отправку приветственного уведомления новому пользователю после регистрации.
+
+    Не выполняется для "raw" операций (например, при загрузке fixtures).
+    """
     if raw:
         return
 
@@ -81,6 +102,12 @@ def notification_user_created(sender, instance, created, raw, **kwargs):
 
 @receiver(post_save, sender=Notification)
 def notification_count_when_notification_created(sender, instance, created, raw, **kwargs):
+    """
+    Запускает WebSocket-событие для обновления счетчика
+    при создании нового уведомления через handler.
+
+    Не выполняется для "raw" операций (например, при загрузке fixtures).
+    """
     if raw:
         return
 
@@ -89,11 +116,20 @@ def notification_count_when_notification_created(sender, instance, created, raw,
 
 @receiver(post_delete, sender=Notification)
 def notification_count_when_notification_deleted(sender, instance, **kwargs):
+    """
+    Запускает WebSocket-событие для обновления счетчика
+    при удалении уведомления через handler.
+    """
     handle_send_channel_notify_event(instance)
 
 
 @receiver(post_save, sender=Notification)
 def log_notification_created(sender, instance, created, raw, **kwargs):
+    """
+    Логирует создание уведомления.
+
+    Не выполняется для "raw" операций (например, при загрузке fixtures).
+    """
     if raw:
         return
 

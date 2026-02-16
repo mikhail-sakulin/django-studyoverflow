@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 @app.task
 def create_notification(user_id, actor_id, message, notification_type, content_type_id, object_id):
+    """
+    Асинхронная Celery задача для создания уведомления Notification.
+    """
     with transaction.atomic():
         try:
             content_type = ContentType.objects.get_for_id(content_type_id)
@@ -49,6 +52,10 @@ def create_notification(user_id, actor_id, message, notification_type, content_t
 
 @app.task(base=QueueOnce, once={"keys": ["user_id"], "graceful": True})
 def send_channel_notify_event(user_id, update_list=True):
+    """
+    Асинхронная Celery задача для отправки обновления счетчика непрочитанных уведомлений
+    через Channels WebSocket пользователю.
+    """
     unread_notifications_count = Notification.objects.filter(user_id=user_id, is_read=False).count()
 
     channel_layer = get_channel_layer()
