@@ -1,13 +1,17 @@
 from .base import env
 
 
-# --- Модель пользователя (User) ----------------------------------------------
+# ----------------------------------------
+# Модель пользователя (User)
+# ----------------------------------------
 
 # Кастомная модель пользователя
 AUTH_USER_MODEL = "users.User"
 
 
-# --- Редиректы после логина/логаута ------------------------------------------
+# ----------------------------------------
+# Редиректы после логина/логаута
+# ----------------------------------------
 
 # URL страницы для логина
 LOGIN_URL = "/users/login/"
@@ -19,7 +23,9 @@ LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "home"
 
 
-# --- Валидация паролей -------------------------------------------------------
+# ----------------------------------------
+# Валидация паролей
+# ----------------------------------------
 
 # Стандартные валидаторы Django
 AUTH_PASSWORD_VALIDATORS = [
@@ -38,7 +44,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# --- Allauth настройки -------------------------------------------------------
+# ----------------------------------------
+# Allauth настройки
+# ----------------------------------------
 
 # Бэкенды аутентификации
 AUTHENTICATION_BACKENDS = [
@@ -52,8 +60,8 @@ AUTHENTICATION_BACKENDS = [
 ACCOUNT_LOGIN_METHODS = {"username", "email"}
 
 # Кастомные адаптеры
-ACCOUNT_ADAPTER = "users.adapters.BlockedUserAccountAdapter"
 SOCIALACCOUNT_ADAPTER = "users.adapters.CustomSocialAccountAdapter"
+ACCOUNT_ADAPTER = "users.adapters.BlockedUserAccountAdapter"
 
 # Поля, обязательные при регистрации через allauth
 ACCOUNT_SIGNUP_FIELDS = ["username*", "email*", "password1*", "password2*"]
@@ -65,7 +73,9 @@ SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
 
-# --- Социальные провайдеры ---------------------------------------------------
+# ----------------------------------------
+# Социальные провайдеры
+# ----------------------------------------
 
 # Настройки для OAuth-провайдеров
 SOCIALACCOUNT_PROVIDERS = {
