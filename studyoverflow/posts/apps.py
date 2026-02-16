@@ -7,4 +7,5 @@ class PostsConfig(AppConfig):
     name = "posts"
 
     def ready(self):
+        """Регистрация обработчиков сигналов после загрузки приложения."""
         import posts.signals  # noqa: F401

@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Type
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -18,13 +19,13 @@ from posts.services.infrastructure import (
     CommentGetMethodMixin,
     CommentSortMixin,
     ContextTagMixin,
-    HTMXHandle404Mixin,
+    HTMXHandle404CommentMixin,
     HTMXMessageMixin,
     LikeAnnotationsMixin,
     LoginRequiredHTMXMixin,
     PostAnnotateQuerysetMixin,
+    PostAuthorFormMixin,
     PostFilterSortMixin,
-    PostTagMixin,
     SingleObjectCacheMixin,
 )
 from users.services.infrastructure import IsAuthorOrModeratorMixin
@@ -33,7 +34,21 @@ from users.services.infrastructure import IsAuthorOrModeratorMixin
 logger = logging.getLogger(__name__)
 
 
+# ----------------------------------------
+# Post Views
+# ----------------------------------------
+
+
 class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMixin, ListView):
+    """
+    Страница со списком постов с тегами, аннотациями, фильтрацией и сортировкой.
+
+    Использует:
+    - ContextTagMixin: для добавления тегов в контекст.
+    - PostAnnotateQuerysetMixin: select_related, prefetch_related и аннотации.
+    - PostFilterSortMixin: фильтрация и сортировка.
+    """
+
     model = Post
     template_name = "posts/post_list.html"
     context_object_name = "posts"
@@ -72,9 +87,11 @@ class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMix
         return context
 
 
-class PostCreateView(PostTagMixin, LoginRequiredHTMXMixin, SuccessMessageMixin, CreateView):
+class PostCreateView(PostAuthorFormMixin, LoginRequiredHTMXMixin, SuccessMessageMixin, CreateView):
     """
-    Класс-представление для создания нового поста.
+    Страница создания нового поста.
+
+    Логирует создание поста и добавляет сообщение об успешном создании.
     """
 
     form_class = PostCreateForm
@@ -83,6 +100,7 @@ class PostCreateView(PostTagMixin, LoginRequiredHTMXMixin, SuccessMessageMixin, 
     success_message = "Пост успешно создан!"
 
     def get_context_data(self, **kwargs):
+        """Добавляет выбранный раздел меню в контекст."""
         context = super().get_context_data(**kwargs)
         context["section_of_menu_selected"] = "posts:create"
         return context
@@ -102,11 +120,16 @@ class PostCreateView(PostTagMixin, LoginRequiredHTMXMixin, SuccessMessageMixin, 
 
 
 class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
+    """
+    Страница просмотра подробностей поста с кешированием его данных.
+    """
+
     model = Post
     template_name = "posts/post_detail.html"
     context_object_name = "post"
 
     def get_object(self, queryset=None):
+        """Возвращает объект поста с кешированием."""
         post_id = self.kwargs.get(self.pk_url_kwarg)
         user_id = self.request.user.id if self.request.user.is_authenticated else "anon"
         cache_key = f"post_detail_{post_id}_u{user_id}"
@@ -125,6 +148,7 @@ class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
         return super().get_annotate_queryset(queryset)
 
     def get_context_data(self, **kwargs):
+        """Добавляет пустую форму для создания комментария в контекст."""
         context = super().get_context_data(**kwargs)
         # Пустая форма в шаблон для написания комментария
         context["comment_form"] = CommentCreateForm()
@@ -135,10 +159,15 @@ class PostUpdateView(
     LoginRequiredMixin,
     IsAuthorOrModeratorMixin,
     SingleObjectCacheMixin,
-    PostTagMixin,
     SuccessMessageMixin,
     UpdateView,
 ):
+    """
+    Страница редактирования поста.
+
+    Логирует изменения и проверяет права пользователя.
+    """
+
     model = Post
     form_class = PostCreateForm
     template_name = "posts/post_edit.html"
@@ -166,6 +195,12 @@ class PostUpdateView(
 class PostDeleteView(
     LoginRequiredMixin, IsAuthorOrModeratorMixin, SingleObjectCacheMixin, DeleteView
 ):
+    """
+    Удаление поста.
+
+    Логирует удаление и показывает сообщение пользователю.
+    """
+
     model = Post
     success_url = reverse_lazy("posts:list")
     permission_required = "posts.moderate_post"
@@ -185,12 +220,24 @@ class PostDeleteView(
         return super().form_valid(form)
 
 
+# ----------------------------------------
+# Comment Views
+# ----------------------------------------
+
+
 class CommentListView(LikeAnnotationsMixin, CommentSortMixin, ListView):
+    """
+    Страница со списком комментариев к посту с аннотациями и сортировкой.
+    """
+
     model = Comment
     template_name = "posts/comments/comment_list.html"
     context_object_name = "root_comments"
 
     def _get_post_object(self):
+        """
+        Возвращает кешированный объект поста, к которому относятся комментарии.
+        """
         if not hasattr(self, "_post_object"):
             post_pk = self.kwargs.get("post_pk")
             self._post_object = get_object_or_404(
@@ -199,6 +246,12 @@ class CommentListView(LikeAnnotationsMixin, CommentSortMixin, ListView):
         return self._post_object
 
     def get_queryset(self):
+        """
+        Возвращает queryset родительских комментариев с
+        prefetch_related queryset дочерних комментариев.
+
+        Используются select_related для оптимизации запроса и аннотации.
+        """
         post = self._get_post_object()
 
         child_queryset = self.annotate_queryset(
@@ -232,11 +285,22 @@ class CommentListView(LikeAnnotationsMixin, CommentSortMixin, ListView):
 class CommentRootCreateView(
     LoginRequiredHTMXMixin, HTMXMessageMixin, CommentGetMethodMixin, CreateView
 ):
+    """
+    Создание родительского комментария к посту.
+
+    Работает с HTMX для создания комментария и обновления списка комментариев
+    без перезагрузки страницы.
+    Логирует создание комментария.
+    """
+
     model = Comment
     form_class = CommentCreateForm
     template_name = "posts/comments/_comment_root_form.html"
 
     def get_form_kwargs(self):
+        """
+        Добавляет в kwargs пользователя и пост, к которому пишется комментарий.
+        """
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
         if not hasattr(self, "_cached_post"):
@@ -275,6 +339,7 @@ class CommentRootCreateView(
         response = render(self.request, self.template_name, context)
         response["HX-Trigger"] = json.dumps({"commentsUpdated": {}, "commentRootFormSuccess": {}})
 
+        # add htmx_message to response
         return self.htmx_message(
             message_text="Комментарий создан.", message_type="success", response=response
         )
@@ -289,18 +354,13 @@ class CommentRootCreateView(
 
 
 class CommentChildCreateView(CommentRootCreateView):
-    template_name = "posts/comments/_comment_child_form.html"
+    """
+    Создание дочернего комментария в ответ на другой комментарий (reply_to).
 
-    def _add_errors_to_messages(self, form):
-        messages.error(self.request, "Возможно, комментарий был удален.")
-        for field, errors in form.errors.items():
-            for error in errors:
-                if field == "__all__":
-                    # ошибки на уровне формы
-                    messages.error(self.request, f"Ошибка: {error}")
-                else:
-                    # ошибки конкретного поля
-                    messages.error(self.request, f'Ошибка в "{form.fields[field].label}": {error}')
+    Расширяет CommentRootCreateView.
+    """
+
+    template_name = "posts/comments/_comment_child_form.html"
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -325,7 +385,10 @@ class CommentChildCreateView(CommentRootCreateView):
         reply_to = form.cleaned_data.get("reply_to")
 
         if not reply_to:
+            # Когда указан некорректный reply_to, ошибки формы
+            # выводятся в messages (нет формы, где их выводить).
             self._add_errors_to_messages(form)
+            # Страница перезагружается для корректировки отображаемых данных.
             response["HX-Refresh"] = "true"
             return response
 
@@ -335,6 +398,20 @@ class CommentChildCreateView(CommentRootCreateView):
 
         return response
 
+    def _add_errors_to_messages(self, form):
+        """
+        Добавляет ошибки формы в messages для отображения у клиента.
+        """
+        messages.error(self.request, "Возможно, комментарий был удален.")
+        for field, errors in form.errors.items():
+            for error in errors:
+                if field == "__all__":
+                    # ошибки на уровне формы
+                    messages.error(self.request, f"Ошибка: {error}")
+                else:
+                    # ошибки конкретного поля
+                    messages.error(self.request, f'Ошибка в "{form.fields[field].label}": {error}')
+
 
 class CommentUpdateView(
     LoginRequiredHTMXMixin,
@@ -342,10 +419,18 @@ class CommentUpdateView(
     IsAuthorOrModeratorMixin,
     SingleObjectCacheMixin,
     LikeAnnotationsMixin,
-    HTMXHandle404Mixin,
+    HTMXHandle404CommentMixin,
     CommentGetMethodMixin,
     UpdateView,
 ):
+    """
+    Изменение комментария к посту.
+
+    Работает с HTMX для изменения комментария и обновления его содержимого
+    без перезагрузки страницы.
+    Логирует изменение комментария.
+    """
+
     model = Comment
     form_class = CommentUpdateForm
     pk_url_kwarg = "comment_pk"
@@ -401,12 +486,20 @@ class CommentUpdateView(
 class CommentDeleteView(
     LoginRequiredHTMXMixin,
     HTMXMessageMixin,
-    HTMXHandle404Mixin,
+    HTMXHandle404CommentMixin,
     IsAuthorOrModeratorMixin,
     SingleObjectCacheMixin,
     CommentGetMethodMixin,
     DeleteView,
 ):
+    """
+    Удаление комментария к посту.
+
+    Работает с HTMX для удаления комментария и обновления списка комментариев
+    без перезагрузки страницы.
+    Логирует удаление комментария.
+    """
+
     model = Comment
     pk_url_kwarg = "comment_pk"
     permission_required = "posts.moderate_comment"
@@ -434,14 +527,28 @@ class CommentDeleteView(
         )
 
 
+# ----------------------------------------
+# Like Views
+# ----------------------------------------
+
+
 class ToggleLikeBaseView(LoginRequiredHTMXMixin, HTMXMessageMixin, View):
-    model: type[models.Model]
+    """
+    Базовое представление для добавления/удаления лайков.
+
+    Работает с HTMX и логирует действия с лайками.
+    """
+
+    model: Type[models.Model]
     pk_url_kwarg: str = "pk"
 
-    def _get_toggle_like_url(self, liked_object):
-        return reverse_lazy("home")
-
     def post(self, request, *args, **kwargs):
+        """
+        Добавляет или удаляет лайк для объекта.
+
+        Возвращает HTMX-ответ с количеством лайков или триггером с перезагрузкой страницы
+        в случае отсутствия объекта (DoesNotExist).
+        """
         try:
             liked_object = self.model.objects.get(pk=kwargs[self.pk_url_kwarg])
         except self.model.DoesNotExist:
@@ -487,22 +594,36 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, HTMXMessageMixin, View):
             message_text=message_text, message_type=message_type, response=response
         )
 
+    def _get_toggle_like_url(self, liked_object):
+        """Возвращает URL для кнопки лайка. Нужно переопределять в дочерних классах."""
+        return reverse_lazy("home")
+
 
 class ToggleLikePostView(ToggleLikeBaseView):
+    """
+    Лайк / удаление лайка для поста.
+    """
+
     model = Post
     pk_url_kwarg = "post_pk"
 
     def _get_toggle_like_url(self, post):
+        """Возвращает URL для кнопки лайка поста."""
         return reverse_lazy(
             "posts:toggle_like_post", kwargs={"post_pk": post.pk, "post_slug": post.slug}
         )
 
 
 class ToggleLikeCommentView(ToggleLikeBaseView):
+    """
+    Лайк / удаление лайка для комментария.
+    """
+
     model = Comment
     pk_url_kwarg = "comment_pk"
 
     def _get_toggle_like_url(self, comment):
+        """Возвращает URL для кнопки лайка комментария."""
         return reverse_lazy(
             "posts:toggle_like_comment",
             kwargs={

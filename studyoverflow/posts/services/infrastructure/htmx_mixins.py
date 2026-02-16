@@ -1,3 +1,5 @@
+"""HTMX-миксины."""
+
 import json
 import logging
 from typing import Optional
@@ -10,6 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 class HTMXMessageMixin:
+    """
+    Миксин для формирования сообщения клиенту при HTMX запросе.
+    """
+
     def htmx_message(
         self,
         *,
@@ -18,6 +24,9 @@ class HTMXMessageMixin:
         response: Optional[HttpResponse] = None,
         reswap_none: bool = False,
     ) -> HttpResponse:
+        """
+        Формирует сообщение и добавляет HTMX-событие showMessage в ответ.
+        """
         response = response or HttpResponse()
 
         if reswap_none:
@@ -52,10 +61,18 @@ class HTMXMessageMixin:
 
 
 class LoginRequiredHTMXMixin(LoginRequiredMixin, HTMXMessageMixin):
-    message_text = "Сначала войдите в аккаунт."
-    message_type = "info"
+    """
+    Миксин для обработки HTMX-запросов неаутентифицированных пользователей.
+    """
+
+    message_text: str = "Сначала войдите в аккаунт."
+    message_type: str = "info"
 
     def dispatch(self, request, *args, **kwargs):
+        """
+        Перехватывает HTMX-запросы неавторизованных пользователей.
+        Вместо редиректа возвращает сообщение.
+        """
         if request.headers.get("Hx-Request") and not request.user.is_authenticated:
             return self.htmx_message(
                 message_text=self.message_text,
@@ -68,7 +85,8 @@ class LoginRequiredHTMXMixin(LoginRequiredMixin, HTMXMessageMixin):
 
 class LoginRequiredRedirectHTMXMixin(LoginRequiredMixin):
     """
-    Расширение LoginRequiredMixin, чтобы HTMX делал редирект на страницу логина.
+    Миксин для выполнения редиректа на страницу логина
+    при HTMX-запросе неавторизованного пользователя.
     """
 
     def handle_no_permission(self):
@@ -77,13 +95,17 @@ class LoginRequiredRedirectHTMXMixin(LoginRequiredMixin):
         return super().handle_no_permission()
 
 
-class HTMXHandle404Mixin:
+class HTMXHandle404CommentMixin:
     """
-    Обрабатывает Http404 для HTMX-запросов, чтобы не выбрасывать ошибку,
-    а триггерить обновление комментариев.
+    Миксин для обработки Http404 в HTMX-запросах комментариев.
     """
 
     def dispatch(self, request, *args, **kwargs):
+        """
+        Перехватывает Http404 и возвращает HTMX-событие обновления комментариев.
+
+        Используется для ситуаций, когда комментарий был удалён и необходимо обновить список.
+        """
         try:
             return super().dispatch(request, *args, **kwargs)  # type: ignore
         except Http404:

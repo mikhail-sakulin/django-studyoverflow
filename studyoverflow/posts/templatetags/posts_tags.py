@@ -1,5 +1,5 @@
 """
-Модуль для хранения пользовательских фильтров и тегов HTML-шаблонов приложения posts.
+Кастомные фильтры и теги HTML-шаблонов приложения posts.
 """
 
 from django import template
@@ -14,7 +14,5 @@ register = template.Library()
 @register.filter
 @stringfilter
 def markdown_safe(text: str) -> str:
-    """
-    Фильтр для преобразования текста с Markdown разметкой в безопасный HTML.
-    """
+    """Фильтр для преобразования текста с Markdown разметкой в безопасный HTML."""
     return render_markdown_safe(text)

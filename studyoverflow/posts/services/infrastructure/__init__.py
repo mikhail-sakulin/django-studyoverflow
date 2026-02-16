@@ -1,6 +1,11 @@
-from .common import CommentGetMethodMixin, SingleObjectCacheMixin
+from .common_mixins import (
+    CommentGetMethodMixin,
+    ContextTagMixin,
+    PostAuthorFormMixin,
+    SingleObjectCacheMixin,
+)
 from .htmx_mixins import (
-    HTMXHandle404Mixin,
+    HTMXHandle404CommentMixin,
     HTMXMessageMixin,
     LoginRequiredHTMXMixin,
     LoginRequiredRedirectHTMXMixin,
@@ -11,24 +16,22 @@ from .queryset_mixins import (
     PostAnnotateQuerysetMixin,
     PostFilterSortMixin,
 )
-from .tags import ContextTagMixin, PostTagMixin
 
 
 __all__ = [
-    # common
+    # common_mixins
     "CommentGetMethodMixin",
     "SingleObjectCacheMixin",
+    "ContextTagMixin",
+    "PostAuthorFormMixin",
     # htmx_mixins
     "HTMXMessageMixin",
     "LoginRequiredHTMXMixin",
     "LoginRequiredRedirectHTMXMixin",
-    "HTMXHandle404Mixin",
+    "HTMXHandle404CommentMixin",
     # queryset_mixins
     "LikeAnnotationsMixin",
     "PostAnnotateQuerysetMixin",
     "PostFilterSortMixin",
     "CommentSortMixin",
-    # tags
-    "ContextTagMixin",
-    "PostTagMixin",
 ]

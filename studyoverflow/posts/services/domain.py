@@ -1,5 +1,5 @@
 """
-Модуль содержит бизнес-логику приложения posts.
+Некоторая бизнес-логика приложения posts.
 """
 
 import re
@@ -7,8 +7,6 @@ import re
 import bleach
 import markdown2
 from django.utils.text import slugify
-
-from .utils import translit_rus_to_eng
 
 
 def generate_slug(title: str, max_length: int = 255) -> str:
@@ -107,7 +105,61 @@ def render_markdown_safe(markdown_text: str) -> str:
 
 
 def normalize_tag_name(tag_name: str) -> str:
+    """
+    Приводит имя тега к нормализованному виду:
+    - Удаление пробелов по краям.
+    - Приведение к нижнему регистру.
+    - Замена пробелов на одиночное нижнее подчеркивание.
+    - Замена нескольких подряд идущих нижних подчеркиваний на одно.
+    """
     tag_name = tag_name.strip().lower()
     tag_name = re.sub(r"\s+", "_", tag_name)
     tag_name = re.sub(r"_+", "_", tag_name)
     return tag_name
+
+
+def translit_rus_to_eng(text: str) -> str:
+    """
+    Преобразует русские буквы строки в латиницу в нижнем регистре.
+
+    Пример:
+        translit_rus_to_eng("Привет") -> 'privet'
+    """
+
+    translit_dict = {
+        "а": "a",
+        "б": "b",
+        "в": "v",
+        "г": "g",
+        "д": "d",
+        "е": "e",
+        "ё": "jo",
+        "ж": "zh",
+        "з": "z",
+        "и": "i",
+        "й": "jj",
+        "к": "k",
+        "л": "l",
+        "м": "m",
+        "н": "n",
+        "о": "o",
+        "п": "p",
+        "р": "r",
+        "с": "s",
+        "т": "t",
+        "у": "u",
+        "ф": "f",
+        "х": "kh",
+        "ц": "c",
+        "ч": "ch",
+        "ш": "sh",
+        "щ": "shh",
+        "ъ": "",
+        "ы": "y",
+        "ь": "",
+        "э": "eh",
+        "ю": "ju",
+        "я": "ja",
+    }
+
+    return "".join(translit_dict.get(letter, letter) for letter in text.lower())

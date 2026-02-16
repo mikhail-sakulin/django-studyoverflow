@@ -8,6 +8,10 @@ from users.services.infrastructure import CustomUsernameValidator
 
 
 class PostCreateForm(forms.ModelForm):
+    """
+    Форма создания поста с валидацией длины заголовка, тегов и нормализацией тегов.
+    """
+
     class Meta:
         model = Post
         fields = ["title", "content", "tags"]
@@ -22,6 +26,9 @@ class PostCreateForm(forms.ModelForm):
         }
 
     def clean_title(self):
+        """
+        Валидация заголовка title.
+        """
         title = self.cleaned_data["title"]
 
         if len(title) < 10:
@@ -35,6 +42,9 @@ class PostCreateForm(forms.ModelForm):
         return title
 
     def clean_tags(self):
+        """
+        Валидация и нормализация тегов.
+        """
         tags_list = self.cleaned_data["tags"]
 
         if len(tags_list) == 0:
@@ -55,6 +65,10 @@ class PostCreateForm(forms.ModelForm):
 
 
 class PostFilterForm(forms.Form):
+    """
+    Форма фильтрации постов по автору с валидацией существования пользователя.
+    """
+
     author = forms.CharField(required=False)
 
     def clean_author(self):
@@ -76,6 +90,10 @@ class PostFilterForm(forms.Form):
 
 
 class CommentCreateForm(forms.ModelForm):
+    """
+    Форма добавления комментария.
+    """
+
     class Meta:
         model = Comment
         fields = ["content", "parent_comment", "reply_to"]
@@ -87,11 +105,18 @@ class CommentCreateForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """
+        Извлечение пользователя и поста из аргументов для валидации.
+        """
         self.user = kwargs.pop("user", None)
         self.post = kwargs.pop("post", None)
         super().__init__(*args, **kwargs)
 
     def clean(self):
+        """
+        Проверка иерархии: родительский комментарий и комментарий, на который отвечают,
+        должны быть в том же посту, к которому создается новый комментарий.
+        """
         cleaned_data = super().clean()
         parent_comment = cleaned_data.get("parent_comment")
         reply_to = cleaned_data.get("reply_to")
@@ -118,6 +143,10 @@ class CommentCreateForm(forms.ModelForm):
 
 
 class CommentUpdateForm(forms.ModelForm):
+    """
+    Форма редактирования существующего комментария.
+    """
+
     class Meta:
         model = Comment
         fields = ["content"]
@@ -128,6 +157,9 @@ class CommentUpdateForm(forms.ModelForm):
         }
 
     def clean(self):
+        """
+        Валидация, что обновленный комментарий не пустой.
+        """
         cleaned_data = super().clean()
         content = cleaned_data.get("content")
         if not content or not content.strip():

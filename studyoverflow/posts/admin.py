@@ -12,6 +12,10 @@ from posts.models import Comment, Like, LowercaseTag, Post, TaggedPost
 
 
 class IsEditedFilter(admin.SimpleListFilter):
+    """
+    Фильтр для поиска отредактированных записей.
+    """
+
     title = "Отредактировано"
     parameter_name = "is_edited"
 
@@ -32,6 +36,10 @@ class IsEditedFilter(admin.SimpleListFilter):
 
 
 class ContentEmptyFilter(admin.SimpleListFilter):
+    """
+    Фильтр для постов с пустым (только заголовок) и заполненным содержимым (content).
+    """
+
     title = "Контент пустой"
     parameter_name = "content_empty"
 
@@ -52,6 +60,10 @@ class ContentEmptyFilter(admin.SimpleListFilter):
 
 
 class LikeContentTypeFilter(admin.SimpleListFilter):
+    """
+    Фильтр для выбора типа лайкнутого объекта (Post/Comment).
+    """
+
     title = "Тип объекта"
     parameter_name = "content_type"
 
@@ -74,6 +86,10 @@ class LikeContentTypeFilter(admin.SimpleListFilter):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
+    """
+    Конфигурация отображения и управления постами в админ-панели.
+    """
+
     list_display = (
         "id",
         "author",
@@ -116,10 +132,12 @@ class PostAdmin(admin.ModelAdmin):
     readonly_fields = ["id", "author", "slug", "time_create", "time_update"]
 
     def get_queryset(self, request):
+        """Добавляет content_len для сортировки по объему текста."""
         queryset = super().get_queryset(request)
         return queryset.annotate(content_len=Length("content"))
 
     def get_actions(self, request):
+        """Ограничивает доступ к действиям на основе ролей пользователя."""
         actions = super().get_actions(request)
 
         if not self._can_clear_content(request.user):
@@ -129,6 +147,7 @@ class PostAdmin(admin.ModelAdmin):
 
     @admin.action(description="Очистить контент выбранных постов")
     def clear_content(self, request, queryset):
+        """Массовое удаление текста (content) из постов."""
         if not self._can_clear_content(request.user):
             self.message_user(
                 request,
@@ -153,12 +172,17 @@ class PostAdmin(admin.ModelAdmin):
         return f"Контент из {post.content_len or 0} символов."
 
     def _can_clear_content(self, user):
+        """Проверяет наличие прав администратора или модератора для выполнения действий."""
         UserModel = get_user_model()  # noqa: N806
         return user.role in {UserModel.Role.ADMIN, UserModel.Role.MODERATOR}
 
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
+    """
+    Конфигурация отображения и управления комментариями в админ-панели.
+    """
+
     list_display = (
         "id",
         "time_create",
@@ -185,6 +209,7 @@ class CommentAdmin(admin.ModelAdmin):
     readonly_fields = ["id", "time_create", "time_update", "post", "author"]
 
     def get_queryset(self, request):
+        """Добавляет content_len для сортировки по объему текста."""
         queryset = super().get_queryset(request)
         return queryset.annotate(content_len=Length("content"))
 
@@ -203,6 +228,10 @@ class CommentAdmin(admin.ModelAdmin):
 
 @admin.register(LowercaseTag)
 class LowercaseTagAdmin(admin.ModelAdmin):
+    """
+    Конфигурация отображения и управления тегами в админ-панели.
+    """
+
     list_display = ("id", "name", "posts_count")
     list_display_links = (
         "id",
@@ -218,6 +247,7 @@ class LowercaseTagAdmin(admin.ModelAdmin):
     list_per_page = 15
 
     def get_queryset(self, request):
+        """Расширяет стандартный запрос, добавляя количество постов для каждого тега."""
         qs = super().get_queryset(request)
         return qs.annotate(posts_count=Count("tagged_posts"))
 
@@ -228,6 +258,10 @@ class LowercaseTagAdmin(admin.ModelAdmin):
 
 @admin.register(TaggedPost)
 class TaggedPostAdmin(admin.ModelAdmin):
+    """
+    Конфигурация отображения и управления связующей таблицы тегов и объектов в админ-панели.
+    """
+
     list_display = ("id", "tag__name", "short_content_object")
     list_display_links = ("id", "tag__name", "short_content_object")
     fields = ["id", "tag", "content_type", "short_content_object", "object_id"]
@@ -247,6 +281,10 @@ class TaggedPostAdmin(admin.ModelAdmin):
 
 @admin.register(Like)
 class LikeAdmin(admin.ModelAdmin):
+    """
+    Конфигурация отображения и управления лайками в админ-панели.
+    """
+
     list_display = (
         "id",
         "time_create",
@@ -275,6 +313,7 @@ class LikeAdmin(admin.ModelAdmin):
     list_per_page = 15
 
     def has_add_permission(self, request):
+        """Запрещает создание лайков вручную через админ-панель."""
         return False
 
     @admin.display(description="Лайкнутый объект")

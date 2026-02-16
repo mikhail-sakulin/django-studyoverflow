@@ -17,15 +17,10 @@ from taggit.models import GenericTaggedItemBase, TagBase
 
 class LowercaseTag(TagBase):
     """
-    Пользовательская модель тега (наследование от taggit.TagBase).
+    Кастомная модель тега (наследование от taggit.models.TagBase).
 
-    Атрибуты:
-        name (CharField): Имя тега.
-
-    Методы:
-        - save(*args, **kwargs):
-            - преобразует имя тега в нижний регистр перед сохранением с удалением лишних пробелов,
-        - get_absolute_url(): Возвращает уникальный URL для тега на основе name.
+    Поля (без учета наследования):
+    - name (CharField): Имя тега.
     """
 
     MAX_NAME_LENGTH_TAG: Final = 50  # максимальная длина имени тега
@@ -42,20 +37,22 @@ class LowercaseTag(TagBase):
         verbose_name_plural = "Теги"
 
     def save(self, *args, **kwargs):
+        """Приводит имя тега к нормализованному виду."""
         self.name = normalize_tag_name(self.name)
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
         """
         Возвращает уникальный URL для тега на основе name.
+        Формирует URL-адрес страницы со списком постов, отфильтрованных по заданному тегу.
         """
         return f"{reverse('posts:list')}?{urlencode({'tags': self.name})}"
 
 
 class TaggedPost(GenericTaggedItemBase):
     """
-    Пользовательская промежуточная модель для связи
-    постов (Post) с тегами (LowercaseTag).
+    Кастомная промежуточная модель для связи постов (Post) с тегами (LowercaseTag).
+    Наследование от taggit.models.GenericTaggedItemBase.
     """
 
     tag = models.ForeignKey(LowercaseTag, related_name="tagged_posts", on_delete=models.CASCADE)
@@ -77,10 +74,27 @@ class TaggedPost(GenericTaggedItemBase):
         ]
 
     def __str__(self):
+        """Возвращает строковое представление объекта."""
         return f"{self.object_id} - {self.tag.name}"
 
 
 class Post(models.Model):
+    """
+    Модель поста.
+
+    Поля:
+    - author (ForeignKey): Автор поста (пользователь).
+    - title (CharField): Заголовок поста.
+    - slug (SlugField): Человекочитаемый идентификатор для URL на основе заголовка.
+    - content (TextField): Исходный текст в формате Markdown.
+    - rendered_content (TextField): Сгенерированный HTML-код из Markdown (для кеширования).
+    - tags (TaggableManager): Менеджер тегов, работающий через TaggedPost.
+    - likes (GenericRelation): Связь с моделью лайков (Like).
+    - notifications (GenericRelation): Связь с моделью уведомлений (Notification).
+    - time_create (DateTimeField): Дата и время создания.
+    - time_update (DateTimeField): Дата и время последнего изменения.
+    """
+
     MAX_TITLE_SLUG_LENGTH_POST: Final = 255  # максимальная длина заголовка и slug поста
     MAX_CONTENT_LENGTH: Final = 15000  # максимальная длина содержимого поста
 
@@ -132,16 +146,23 @@ class Post(models.Model):
         ]
 
     def __init__(self, *args, **kwargs):
+        """
+        Сохраняет исходное значение content, загруженное из БД.
+        Используется для оптимизации рендеринга Markdown при сохранении.
+        """
         super().__init__(*args, **kwargs)
         # Сохранение записанного в БД значения content для проверки изменения поля
         self._original_content = self.content
 
     def __str__(self):
+        """Возвращает строковое представление объекта."""
         return Truncator(self.title).chars(40, truncate="…")
 
     def save(self, *args, **kwargs):
         """
-        Переопределение метода save.
+        Добавлена логика при сохранении объекта:
+        - Автоматическая генерация slug на основе заголовка (только при создании).
+        - Рендеринг Markdown в HTML только при создании или изменении контента.
         """
         if not self.slug:
             self.slug = generate_slug(self.title, self.MAX_TITLE_SLUG_LENGTH_POST)
@@ -152,28 +173,47 @@ class Post(models.Model):
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        """
-        Возвращает уникальный URL для поста на основе pk и slug.
-        """
+        """Возвращает уникальный URL для поста на основе pk и slug."""
         return reverse("posts:detail", kwargs={"pk": self.pk, "slug": self.slug})
 
     @property
     def is_edited(self):
-        """
-        Вычисляемое свойство. Определяет факт редактирования поста.
-        """
+        """Вычисляемое свойство. Определяет факт редактирования поста."""
         return (self.time_update - self.time_create).total_seconds() > 3
 
 
 class CommentQuerySet(models.QuerySet):
+    """
+    QuerySet для модели Comment с дополнительными методами
+    для работы с иерархией комментариев.
+    """
+
     def roots(self):
+        """Возвращает родительские комментарии (которые без родительского комментария)."""
         return self.filter(parent_comment__isnull=True)
 
     def children(self):
+        """Возвращает дочерние комментарии (имеющие родительский комментарий)."""
         return self.filter(parent_comment__isnull=False)
 
 
 class Comment(models.Model):
+    """
+    Модель комментария к посту.
+
+    Поля:
+    - post (ForeignKey): Пост, к которому относится комментарий.
+    - author (ForeignKey): Автор комментария.
+    - parent_comment (ForeignKey): Родительский комментарий (для вложенности).
+    - reply_to (ForeignKey): Комментарий, на который даётся ответ.
+    - content (TextField): Исходный текст в формате Markdown.
+    - rendered_content (TextField): Сгенерированный HTML-код из Markdown (для кеширования).
+    - likes (GenericRelation): Связь с моделью лайков (Like).
+    - notifications (GenericRelation): Связь с моделью уведомлений (Notification).
+    - time_create (DateTimeField): Дата и время создания.
+    - time_update (DateTimeField): Дата и время последнего изменения.
+    """
+
     MAX_CONTENT_LENGTH: Final = 5000  # максимальная длина содержимого комментария
 
     post = models.ForeignKey(
@@ -245,16 +285,22 @@ class Comment(models.Model):
         ]
 
     def __init__(self, *args, **kwargs):
+        """
+        Сохраняет исходное значение content, загруженное из БД.
+        Используется для оптимизации рендеринга Markdown при сохранении.
+        """
         super().__init__(*args, **kwargs)
         # Сохранение записанного в БД значения content для проверки изменения поля
         self._original_content = self.content
 
     def __str__(self):
+        """Возвращает строковое представление объекта."""
         return f"{self.author}: {Truncator(self.content).chars(30, truncate="…")}"
 
     def save(self, *args, **kwargs):
         """
-        Переопределение метода save.
+        Добавлена логика при сохранении комментария:
+        - Рендеринг Markdown в HTML только при создании или изменении контента.
         """
         if not self.pk or self.content != self._original_content:
             self.rendered_content = render_markdown_safe(self.content)
@@ -262,6 +308,16 @@ class Comment(models.Model):
         super().save(*args, **kwargs)
 
     def clean(self):
+        """
+        Валидация комментария.
+
+        Проверяет:
+        - что комментарий не пустой;
+        - что текущий комментарий и комментарий, на который отвечают (reply_to),
+          относятся к одному и тому же родительскому комментарию;
+        - невозможность ссылок на самого себя;
+        - принадлежность всех комментариев одному посту.
+        """
         errors = {}
 
         post = getattr(self, "post", None)
@@ -293,27 +349,44 @@ class Comment(models.Model):
             raise ValidationError(errors)
 
     def get_absolute_url(self):
+        """Возвращает уникальный URL комментария (страница поста с якорем на комментарий)."""
         return f"{self.post.get_absolute_url()}#comment-card-{self.pk}"
 
     @property
     def has_parent_comment(self):
+        """Проверяет, есть ли родительский комментарий."""
         return self.parent_comment is not None
 
     @property
     def is_edited(self):
-        """
-        Вычисляемое свойство. Определяет факт редактирования комментария.
-        """
+        """Вычисляемое свойство. Определяет факт редактирования комментария."""
         return (self.time_update - self.time_create).total_seconds() > 3
 
 
 class LikeManager(models.Manager):
+    """
+    Менеджер модели Like с дополнительной логикой проверки лайков.
+    """
+
     def is_liked(self, user, obj):
+        """Проверяет, поставил ли пользователь лайк указанному объекту."""
         ct = ContentType.objects.get_for_model(obj)
         return self.filter(content_type=ct, object_id=obj.pk, user=user).exists()
 
 
 class Like(models.Model):
+    """
+    Универсальная модель лайков для объектов Post и Comment.
+
+    Поля:
+    - user (ForeignKey): Пользователь, поставивший лайк.
+    - content_type (ForeignKey): Тип объекта (Post, Comment).
+    - object_id (PositiveIntegerField): ID объекта.
+    - content_object (GenericForeignKey): Ссылка на объект.
+    - notifications (GenericRelation): Связь с уведомлениями.
+    - time_create (DateTimeField): Дата и время создания лайка.
+    """
+
     user = models.ForeignKey(
         get_user_model(),
         on_delete=models.CASCADE,
@@ -356,7 +429,9 @@ class Like(models.Model):
         ]
 
     def __str__(self):
+        """Возвращает строковое представление объекта."""
         return f"Like by {self.user} on {self.content_object}"
 
     def get_absolute_url(self):
+        """Возвращает URL объекта, на который поставлен лайк."""
         return self.content_object.get_absolute_url()

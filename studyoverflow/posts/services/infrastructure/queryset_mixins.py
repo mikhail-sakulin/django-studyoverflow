@@ -1,18 +1,27 @@
+"""Миксины для оптимизации выборок, аннотирования и фильтрации данных."""
+
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, Exists, OuterRef, Q
 from django.http import HttpRequest
-from posts.models import Like, Post
+from posts.models import Like
 
 
 class LikeAnnotationsMixin:
-    like_model = None
-    like_related_field = "likes"
+    """
+    Миксин для аннотирования QuerySet данными о лайках.
+    """
+
+    like_related_field: str = "likes"
     request: HttpRequest
 
     def _get_content_type(self, model):
+        """Возвращает ContentType для указанной модели, используя кеш Django."""
         return ContentType.objects.get_for_model(model)
 
     def annotate_queryset(self, queryset):
+        """
+        Добавляет к выборке счетчик лайков и флаг 'user_has_liked'.
+        """
         if "likes_count" not in queryset.query.annotations:
             queryset = queryset.annotate(likes_count=Count(self.like_related_field))
 
@@ -40,9 +49,8 @@ class PostAnnotateQuerysetMixin(LikeAnnotationsMixin):
     - select_related author
     - prefetch_related tags
     - annotate likes_count и comments_count
+    - флаг 'user_has_liked' через LikeAnnotationsMixin
     """
-
-    model: type[Post]
 
     def get_annotate_queryset(self, queryset):  # type: ignore
         queryset = (
@@ -60,18 +68,18 @@ class PostAnnotateQuerysetMixin(LikeAnnotationsMixin):
 class PostFilterSortMixin:
     """
     Миксин для фильтрации и сортировки постов по GET-параметрам:
-        - q: поиск по заголовку или содержимому
-        - tags: теги через запятую
-        - tag_match: any/all
-        - author: имя автора
-        - has_comments: yes/no
-        - sort: created/likes/answers
-        - order: asc/desc
+    - q: поиск по заголовку или содержимому
+    - tags: теги через запятую
+    - tag_match: any/all
+    - author: имя автора
+    - has_comments: yes/no
+    - sort: created/likes/answers
+    - order: asc/desc
     """
 
     def filter_by_model_fields(self, queryset, request):
         """
-        Фильтрация по полям модели (q, tags, author).
+        Выполняет поиск по текстовым полям и фильтрацию по связям tags, author.
         """
         # Поиск по тексту
         q = request.GET.get("q", "").strip()
@@ -102,7 +110,8 @@ class PostFilterSortMixin:
 
     def filter_and_sort_by_annotations(self, queryset, request):
         """
-        Фильтрация и сортировка по аннотациям (likes_count, comments_count).
+        Фильтрация по аннотированному полю comments_count.
+        Сортировка по полям модели или аннотированным полям.
         """
         # Фильтр по наличию комментариев
         has_comments = request.GET.get("has_comments", "any")
@@ -135,9 +144,17 @@ class PostFilterSortMixin:
 
 
 class CommentSortMixin:
+    """
+    Миксин для сортировки комментариев по дате и лайкам.
+    """
+
     request: HttpRequest
 
     def sort_comments(self, queryset):
+        """
+        Упорядочивает queryset комментариев на основе параметров запроса.
+        Сортирует комментарии по дате и лайкам.
+        """
         ordering_map = {
             "date": "time_create",
             "likes": "likes_count",
