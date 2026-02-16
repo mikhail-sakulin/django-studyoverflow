@@ -28,3 +28,6 @@ celerybeat-schedule.*
 
 # SSL-сертификат
 cert.*
+
+# Временные файлы задач
+my_todo.*
