@@ -61,7 +61,7 @@ ACCOUNT_LOGIN_METHODS = {"username", "email"}
 
 # Кастомные адаптеры
 SOCIALACCOUNT_ADAPTER = "users.adapters.CustomSocialAccountAdapter"
-ACCOUNT_ADAPTER = "users.adapters.BlockedUserAccountAdapter"
+ACCOUNT_ADAPTER = "users.adapters.AllauthMessageAdapter"
 
 # Поля, обязательные при регистрации через allauth
 ACCOUNT_SIGNUP_FIELDS = ["username*", "email*", "password1*", "password2*"]

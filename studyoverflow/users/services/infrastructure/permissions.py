@@ -11,9 +11,11 @@ if TYPE_CHECKING:
 
 class IsAuthorOrModeratorMixin:
     """
-    Доступ к изменению объекта разрешен, если:
-    - пользователь является автором объекта
-    - ИЛИ имеет permission на модерацию объекта
+    Mixin для проверки прав на изменение объекта.
+
+    Доступ разрешён, если выполняется одно из условий:
+    - Пользователь является автором объекта (obj.author_id == user.pk или obj.user_id == user.pk)
+    - Пользователь имеет permission на модерацию объекта
     """
 
     permission_required: Optional[str] = None
@@ -37,6 +39,9 @@ class IsAuthorOrModeratorMixin:
         return False
 
     def dispatch(self, request, *args, **kwargs):
+        """
+        Проверяет права пользователя перед выполнением действия.
+        """
         obj = self.get_object()  # type: ignore[attr-defined]
 
         if not self.has_permission(obj):
@@ -47,10 +52,13 @@ class IsAuthorOrModeratorMixin:
 
 class SocialUserPasswordChangeForbiddenMixin:
     """
-    Запрещает смену пароля для пользователей с авторизацией через соцсеть.
+    Миксин, запрещающий смену пароля для пользователей с авторизацией через соцсеть.
     """
 
     def dispatch(self, request, *args, **kwargs):
+        """
+        Проверяет возможность смены пароля.
+        """
         if request.user.is_authenticated and getattr(request.user, "is_social", False):
             raise PermissionDenied(
                 "Сменить пароль невозможно при авторизации через социальную сеть."
@@ -61,8 +69,9 @@ class SocialUserPasswordChangeForbiddenMixin:
 
 def can_moderate(actor: "User", target: "User") -> bool:
     """
-    Проверяет, может ли actor модерировать target.
-    Бросает PermissionDenied, если нельзя.
+    Проверяет, может ли пользователь actor модерировать пользователя target.
+
+    Бросает PermissionDenied, если модерировать нельзя.
     """
     UserModel = get_user_model()  # noqa: N806
 

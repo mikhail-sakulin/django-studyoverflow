@@ -9,9 +9,9 @@ from PIL import Image
 @deconstructible
 class CustomUsernameValidator(RegexValidator):
     """
-    Класс-валидатор для username:
-        - минимум 4 символа,
-        - разрешены только латинские буквы, цифры, _ и -.
+    Валидатор для username пользователя:
+    - минимум 4 символа;
+    - разрешены только латинские буквы, цифры, "_" и "-".
     """
 
     regex = r"^[a-zA-Z0-9_-]{4,}$"
@@ -25,9 +25,13 @@ class CustomUsernameValidator(RegexValidator):
 @deconstructible
 class PersonalNameValidator:
     """
-    Класс-валидатор для first_name и last_name:
-        - разрешены только буквы из Unicode и дефис,
-        - запрещены цифры, пробелы и спецсимволы.
+    Валидатор для first_name и last_name пользователя:
+    - разрешены только буквы из Unicode и дефис;
+    - запрещены цифры, пробелы и спецсимволы;
+    - пустое значение разрешено;
+    - не допускается начинать или заканчивать строку дефисом;
+    - не допускается несколько подряд идущих дефисов;
+    - строка не может состоять только из дефисов.
     """
 
     message = gettext_lazy("Имя и фамилия должны состоять только из букв, дефис разрешен.")
@@ -72,13 +76,13 @@ class PersonalNameValidator:
 @deconstructible
 class AvatarFileValidator:
     """
-    Класс-валидатор для проверки аватаров пользователей.
+    Валидатор для проверки аватаров пользователей.
 
     Проверяет:
-        - размер файла,
-        - MIME-тип файла,
-        - минимальные размеры изображения,
-        - соотношения сторон изображения.
+    - максимальный размер файла;
+    - MIME-тип файла;
+    - минимальные размеры изображения;
+    - соотношения сторон изображения.
     """
 
     # Разрешенные MIME-типы файлов
@@ -90,17 +94,16 @@ class AvatarFileValidator:
         "image/x-icon",
     )
 
-    def __init__(self, max_size: int = 10 * 1024 * 1024):
-        self.max_size = max_size
-        self.min_height = 100
-        self.min_width = 100
-        self.min_aspect_ration = 0.25
-        self.max_aspect_ration = 4
+    MAX_SIZE = 10 * 1024 * 1024
+    MIN_HEIGHT = 100
+    MIN_WIDTH = 100
+    MIN_ASPECT_RATION = 0.25
+    MAX_ASPECT_RATION = 4
 
     def __call__(self, file, *args, **kwargs):
         # Проверка размера файла
-        if file.size > self.max_size:
-            max_size_mb = self.max_size / (1024 * 1024)
+        if file.size > self.MAX_SIZE:
+            max_size_mb = self.MAX_SIZE / (1024 * 1024)
             raise ValidationError(
                 gettext_lazy(f"Максимальный разрешенный размер файла: {max_size_mb} Mb."),
                 code="file_too_large",
@@ -128,22 +131,22 @@ class AvatarFileValidator:
         img = Image.open(file)
         width, height = img.size
 
-        if width < self.min_width or height < self.min_height:
+        if width < self.MIN_WIDTH or height < self.MIN_HEIGHT:
             raise ValidationError(
                 gettext_lazy(
                     f"Изображение слишком маленькое. Разрешенный минимум: "
-                    f"{self.min_width}x{self.min_height} px."
+                    f"{self.MIN_WIDTH}x{self.MIN_HEIGHT} px."
                 ),
                 code="file_too_small",
             )
 
         aspect_ratio = width / height
 
-        if aspect_ratio < self.min_aspect_ration or aspect_ratio > self.max_aspect_ration:
+        if aspect_ratio < self.MIN_ASPECT_RATION or aspect_ratio > self.MAX_ASPECT_RATION:
             raise ValidationError(
                 gettext_lazy(
                     f"Недопустимое соотношение сторон изображения. Допустимо "
-                    f"{self.min_aspect_ration}-{self.max_aspect_ration}."
+                    f"{self.MIN_ASPECT_RATION}-{self.MAX_ASPECT_RATION}."
                 ),
                 code="invalid_file_aspect_ration",
             )

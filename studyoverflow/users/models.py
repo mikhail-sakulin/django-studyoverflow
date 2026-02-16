@@ -19,12 +19,55 @@ from users.tasks import delete_old_avatars_from_s3_storage, generate_and_save_av
 
 
 class CustomUserManager(UserManager):
+    """
+    Кастомный менеджер пользователей.
+
+    Позволяет искать пользователя как по username, так и по email.
+    """
+
     def get_by_natural_key(self, username_or_email):
+        """Возвращает пользователя по username или email."""
         return self.get(Q(username=username_or_email) | Q(email__iexact=username_or_email))
 
 
 class User(AbstractUser):
+    """
+    Кастомная модель пользователя (наследование от django.contrib.auth.models.AbstractUser).
+
+    Поля (без учета наследования):
+    - username (CharField): Уникальное имя пользователя.
+    - email (EmailField): Уникальный email.
+    - first_name (CharField): Имя.
+    - last_name (CharField): Фамилия.
+    - bio (TextField): Информация о пользователе.
+    - date_birth (DateField): Дата рождения.
+    - avatar (ImageField): Основной аватар.
+    - avatar_small_size1 (ImageField): Миниатюра аватара №1 (100x100).
+    - avatar_small_size2 (ImageField): Миниатюра аватара №2 (170x170).
+    - avatar_small_size3 (ImageField): Миниатюра аватара №3 (800x800).
+    - reputation (IntegerField): Репутация пользователя.
+    - posts_count (PositiveIntegerField): Количество постов.
+    - comments_count (PositiveIntegerField): Количество комментариев.
+    - date_joined (DateTimeField): Время создания аккаунта.
+    - last_seen (DateTimeField): Последняя активность пользователя.
+    - is_social (BooleanField): Флаг регистрации через соцсети.
+    - role (CharField): Роль пользователя.
+    - is_blocked (BooleanField): Флаг блокировки.
+    - blocked_at (DateTimeField): Дата и время блокировки.
+    - blocked_by (ForeignKey): Пользователь, заблокировавший аккаунт.
+
+    Прописана логика:
+    - синхронизация роли пользователя с флагами is_staff / is_superuser;
+    - синхронизация роли пользователя с группами Django;
+    - обработка загрузки, удаления и обновления аватара;
+    - асинхронные генерация миниатюр аватара и удаление старых файлов через Celery.
+    """
+
     class Role(models.TextChoices):
+        """
+        Перечисление ролей пользователей.
+        """
+
         ADMIN = "ADMIN", "Администратор"
         MODERATOR = "MODERATOR", "Модератор"
         STAFF_VIEWER = "STAFF_VIEWER", "Персонал (просмотр)"
@@ -41,12 +84,14 @@ class User(AbstractUser):
         "size3": (800, 800),
     }
 
+    # Соответствие ролей пользователей и флагов "is_staff" и "is_superuser"
     ROLE_FLAGS_MAP = {
         Role.ADMIN: {"is_staff": True, "is_superuser": True},
         Role.MODERATOR: {"is_staff": True, "is_superuser": False},
         Role.STAFF_VIEWER: {"is_staff": True, "is_superuser": False},
         Role.USER: {"is_staff": False, "is_superuser": False},
     }
+    # Соответствие ролей пользователей и групп прав
     ROLE_GROUPS_MAP = {
         Role.MODERATOR: ["Moderators", "StaffViewers"],
         Role.STAFF_VIEWER: ["StaffViewers"],
@@ -165,9 +210,18 @@ class User(AbstractUser):
         ]
 
     def __str__(self):
+        """Возвращает строковое представление пользователя."""
         return self.username
 
     def save(self, *args, **kwargs):
+        """
+        Добавлена логика при сохранении пользователя:
+        - синхронизация роли и флагов "is_staff" и "is_superuser";
+        - синхронизация роли с группами Django;
+        - обработка загрузки, удаления и изменения аватара;
+        - отложенный запуск Celery-задач после подтверждения транзакции БД
+          для генерации миниатюр аватара и удаление старых файлов.
+        """
         is_creation = not self.pk
         update_fields = kwargs.get("update_fields")
 
@@ -190,10 +244,13 @@ class User(AbstractUser):
             self._schedule_update_celery_tasks(post_save_context)
 
     def get_absolute_url(self):
+        """Возвращает уникальный URL профиля пользователя."""
         return reverse("users:profile", kwargs={"username": self.username})
 
     def get_avatar_small_url(self, size="size1"):
-        """Возвращает URL конкретной миниатюры или URL оригинала аватара."""
+        """
+        Возвращает URL конкретной миниатюры или URL оригинала аватара.
+        """
         fields = {
             "size1": self.avatar_small_size1,
             "size2": self.avatar_small_size2,
@@ -206,19 +263,23 @@ class User(AbstractUser):
 
     @property
     def avatar_small_size1_url(self):
+        """URL миниатюры аватара размера size1."""
         return self.get_avatar_small_url("size1")
 
     @property
     def avatar_small_size2_url(self):
+        """URL миниатюры аватара размера size2."""
         return self.get_avatar_small_url("size2")
 
     @property
     def avatar_small_size3_url(self):
+        """URL миниатюры аватара размера size3."""
         return self.get_avatar_small_url("size3")
 
     def _sync_role_flags(self):
         """
-        Синхронизирует системные флаги и роль.
+        Синхронизирует флаги "is_staff" и "is_superuser" и роль.
+
         Устанавливает is_staff и is_superuser на основе выбранной роли.
         """
         if self.is_superuser and not self.pk:
@@ -232,7 +293,7 @@ class User(AbstractUser):
 
     def _sync_role_groups(self):
         """
-        Назначает или удаляет группы "Moderators" и "StaffViewers".
+        Назначает или удаляет группы "Moderators" и "StaffViewers" в зависимости от роли.
         """
         managed_group_names = ["Moderators", "StaffViewers"]
         target_group_names = set(self.ROLE_GROUPS_MAP.get(self.role, []))
@@ -261,7 +322,7 @@ class User(AbstractUser):
         default_avatar = self._meta.get_field("avatar").get_default()
 
         is_deleted = not self.avatar
-        is_new_upload = not is_deleted and self.avatar != avatar_name_in_db
+        is_new_upload = not is_deleted and self.avatar.name != avatar_name_in_db
 
         if is_deleted:
             # Сброс на дефолт
@@ -280,6 +341,11 @@ class User(AbstractUser):
         }
 
     def _reset_small_avatars(self, default: bool):
+        """
+        Сбрасывает значения миниатюр аватара.
+
+        Если default=True — устанавливает стандартные значения, иначе очищает поля.
+        """
         for field_name in self.get_small_avatar_fields():
             if default:
                 value = self._meta.get_field(field_name).get_default()
@@ -288,13 +354,23 @@ class User(AbstractUser):
             setattr(self, field_name, value)
 
     def _schedule_creation_celery_tasks(self):
-        """Задачи Celery при создании пользователя."""
+        """
+        Задачи Celery при создании пользователя.
+
+        Генерирует миниатюры аватара, если используется не стандартный аватар.
+        """
         default_avatar = self._meta.get_field("avatar").get_default()
         if self.avatar != default_avatar:
             transaction.on_commit(lambda: generate_and_save_avatars_small.delay(self.pk))
 
     def _schedule_update_celery_tasks(self, context: dict):
-        """Задачи Celery при обновлении пользователя."""
+        """
+        Задачи Celery при обновлении пользователя.
+
+        Обрабатывает:
+        - генерацию миниатюр;
+        - удаление старых файлов из S3-хранилища.
+        """
         if not context:
             return
 
@@ -307,7 +383,7 @@ class User(AbstractUser):
             # цепочка celery задач на создание миниатюр и удаление
             tasks = chain(
                 generate_and_save_avatars_small.si(self.pk),
-                delete_old_avatars_from_s3_storage.si(self.pk, list(avatar_names_for_delete or [])),
+                delete_old_avatars_from_s3_storage.si(self.pk, avatar_names_for_delete),
             )
 
             # Запуск задач только после завершения сохранения в БД
@@ -316,9 +392,7 @@ class User(AbstractUser):
         elif is_deleted and not was_default:
             # celery задача на удаление после завершения сохранения в БД
             transaction.on_commit(
-                lambda: delete_old_avatars_from_s3_storage.delay(
-                    self.pk, list(avatar_names_for_delete or [])
-                )
+                lambda: delete_old_avatars_from_s3_storage.delay(self.pk, avatar_names_for_delete)
             )
 
     @classmethod
@@ -331,4 +405,5 @@ class User(AbstractUser):
 
     @classmethod
     def get_small_avatar_fields(cls) -> list[str]:
+        """Возвращает список имен полей миниатюр аватара."""
         return [f"avatar_small_{key}" for key in cls.AVATAR_SMALL_SIZES.keys()]

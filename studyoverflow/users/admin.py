@@ -7,6 +7,10 @@ from users.models import User
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
+    """
+    Конфигурация отображения и управления пользователями в админ-панели.
+    """
+
     list_display = (
         "id",
         "username",
@@ -74,6 +78,10 @@ class UserAdmin(admin.ModelAdmin):
     )
 
     def get_actions(self, request):
+        """
+        Ограничивает доступ к действиям с пользователями
+        в зависимости от роли персонала в админ-панели.
+        """
         actions = super().get_actions(request)
 
         if not self._can_block_users(request.user):
@@ -84,21 +92,33 @@ class UserAdmin(admin.ModelAdmin):
 
     @admin.action(description="Заблокировать выбранных пользователей")
     def block_users(self, request, queryset):
+        """
+        Блокирует выбранных пользователей.
+        """
         count = queryset.update(is_blocked=True, blocked_at=timezone.now(), blocked_by=request.user)
         self.message_user(request, f"Заблокировано {count} пользователей.")
 
     @admin.action(description="Разблокировать выбранных пользователей")
     def unblock_users(self, request, queryset):
+        """
+        Разблокирует выбранных пользователей.
+        """
         count = queryset.update(is_blocked=False, blocked_at=None, blocked_by=None)
         self.message_user(request, f"Разблокировано {count} пользователей.")
 
     @admin.display(description="Аватар (изображение)", ordering="username")
     def user_avatar(self, user: User):
+        """
+        Отображает миниатюру аватара пользователя в списке.
+        """
         if user.avatar:
             return mark_safe(f"<img src='{user.avatar.url}' width=50>")
         else:
             return "Без изображения"
 
     def _can_block_users(self, user: User):
+        """
+        Проверяет, имеет ли текущий пользователь право блокировать аккаунты.
+        """
         UserModel = get_user_model()  # noqa: N806
         return user.role in {UserModel.Role.ADMIN, UserModel.Role.MODERATOR}

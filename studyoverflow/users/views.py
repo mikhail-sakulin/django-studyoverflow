@@ -43,6 +43,12 @@ logger = logging.getLogger(__name__)
 
 
 class UsersListView(UserHTMXPaginationMixin, ListView):
+    """
+    Страница списка пользователей.
+
+    Использует кеширование первой страницы. Список сортируется по репутации и имени пользователя.
+    """
+
     model = get_user_model()
     template_name = "users/user_list.html"
     context_object_name = "users"
@@ -79,6 +85,18 @@ class UsersListView(UserHTMXPaginationMixin, ListView):
 
 
 class UsersListHTMXView(UserHTMXPaginationMixin, UserSortMixin, UserOnlineFilterMixin, ListView):
+    """
+    HTMX-представление для подгрузки пользователей на страницу списка пользователей.
+
+    Поддерживает:
+    - постраничную загрузку;
+    - сортировку;
+    - фильтрацию по online-статусу.
+
+    Используется для динамического обновления списка пользователей
+    без полной перезагрузки страницы.
+    """
+
     model = get_user_model()
     template_name = "users/_user_grid.html"
     context_object_name = "users"
@@ -103,6 +121,14 @@ class UsersListHTMXView(UserHTMXPaginationMixin, UserSortMixin, UserOnlineFilter
 
 
 class UserRegisterView(SuccessMessageMixin, CreateView):
+    """
+    Страница регистрации нового пользователя.
+
+    После успешной регистрации:
+    - отправляет сигнал user_signed_up (из allauth.account.signals);
+    - выполняет редирект на указанный next URL либо на главную страницу.
+    """
+
     form_class = UserRegisterForm
     template_name = "users/register.html"
     success_url = reverse_lazy("home")
@@ -117,23 +143,25 @@ class UserRegisterView(SuccessMessageMixin, CreateView):
         return response
 
     def get_success_url(self):
-        """
-        Редирект после регистрации.
-        """
+        """Редирект после регистрации."""
         # Редирект на next_url, если задан GET-параметр next
         next_url = self.request.GET.get("next")
         return next_url or self.success_url
 
     def get_context_data(self, **kwargs):
-        """
-        Передает GET-параметр next в шаблон.
-        """
+        """Передает GET-параметр next в шаблон."""
         context = super().get_context_data(**kwargs)
         context["next"] = self.request.GET.get("next")
         return context
 
 
 class UserLoginView(LoginView):
+    """
+    Страница входа в аккаунт пользователя.
+
+    После успешного входа отображает приветственное сообщение.
+    """
+
     form_class = UserLoginForm
     template_name = "users/login.html"
 
@@ -143,6 +171,12 @@ class UserLoginView(LoginView):
 
 
 class UserLogoutView(LoginRequiredMixin, LogoutView):
+    """
+    Выход пользователя из аккаунта.
+
+    После успешного выхода отображает информационное сообщение.
+    """
+
     def post(self, request, *args, **kwargs):
         user_was_authenticated = request.user.is_authenticated
         response = super().post(request, *args, **kwargs)
@@ -152,6 +186,15 @@ class UserLogoutView(LoginRequiredMixin, LogoutView):
 
 
 class AuthorProfileView(DetailView):
+    """
+    Страница с публичным профилем пользователя.
+
+    Использует кеширование данных пользователя.
+
+    Если пользователь открывает собственный профиль, выполняется
+    редирект на страницу личного профиля.
+    """
+
     model = get_user_model()
     template_name = "users/profile_author.html"
     context_object_name = "author"
@@ -180,6 +223,10 @@ class AuthorProfileView(DetailView):
 
 
 class UserProfileUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+    """
+    Страница редактирования профиля текущего пользователя.
+    """
+
     model = get_user_model()
     form_class = UserProfileUpdateForm
     template_name = "users/profile_current_user.html"
@@ -192,11 +239,22 @@ class UserProfileUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView)
 
 
 def avatar_preview(request, username):
+    """
+    Возвращает HTML-фрагмент для просмотра аватара пользователя.
+
+    Используется для отображения аватара в модальном окне.
+    """
     author = get_object_or_404(get_user_model(), username=username)
     return render(request, "users/_avatar_only_for_modal.html", {"author": author})
 
 
 class UserDeleteView(LoginRequiredMixin, DeleteView):
+    """
+    Представление удаления аккаунта пользователя.
+
+    После удаления выполняется logout и редирект на главную страницу.
+    """
+
     model = get_user_model()
     success_url = reverse_lazy("home")
 
@@ -219,6 +277,12 @@ class UserPasswordChangeView(
     SuccessMessageMixin,
     PasswordChangeView,
 ):
+    """
+    Представление смены пароля пользователя.
+
+    Для социальных аккаунтов смена пароля запрещена.
+    """
+
     form_class = UserPasswordChangeForm
     success_url = reverse_lazy("users:my_profile")
     template_name = "users/password_change.html"
@@ -239,6 +303,10 @@ class UserPasswordChangeView(
 
 
 class UserPasswordResetView(PasswordResetView):
+    """
+    Страница запроса восстановления пароля через email.
+    """
+
     form_class = UserPasswordResetForm
     template_name = "users/password_reset_form.html"
     email_template_name = "users/password_reset_email.html"
@@ -246,10 +314,18 @@ class UserPasswordResetView(PasswordResetView):
 
 
 class UserPasswordResetDoneView(PasswordResetDoneView):
+    """
+    Страница сообщения об отправки email для восстановления пароля.
+    """
+
     template_name = "users/password_reset_done.html"
 
 
 class UserPasswordResetConfirmView(SuccessMessageMixin, PasswordResetConfirmView):
+    """
+    Страница установки нового пароля после подтверждения email.
+    """
+
     form_class = UserSetPasswordForm
     template_name = "users/password_reset_confirm.html"
     success_url = reverse_lazy("users:password_reset_complete")
@@ -270,12 +346,22 @@ class UserPasswordResetConfirmView(SuccessMessageMixin, PasswordResetConfirmView
 
 
 class UserPasswordResetCompleteView(PasswordResetCompleteView):
+    """
+    Страница завершения процесса восстановления пароля.
+    """
+
     template_name = "users/password_reset_complete.html"
 
 
 @login_required
 @permission_required("users.block_user", raise_exception=True)
 def block_user(request, user_id):
+    """
+    Блокирует пользователя.
+
+    Проверяет права модератора (кто блокирует) и возможность модерации целевого пользователю.
+    """
+
     UserModel = get_user_model()  # noqa: N806
     user = get_object_or_404(UserModel, pk=user_id)
 
@@ -311,6 +397,13 @@ def block_user(request, user_id):
 @login_required
 @permission_required("users.block_user", raise_exception=True)
 def unblock_user(request, user_id):
+    """
+    Разблокирует пользователя.
+
+    Проверяет права модератора (кто разблокирует) и возможность
+    снятия блокировки целевого пользователю.
+    """
+
     UserModel = get_user_model()  # noqa: N806
     user = get_object_or_404(UserModel, pk=user_id)
 

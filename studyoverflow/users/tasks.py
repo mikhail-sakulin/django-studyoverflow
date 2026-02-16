@@ -1,3 +1,7 @@
+"""
+Celery-задачи для фоновой асинхронной обработки данных пользователей.
+"""
+
 import logging
 from typing import Optional
 
@@ -23,6 +27,14 @@ logger = logging.getLogger(__name__)
 
 @app.task
 def generate_and_save_avatars_small(user_pk):
+    """
+    Генерирует уменьшенные версии аватара пользователя.
+
+    Создаёт набор уменьшенных изображений на основе аватара
+    пользователя и сохраняет их в соответствующие поля модели.
+
+    Используется после изменения аватара или регистрации пользователя.
+    """
     User = get_user_model()  # noqa: N806
 
     try:
@@ -51,6 +63,15 @@ def generate_and_save_avatars_small(user_pk):
 
 @app.task
 def delete_old_avatars_from_s3_storage(user_pk, avatar_names_for_delete: Optional[list] = None):
+    """
+    Удаляет устаревшие файлы аватаров пользователя из хранилища.
+
+    Если передан список `avatar_names_for_delete`, удаляет только указанные
+    файлы.
+
+    Если список не передан, автоматически определяет устаревшие файлы,
+    сравнивая текущее состояние модели пользователя с содержимым в хранилище.
+    """
     User = get_user_model()  # noqa: N806
 
     try:
@@ -96,7 +117,9 @@ def delete_old_avatars_from_s3_storage(user_pk, avatar_names_for_delete: Optiona
 @app.task
 def sync_online_users_to_db():
     """
-    Проверяет все ключи online_users:
+    Записывает online-статус пользователей в БД (last_seen) из кеша.
+
+    Получает список онлайн-пользователей из Redis и обновляет поле `last_seen` в БД.
     """
     User = get_user_model()  # noqa: N806
 
@@ -114,6 +137,14 @@ def sync_online_users_to_db():
 
 @app.task
 def sync_user_activity_counters(batch_size: int = 1000):
+    """
+    Пересчитывает и синхронизирует поля-счётчики пользователей.
+
+    Обновляет:
+    - количество постов (posts_count);
+    - количество комментариев (comments_count);
+    - репутацию (reputation).
+    """
     # ленивый импорт
     from posts.models import Comment, Post
 
@@ -127,6 +158,7 @@ def sync_user_activity_counters(batch_size: int = 1000):
 
     users_queryset = User.objects.only("id", "posts_count", "comments_count", "reputation")
 
+    # Обновление батчами для оптимизации нагрузки на БД.
     for user in users_queryset.iterator(chunk_size=batch_size):
         new_posts_count = posts_map.get(user.id, 0)
         new_comments_count = comments_map.get(user.id, 0)
@@ -155,6 +187,16 @@ def sync_user_activity_counters(batch_size: int = 1000):
 
 @app.task
 def download_and_set_avatar(user_id: int, avatar_url: str):
+    """
+    Загружает аватар пользователя по переданному URL и сохраняет его в хранилище.
+
+    Используется при регистрации через социальные сети.
+
+    Выполняет:
+    - загрузку файла;
+    - валидацию;
+    - сохранение файла в хранилище.
+    """
     User = get_user_model()  # noqa: N806
 
     try:
@@ -225,6 +267,9 @@ def download_and_set_avatar(user_id: int, avatar_url: str):
 def delete_files_from_storage_task(file_paths: list[str]):
     """
     Универсальная задача для удаления списка файлов из хранилища.
+
+    Используется для асинхронной очистки файлов из хранилища, в том числе аватаров,
+    после удаления пользователя или обновления изображений.
     """
     if file_paths:
         delete_old_avatar_names(file_paths)

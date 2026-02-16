@@ -1,5 +1,3 @@
-from typing import Protocol, runtime_checkable
-
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import (
@@ -15,30 +13,31 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy
 
 
-@runtime_checkable
-class FormProtocol(Protocol):
+class BootstrapFormMixin:
     """
-    Протокол, определяющий обязательные атрибуты формы для работы BootstrapFormMixin.
+    Миксин для добавления Bootstrap-оформления полям формы.
+
+    Добавляет:
+    - css-класс form-control ко всем полям;
+    - placeholder равный label (если не задан);
+    - классы is-valid / is-invalid для полей при POST-запросе.
     """
 
     fields: dict
     is_bound: bool
     errors: dict
 
-
-class BootstrapFormMixin:
-    """
-    Миксин для добавления Bootstrap-оформления полям формы.
-
-    Добавляет:
-        - класс form-control ко всем полям;
-        - placeholder = label (если не задан);
-        - классы is-valid / is-invalid для полей при POST-запросе.
-    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._apply_bootstrap_styles(*args, **kwargs)
 
     def _apply_bootstrap_styles(self, *args, **kwargs):
-        if not isinstance(self, FormProtocol):
-            raise TypeError("BootstrapFormMixin требует наличия fields, is_bound, errors")
+        if (
+            not hasattr(self, "fields")
+            or not hasattr(self, "is_bound")
+            or not hasattr(self, "errors")
+        ):
+            raise TypeError("BootstrapFormMixin требует наличия полей fields, is_bound, errors")
 
         for field_name, field in self.fields.items():
             css_classes = field.widget.attrs.get("class", "")
@@ -58,12 +57,12 @@ class BootstrapFormMixin:
                 else:
                     field.widget.attrs["class"] += " is-valid"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._apply_bootstrap_styles(*args, **kwargs)
-
 
 class UserRegisterForm(BootstrapFormMixin, UserCreationForm):
+    """
+    Форма регистрации нового пользователя.
+    """
+
     class Meta:
         model = get_user_model()
         fields = ["username", "first_name", "last_name", "email", "password1", "password2"]
@@ -88,6 +87,10 @@ class UserRegisterForm(BootstrapFormMixin, UserCreationForm):
 
 
 class UserLoginForm(AuthenticationForm):
+    """
+    Форма аутентификации пользователя по username или email.
+    """
+
     username = forms.CharField(
         label="Имя пользователя или email",
         widget=forms.TextInput(
@@ -108,6 +111,9 @@ class UserLoginForm(AuthenticationForm):
         fields = ["username", "password"]
 
     def confirm_login_allowed(self, user):
+        """
+        Запрещает вход заблокированным пользователям.
+        """
         super().confirm_login_allowed(user)
 
         if user.is_blocked:
@@ -124,6 +130,11 @@ class CustomClearableFileInput(ClearableFileInput):
     """
     Кастомный виджет для поля ImageField (аватар пользователя),
     наследуется от стандартного ClearableFileInput.
+
+    Переопределяет:
+    - текст кнопки загрузки;
+    - подписи для текущего изображения;
+    - текст чекбокса удаления.
     """
 
     clear_checkbox_label = gettext_lazy("Удалить")
@@ -132,6 +143,10 @@ class CustomClearableFileInput(ClearableFileInput):
 
 
 class UserProfileUpdateForm(BootstrapFormMixin, forms.ModelForm):
+    """
+    Форма редактирования профиля пользователя.
+    """
+
     class Meta:
         model = get_user_model()
         fields = ["avatar", "username", "email", "date_birth", "bio", "first_name", "last_name"]
@@ -148,6 +163,10 @@ class UserProfileUpdateForm(BootstrapFormMixin, forms.ModelForm):
 
 
 class UserPasswordChangeForm(BootstrapFormMixin, PasswordChangeForm):
+    """
+    Форма смены пароля.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -157,10 +176,18 @@ class UserPasswordChangeForm(BootstrapFormMixin, PasswordChangeForm):
 
 
 class UserPasswordResetForm(BootstrapFormMixin, PasswordResetForm):
+    """
+    Форма запроса сброса пароля.
+    """
+
     pass
 
 
 class UserSetPasswordForm(BootstrapFormMixin, SetPasswordForm):
+    """
+    Форма установки нового пароля после восстановления доступа.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

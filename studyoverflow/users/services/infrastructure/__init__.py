@@ -1,5 +1,4 @@
 from .avatars import (
-    AvatarNamesForDelete,
     avatar_upload_to,
     delete_old_avatar_names,
     generate_avatar_small,
@@ -45,7 +44,6 @@ from .validators import (
 
 __all__ = [
     # avatars
-    "AvatarNamesForDelete",
     "avatar_upload_to",
     "user_avatar_upload_path",
     "generate_avatar_small",

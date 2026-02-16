@@ -17,13 +17,24 @@ ONLINE_TTL = 120
 
 
 def get_user_key_for_redis(user_id: int) -> str:
+    """
+    Формирует Redis-ключ для хранения временного online-флага пользователя.
+
+    Формат ключа:
+        online_user:<user_id>
+
+    Используется для определения текущего online-статуса пользователя через Redis.
+    """
     return f"{REDIS_KEY_PREFIX}:{user_id}"
 
 
 def set_user_online(user_id: int):
     """
     Помечает пользователя как онлайн.
-    Создает временный user_key и добавляет ID в общее множество.
+
+    Механизм работы:
+    - Создает временный Redis-ключ user_key с TTL = ONLINE_TTL.
+    - Добавляет ID пользователя в общее множество ONLINE_SET_KEY.
     """
     redis_conn = get_redis_connection("default")
     user_key = get_user_key_for_redis(user_id)
@@ -38,7 +49,7 @@ def set_user_online(user_id: int):
 
 def is_user_online(user_id: int) -> bool:
     """
-    Быстрая проверка статуса конкретного пользователя.
+    Проверка онлайн-статуса конкретного пользователя.
     """
     redis_conn = get_redis_connection("default")
     user_key = get_user_key_for_redis(user_id)
@@ -60,6 +71,14 @@ def remove_user_offline(user_id: int):
 def get_online_user_ids() -> list:
     """
     Возвращает список ID всех пользователей онлайн и чистит устаревшие записи.
+
+    Логика:
+    - Получает все ID из множества ONLINE_SET_KEY.
+    - Проверяет наличие временного Redis-ключа user_key для каждого ID.
+    - Формирует:
+        - active_ids — активные онлайн-пользователи.
+        - expired_ids — устаревшие записи.
+    - Удаляет устаревшие ID из множества.
     """
     redis_conn = get_redis_connection("default")
 

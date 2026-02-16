@@ -1,6 +1,5 @@
 import logging
 import os
-from dataclasses import astuple, dataclass
 from io import BytesIO
 from typing import TYPE_CHECKING, Type
 
@@ -22,33 +21,27 @@ logger = logging.getLogger(__name__)
 storage_default = storages["default"]
 
 
-@dataclass(slots=True)
-class AvatarNamesForDelete:
-    """
-    Dataclass для хранения имен старых файлов аватарок пользователя,
-    подлежащих удалению.
-    """
-
-    old_avatar_name: None | str = None
-    old_avatar_small_size1_name: None | str = None
-    old_avatar_small_size2_name: None | str = None
-    old_avatar_small_size3_name: None | str = None
-
-    def __iter__(self):
-        """
-        Возвращает итератор по значениям атрибутов в порядке объявления.
-        """
-        return iter(astuple(self))
-
-
 def avatar_upload_to(instance: "User", filename: str) -> str:
+    """
+    DEPRECATED - используется в старых файлах миграций схемы БД.
+
+    Генерирует путь загрузки основного аватара пользователя в хранилище.
+
+    Возвращает:
+        str: avatars/<uuid>.<ext>
+    """
     return f"avatars/{generate_new_filename_with_uuid(filename)}"
 
 
 def user_avatar_upload_path(instance, filename):
     """
-    Генерирует путь: avatars/tmp/uuid.jpg (если нет PK)
-    или avatars/123/uuid.jpg (если есть PK).
+    Генерирует путь загрузки основного аватара пользователя в хранилище.
+
+    Если пользователь еще не сохранён (нет pk):
+        avatars/tmp/<uuid>.<ext>
+
+    Если пользователь уже существует (есть pk):
+        avatars/<user_id>/<uuid>.<ext>
     """
     new_filename = generate_new_filename_with_uuid(filename)
 
@@ -61,6 +54,7 @@ def user_avatar_upload_path(instance, filename):
 def generate_avatar_small(user: "User", size_type: int) -> bool | str:
     """
     Генерирует уменьшенную версию avatar пользователя.
+
     Возвращает путь avatar_small в хранилище или False, если avatar_small не создается.
     """
     # Если нет avatar, то avatar_small не создается
@@ -139,45 +133,9 @@ def save_img_in_storage(buffer: BytesIO, storage_path_to_avatar_small: str) -> N
     storage_default.save(storage_path_to_avatar_small, ContentFile(buffer.read()))
 
 
-def get_old_avatar_names(user: "User") -> tuple[str | None, AvatarNamesForDelete]:
-    """
-    Получает старые пути в хранилище для avatar и avatar_small для пользователя
-    для их последующего удаления.
-    """
-    avatar_names_for_delete = AvatarNamesForDelete()
-    avatar_name_in_db = None
-
-    if user.pk:
-        old_user = type(user).objects.get(pk=user.pk)
-        avatar_name_in_db = old_user.avatar.name
-
-        if (
-            old_user.avatar
-            and old_user.avatar != user._meta.get_field("avatar").get_default()
-            and old_user.avatar.name != user.avatar.name
-        ):
-            avatar_names_for_delete.old_avatar_name = old_user.avatar.name
-        else:
-            return avatar_name_in_db, avatar_names_for_delete
-
-        for avatar_small in user.get_small_avatar_fields():
-            avatar_small_field = getattr(old_user, avatar_small)
-
-            if (
-                avatar_small_field
-                and avatar_small_field != user._meta.get_field(avatar_small).get_default()
-            ):
-                setattr(
-                    avatar_names_for_delete, f"old_{avatar_small}_name", avatar_small_field.name
-                )
-
-    return avatar_name_in_db, avatar_names_for_delete
-
-
 def get_user_avatar_paths_list(user) -> list[str]:
     """
-    Собирает список всех путей к файлам аватарок пользователя (оригинал + миниатюры).
-    Исключает дефолтные файлы, которые не подлежат удалению.
+    Возвращает список путей всех файлов аватаров пользователя, исключая стандартные.
     """
     paths = []
     # Список дефолтных имен, не удаляются из хранилища
@@ -201,9 +159,28 @@ def get_user_avatar_paths_list(user) -> list[str]:
     return paths
 
 
-def delete_old_avatar_names(old_avatar_names: AvatarNamesForDelete | list[str]) -> None:
+def get_old_avatar_names(user: "User") -> tuple[str | None, list[str]]:
     """
-    Удаляет старые файлы для avatar и avatar_small пользователя из хранилища.
+    Возвращает путь avatar из БД и список путей файлов аватаров, которые нужно удалить
+    при обновлении пользователя.
+    """
+    if not user.pk:
+        return None, []
+
+    old_user = type(user).objects.get(pk=user.pk)
+    avatar_name_in_db = old_user.avatar.name
+
+    avatar_names_for_delete = []
+
+    if user.avatar.name != avatar_name_in_db:
+        avatar_names_for_delete = get_user_avatar_paths_list(old_user)
+
+    return avatar_name_in_db, avatar_names_for_delete
+
+
+def delete_old_avatar_names(old_avatar_names: list[str]) -> None:
+    """
+    Удаляет старые файлы avatar и avatar_small (миниатюры) пользователя из хранилища.
     """
     for name in old_avatar_names:
         if name and storage_default.exists(name):
@@ -223,8 +200,8 @@ def delete_old_avatar_names(old_avatar_names: AvatarNamesForDelete | list[str]) 
 
 def generate_default_avatar_in_different_sizes(user_model: Type["User"]) -> None:
     """
-    Генерирует уменьшенные версии default_avatar всех размеров.
-    Используется для создания стандартных аватарок в хранилище.
+    Генерирует уменьшенные версии стандартного default_avatar
+    для всех размеров, указанных в AVATAR_SMALL_SIZES.
     """
     # Если default_avatar не существует в хранилище, ничего не создается
     if not storage_default.exists(user_model.DEFAULT_AVATAR_FILENAME):

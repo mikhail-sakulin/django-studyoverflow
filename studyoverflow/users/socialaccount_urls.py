@@ -1,3 +1,13 @@
+"""
+Модуль конфигурации URL для социальной аутентификации.
+
+Содержит маршруты для OAuth2-аутентификации через социальные провайдеры:
+- GitHub;
+- Google;
+- Yandex;
+- VK.
+"""
+
 from allauth.account import views as account_views
 from allauth.socialaccount import views as social_views
 from allauth.socialaccount.providers.github.provider import GitHubProvider

@@ -12,8 +12,7 @@ from PIL.Image import Image as PILImage
 
 def generate_new_filename_with_uuid(filename: str) -> str:
     """
-    Генерирует уникальное имя файла на основе UUID,
-    сохраняет исходное расширение, если оно есть.
+    Генерирует уникальное имя файла на основе UUID, сохраняет исходное расширение, если оно есть.
     """
     root, ext = os.path.splitext(filename)
     ext = ext.lower()
@@ -24,6 +23,7 @@ def generate_new_filename_with_uuid(filename: str) -> str:
 def generate_image(img: PILImage, ext: str, size: tuple[float, float]) -> BytesIO:
     """
     Создает изображение в BytesIO из PILImage.
+
     Обрабатывает GIF и статические изображения.
     """
     # Определение формата изображения

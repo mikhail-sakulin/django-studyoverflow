@@ -7,4 +7,5 @@ class UsersConfig(AppConfig):
     name = "users"
 
     def ready(self):
+        """Регистрация обработчиков сигналов после загрузки приложения."""
         import users.signals  # noqa: F401
