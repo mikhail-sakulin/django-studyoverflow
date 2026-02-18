@@ -4,9 +4,8 @@ from django.shortcuts import get_object_or_404
 from django.views import View
 from django.views.generic import ListView, TemplateView
 from notifications.models import Notification
+from notifications.tasks import send_channel_notify_event
 from posts.models import Comment, Like, Post
-
-from .tasks import send_channel_notify_event
 
 
 class NotificationTemplateView(TemplateView):

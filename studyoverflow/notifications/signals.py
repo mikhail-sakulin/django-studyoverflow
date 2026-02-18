@@ -3,6 +3,7 @@ import logging
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
+from notifications.models import Notification
 from notifications.services.infrastructure import (
     handle_notification_comment_like,
     handle_notification_comment_on_post_created,
@@ -13,8 +14,6 @@ from notifications.services.infrastructure import (
     handle_send_channel_notify_event,
 )
 from posts.models import Comment, Like, Post
-
-from .models import Notification
 
 
 UserModel = get_user_model()
