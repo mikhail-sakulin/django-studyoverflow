@@ -15,7 +15,6 @@ from users.services.infrastructure import (
     get_old_avatar_names,
     user_avatar_upload_path,
 )
-from users.tasks import delete_old_avatars_from_s3_storage, generate_and_save_avatars_small
 
 
 class CustomUserManager(UserManager):
@@ -359,6 +358,8 @@ class User(AbstractUser):
 
         Генерирует миниатюры аватара, если используется не стандартный аватар.
         """
+        from users.tasks import generate_and_save_avatars_small
+
         default_avatar = self._meta.get_field("avatar").get_default()
         if self.avatar != default_avatar:
             transaction.on_commit(lambda: generate_and_save_avatars_small.delay(self.pk))
@@ -371,6 +372,8 @@ class User(AbstractUser):
         - генерацию миниатюр;
         - удаление старых файлов из S3-хранилища.
         """
+        from users.tasks import delete_old_avatars_from_s3_storage, generate_and_save_avatars_small
+
         if not context:
             return
 

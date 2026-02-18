@@ -10,12 +10,12 @@ register = template.Library()
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
 
-User = get_user_model()  # noqa: N806
+UserModel = get_user_model()
 
 role_mapping = {
-    User.Role.ADMIN: ("role-admin", "Admin"),
-    User.Role.MODERATOR: ("role-moderator", "Moderator"),
-    User.Role.STAFF_VIEWER: ("role-staff", "Staff"),
+    UserModel.Role.ADMIN: ("role-admin", "Admin"),
+    UserModel.Role.MODERATOR: ("role-moderator", "Moderator"),
+    UserModel.Role.STAFF_VIEWER: ("role-staff", "Staff"),
 }
 
 

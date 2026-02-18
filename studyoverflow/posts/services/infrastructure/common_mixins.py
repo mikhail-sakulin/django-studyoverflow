@@ -30,7 +30,7 @@ class ContextTagMixin:
         return context
 
 
-class PostAuthorFormMixin:
+class PostAuthorMixin:
     """
     Миксин для автоматического назначения автора при сохранении формы поста.
     """

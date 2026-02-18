@@ -12,12 +12,12 @@ def update_user_counter_field(author_id: int, counter_field: str, value_change: 
     - Выполняет атомарное обновление через F() выражение.
     - Значение поля не может стать меньше 0 (используется Greatest).
     """
-    author_model = get_user_model()
+    user_model = get_user_model()
 
-    if not hasattr(author_model, counter_field):
+    if not hasattr(user_model, counter_field):
         raise ValueError(f"User has no field {counter_field}")
 
-    author_model.objects.filter(pk=author_id).update(
+    user_model.objects.filter(pk=author_id).update(
         **{counter_field: Greatest(F(counter_field) + value_change, 0)}
     )
 

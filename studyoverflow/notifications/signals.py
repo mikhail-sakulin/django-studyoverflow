@@ -17,7 +17,7 @@ from posts.models import Comment, Like, Post
 from .models import Notification
 
 
-User = get_user_model()
+UserModel = get_user_model()
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ def notification_comment_created(sender, instance, created, raw, **kwargs):
         handle_notification_comment_on_post_created(instance)
 
 
-@receiver(post_save, sender=User)
+@receiver(post_save, sender=UserModel)
 def notification_user_created(sender, instance, created, raw, **kwargs):
     """
     Инициирует отправку приветственного уведомления новому пользователю после регистрации.

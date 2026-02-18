@@ -120,5 +120,5 @@ class UserAdmin(admin.ModelAdmin):
         """
         Проверяет, имеет ли текущий пользователь право блокировать аккаунты.
         """
-        UserModel = get_user_model()  # noqa: N806
-        return user.role in {UserModel.Role.ADMIN, UserModel.Role.MODERATOR}
+        user_model = get_user_model()
+        return user.role in {user_model.Role.ADMIN, user_model.Role.MODERATOR}

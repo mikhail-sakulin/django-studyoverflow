@@ -1,4 +1,6 @@
-"""HTMX-миксины."""
+"""
+HTMX-миксины.
+"""
 
 import json
 import logging

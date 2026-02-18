@@ -114,5 +114,5 @@ class NotificationAdmin(admin.ModelAdmin):
 
     def _can_do_actions(self, user: User):
         """Проверяет наличие прав администратора или модератора для выполнения действий."""
-        UserModel = get_user_model()  # noqa: N806
-        return user.role in {UserModel.Role.ADMIN, UserModel.Role.MODERATOR}
+        user_model = get_user_model()
+        return user.role in {user_model.Role.ADMIN, user_model.Role.MODERATOR}

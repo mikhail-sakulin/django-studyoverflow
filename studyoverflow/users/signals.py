@@ -9,12 +9,12 @@ from users.services.infrastructure import get_user_avatar_paths_list, remove_use
 from users.tasks import delete_files_from_storage_task
 
 
-User = get_user_model()
+UserModel = get_user_model()
 
 logger = logging.getLogger(__name__)
 
 
-@receiver(post_delete, sender=User)
+@receiver(post_delete, sender=UserModel)
 def delete_user_avatars_after_user_deleted(sender, instance, **kwargs):
     """
     Сигнал, срабатывающий после удаления пользователя.
@@ -106,7 +106,7 @@ def remove_user_offline_when_logged_out(sender, request, user, **kwargs):
     remove_user_offline(user.id)
 
 
-@receiver(post_delete, sender=User)
+@receiver(post_delete, sender=UserModel)
 def log_user_deletion(sender, instance, **kwargs):
     """
     Сигнал, срабатывающий после удаления пользователя.

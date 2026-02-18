@@ -1,4 +1,6 @@
-"""Миксины для оптимизации выборок, аннотирования и фильтрации данных."""
+"""
+Миксины для оптимизации выборок, аннотирования и фильтрации данных.
+"""
 
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, Exists, OuterRef, Q

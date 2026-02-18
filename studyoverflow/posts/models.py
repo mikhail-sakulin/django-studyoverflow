@@ -1,7 +1,6 @@
 from typing import Final
 from urllib.parse import urlencode
 
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -13,6 +12,8 @@ from notifications.models import Notification
 from posts.services.domain import generate_slug, normalize_tag_name, render_markdown_safe
 from taggit.managers import TaggableManager
 from taggit.models import GenericTaggedItemBase, TagBase
+
+from studyoverflow import settings
 
 
 class LowercaseTag(TagBase):
@@ -99,7 +100,10 @@ class Post(models.Model):
     MAX_CONTENT_LENGTH: Final = 15000  # максимальная длина содержимого поста
 
     author = models.ForeignKey(
-        get_user_model(), on_delete=models.CASCADE, related_name="posts", verbose_name="Автор"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="posts",
+        verbose_name="Автор",
     )
     title = models.CharField(max_length=MAX_TITLE_SLUG_LENGTH_POST, verbose_name="Заголовок")
     slug = models.SlugField(max_length=MAX_TITLE_SLUG_LENGTH_POST, verbose_name="Slug")
@@ -220,7 +224,10 @@ class Comment(models.Model):
         Post, on_delete=models.CASCADE, related_name="comments", verbose_name="Пост"
     )
     author = models.ForeignKey(
-        get_user_model(), on_delete=models.CASCADE, related_name="comments", verbose_name="Автор"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="comments",
+        verbose_name="Автор",
     )
     parent_comment = models.ForeignKey(
         "self",
@@ -388,7 +395,7 @@ class Like(models.Model):
     """
 
     user = models.ForeignKey(
-        get_user_model(),
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="likes",
         verbose_name="Пользователь",

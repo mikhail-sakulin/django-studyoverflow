@@ -19,8 +19,6 @@ from posts.models import Comment, Like, Post
 if TYPE_CHECKING:
     from users.models import User as UserType
 
-UserModel = get_user_model()
-
 
 def handle_send_channel_notify_event(notification):
     """
@@ -188,13 +186,15 @@ def handle_notification_user_created(user: "UserType"):
     """
     message = "Вы успешно зарегистрировались!"
 
+    user_model = get_user_model()
+
     transaction.on_commit(
         lambda: create_notification.delay(
             user_id=user.pk,
             actor_id=user.pk,
             message=message,
             notification_type=NotificationType.REGISTER,
-            content_type_id=ContentType.objects.get_for_model(UserModel).id,
+            content_type_id=ContentType.objects.get_for_model(user_model).id,
             object_id=user.pk,
         )
     )

@@ -1,10 +1,8 @@
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
-
-User = get_user_model()
+from studyoverflow import settings
 
 
 class NotificationType(models.TextChoices):
@@ -37,14 +35,14 @@ class Notification(models.Model):
     """
 
     user = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="notifications",
         verbose_name="Пользователь",
         help_text="Пользователь, которому адресовано уведомление",
     )
     actor = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="actor_notifications",
         verbose_name="Инициатор",

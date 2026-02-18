@@ -73,13 +73,13 @@ def can_moderate(actor: "User", target: "User") -> bool:
 
     Бросает PermissionDenied, если модерировать нельзя.
     """
-    UserModel = get_user_model()  # noqa: N806
+    user_model = get_user_model()
 
     role_priority = {
-        UserModel.Role.ADMIN: 3,
-        UserModel.Role.MODERATOR: 2,
-        UserModel.Role.STAFF_VIEWER: -1,
-        UserModel.Role.USER: -1,
+        user_model.Role.ADMIN: 3,
+        user_model.Role.MODERATOR: 2,
+        user_model.Role.STAFF_VIEWER: -1,
+        user_model.Role.USER: -1,
     }
 
     if actor == target:

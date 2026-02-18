@@ -24,7 +24,7 @@ from posts.services.infrastructure import (
     LikeAnnotationsMixin,
     LoginRequiredHTMXMixin,
     PostAnnotateQuerysetMixin,
-    PostAuthorFormMixin,
+    PostAuthorMixin,
     PostFilterSortMixin,
     SingleObjectCacheMixin,
 )
@@ -87,7 +87,7 @@ class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMix
         return context
 
 
-class PostCreateView(PostAuthorFormMixin, LoginRequiredHTMXMixin, SuccessMessageMixin, CreateView):
+class PostCreateView(PostAuthorMixin, LoginRequiredHTMXMixin, SuccessMessageMixin, CreateView):
     """
     Страница создания нового поста.
 

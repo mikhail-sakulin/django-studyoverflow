@@ -13,6 +13,9 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy
 
 
+UserModel = get_user_model()
+
+
 class BootstrapFormMixin:
     """
     Миксин для добавления Bootstrap-оформления полям формы.
@@ -64,7 +67,7 @@ class UserRegisterForm(BootstrapFormMixin, UserCreationForm):
     """
 
     class Meta:
-        model = get_user_model()
+        model = UserModel
         fields = ["username", "first_name", "last_name", "email", "password1", "password2"]
 
     def __init__(self, *args, **kwargs):
@@ -107,7 +110,7 @@ class UserLoginForm(AuthenticationForm):
     }
 
     class Meta:
-        model = get_user_model()
+        model = UserModel
         fields = ["username", "password"]
 
     def confirm_login_allowed(self, user):
@@ -148,7 +151,7 @@ class UserProfileUpdateForm(BootstrapFormMixin, forms.ModelForm):
     """
 
     class Meta:
-        model = get_user_model()
+        model = UserModel
         fields = ["avatar", "username", "email", "date_birth", "bio", "first_name", "last_name"]
         widgets = {
             "avatar": CustomClearableFileInput(),

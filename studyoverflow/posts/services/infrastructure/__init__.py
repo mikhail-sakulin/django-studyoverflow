@@ -1,7 +1,7 @@
 from .common_mixins import (
     CommentGetMethodMixin,
     ContextTagMixin,
-    PostAuthorFormMixin,
+    PostAuthorMixin,
     SingleObjectCacheMixin,
 )
 from .htmx_mixins import (
@@ -23,7 +23,7 @@ __all__ = [
     "CommentGetMethodMixin",
     "SingleObjectCacheMixin",
     "ContextTagMixin",
-    "PostAuthorFormMixin",
+    "PostAuthorMixin",
     # htmx_mixins
     "HTMXMessageMixin",
     "LoginRequiredHTMXMixin",

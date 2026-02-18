@@ -39,6 +39,8 @@ from users.services.infrastructure import (
 )
 
 
+UserModel = get_user_model()
+
 logger = logging.getLogger(__name__)
 
 
@@ -49,7 +51,7 @@ class UsersListView(UserHTMXPaginationMixin, ListView):
     Использует кеширование первой страницы. Список сортируется по репутации и имени пользователя.
     """
 
-    model = get_user_model()
+    model = UserModel
     template_name = "users/user_list.html"
     context_object_name = "users"
     extra_context = {"section_of_menu_selected": "users:list"}
@@ -97,7 +99,7 @@ class UsersListHTMXView(UserHTMXPaginationMixin, UserSortMixin, UserOnlineFilter
     без полной перезагрузки страницы.
     """
 
-    model = get_user_model()
+    model = UserModel
     template_name = "users/_user_grid.html"
     context_object_name = "users"
 
@@ -195,7 +197,7 @@ class AuthorProfileView(DetailView):
     редирект на страницу личного профиля.
     """
 
-    model = get_user_model()
+    model = UserModel
     template_name = "users/profile_author.html"
     context_object_name = "author"
 
@@ -206,7 +208,7 @@ class AuthorProfileView(DetailView):
         author = cache.get(cache_key)
 
         if not author:
-            author = get_object_or_404(get_user_model(), username=username)
+            author = get_object_or_404(UserModel, username=username)
             # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
             cache.set(cache_key, author, timeout=2)
 
@@ -227,7 +229,7 @@ class UserProfileUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView)
     Страница редактирования профиля текущего пользователя.
     """
 
-    model = get_user_model()
+    model = UserModel
     form_class = UserProfileUpdateForm
     template_name = "users/profile_current_user.html"
     success_url = reverse_lazy("users:my_profile")
@@ -244,7 +246,7 @@ def avatar_preview(request, username):
 
     Используется для отображения аватара в модальном окне.
     """
-    author = get_object_or_404(get_user_model(), username=username)
+    author = get_object_or_404(UserModel, username=username)
     return render(request, "users/_avatar_only_for_modal.html", {"author": author})
 
 
@@ -255,7 +257,7 @@ class UserDeleteView(LoginRequiredMixin, DeleteView):
     После удаления выполняется logout и редирект на главную страницу.
     """
 
-    model = get_user_model()
+    model = UserModel
     success_url = reverse_lazy("home")
 
     def get_object(self, queryset=None):
@@ -361,8 +363,6 @@ def block_user(request, user_id):
 
     Проверяет права модератора (кто блокирует) и возможность модерации целевого пользователю.
     """
-
-    UserModel = get_user_model()  # noqa: N806
     user = get_object_or_404(UserModel, pk=user_id)
 
     # Проверка возможности заблокировать целевого пользователя
@@ -403,8 +403,6 @@ def unblock_user(request, user_id):
     Проверяет права модератора (кто разблокирует) и возможность
     снятия блокировки целевого пользователю.
     """
-
-    UserModel = get_user_model()  # noqa: N806
     user = get_object_or_404(UserModel, pk=user_id)
 
     # Проверка возможности разблокировать целевого пользователя

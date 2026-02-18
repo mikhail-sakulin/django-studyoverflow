@@ -22,6 +22,8 @@ from users.services.infrastructure import (
 from studyoverflow.celery import app
 
 
+UserModel = get_user_model()
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,11 +37,9 @@ def generate_and_save_avatars_small(user_pk):
 
     Используется после изменения аватара или регистрации пользователя.
     """
-    User = get_user_model()  # noqa: N806
-
     try:
-        user = User.objects.get(pk=user_pk)
-    except User.DoesNotExist:
+        user = UserModel.objects.get(pk=user_pk)
+    except UserModel.DoesNotExist:
         logger.warning(
             f"Пользователь с pk={user_pk} не найден, avatar_small не будет сгенерирован.",
             extra={
@@ -72,11 +72,9 @@ def delete_old_avatars_from_s3_storage(user_pk, avatar_names_for_delete: Optiona
     Если список не передан, автоматически определяет устаревшие файлы,
     сравнивая текущее состояние модели пользователя с содержимым в хранилище.
     """
-    User = get_user_model()  # noqa: N806
-
     try:
-        user = User.objects.get(pk=user_pk)
-    except User.DoesNotExist:
+        user = UserModel.objects.get(pk=user_pk)
+    except UserModel.DoesNotExist:
         logger.warning(
             f"Пользователь с pk={user_pk} не найден, avatar_small не будет сгенерирован.",
             extra={
@@ -121,18 +119,16 @@ def sync_online_users_to_db():
 
     Получает список онлайн-пользователей из Redis и обновляет поле `last_seen` в БД.
     """
-    User = get_user_model()  # noqa: N806
-
     user_ids = get_cached_online_user_ids()
 
-    users = list(User.objects.filter(pk__in=user_ids))
+    users = list(UserModel.objects.filter(pk__in=user_ids))
 
     now = timezone.now()
 
     for user in users:
         user.last_seen = now
 
-    User.objects.bulk_update(users, ["last_seen"])
+    UserModel.objects.bulk_update(users, ["last_seen"])
 
 
 @app.task
@@ -148,15 +144,13 @@ def sync_user_activity_counters(batch_size: int = 1000):
     # ленивый импорт
     from posts.models import Comment, Post
 
-    User = get_user_model()  # noqa: N806
-
     posts_map = get_counts_map(Post, "author_id")
     comments_map = get_counts_map(Comment, "author_id")
     reputation_map = get_reputation_map(Post, Comment)
 
     users_to_update = []
 
-    users_queryset = User.objects.only("id", "posts_count", "comments_count", "reputation")
+    users_queryset = UserModel.objects.only("id", "posts_count", "comments_count", "reputation")
 
     # Обновление батчами для оптимизации нагрузки на БД.
     for user in users_queryset.iterator(chunk_size=batch_size):
@@ -176,13 +170,15 @@ def sync_user_activity_counters(batch_size: int = 1000):
             users_to_update.append(user)
 
         if len(users_to_update) >= batch_size:
-            User.objects.bulk_update(
+            UserModel.objects.bulk_update(
                 users_to_update, ["posts_count", "comments_count", "reputation"]
             )
             users_to_update.clear()
 
     if users_to_update:
-        User.objects.bulk_update(users_to_update, ["posts_count", "comments_count", "reputation"])
+        UserModel.objects.bulk_update(
+            users_to_update, ["posts_count", "comments_count", "reputation"]
+        )
 
 
 @app.task
@@ -197,11 +193,9 @@ def download_and_set_avatar(user_id: int, avatar_url: str):
     - валидацию;
     - сохранение файла в хранилище.
     """
-    User = get_user_model()  # noqa: N806
-
     try:
-        user = User.objects.get(pk=user_id)
-    except User.DoesNotExist:
+        user = UserModel.objects.get(pk=user_id)
+    except UserModel.DoesNotExist:
         logger.warning(
             f"Пользователь с pk={user_id} не найден, avatar_small не будет сгенерирован.",
             extra={
@@ -260,7 +254,7 @@ def download_and_set_avatar(user_id: int, avatar_url: str):
                 "event_type": "download_and_set_avatar_unexpected_error",
             },
         )
-        return
+        raise
 
 
 @app.task
