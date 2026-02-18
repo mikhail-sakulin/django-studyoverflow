@@ -3,7 +3,7 @@
 """
 
 from django.test import TestCase
-from posts.services.domain import generate_slug
+from posts.services import generate_slug
 
 
 class GenerateSlugTestCase(TestCase):

@@ -9,7 +9,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils.text import Truncator
 from notifications.models import Notification
-from posts.services.domain import generate_slug, normalize_tag_name, render_markdown_safe
+from posts.services import generate_slug, normalize_tag_name, render_markdown_safe
 from taggit.managers import TaggableManager
 from taggit.models import GenericTaggedItemBase, TagBase
 

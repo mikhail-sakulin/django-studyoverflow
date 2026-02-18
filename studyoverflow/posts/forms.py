@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from posts.models import Comment, LowercaseTag, Post
-from posts.services.domain import normalize_tag_name
+from posts.services import normalize_tag_name
 from taggit.forms import TagWidget
 from users.services.infrastructure import CustomUsernameValidator
 

@@ -4,8 +4,7 @@
 
 from django import template
 from django.template.defaultfilters import stringfilter
-
-from ..services.domain import render_markdown_safe
+from posts.services import render_markdown_safe
 
 
 register = template.Library()

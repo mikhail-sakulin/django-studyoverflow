@@ -3,7 +3,7 @@
 """
 
 from django.test import TestCase
-from posts.services.utils import translit_rus_to_eng
+from posts.services import translit_rus_to_eng
 
 
 class TranslitTestCase(TestCase):
