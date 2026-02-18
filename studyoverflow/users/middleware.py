@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.shortcuts import redirect
-from users.services.infrastructure import set_user_online
+from users.services import set_user_online
 
 
 class OnlineStatusMiddleware:

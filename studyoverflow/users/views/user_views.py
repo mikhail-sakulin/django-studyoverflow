@@ -29,13 +29,16 @@ from users.forms import (
     UserRegisterForm,
     UserSetPasswordForm,
 )
-from users.services.infrastructure import (
+from users.services import (
+    can_moderate,
+    get_cached_online_user_ids,
+)
+
+from .mixins import (
     SocialUserPasswordChangeForbiddenMixin,
     UserHTMXPaginationMixin,
     UserOnlineFilterMixin,
     UserSortMixin,
-    can_moderate,
-    get_cached_online_user_ids,
 )
 
 

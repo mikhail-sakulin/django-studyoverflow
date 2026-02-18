@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.utils import timezone
-from users.services.infrastructure import (
+from users.services import (
     delete_old_avatar_names,
     generate_avatar_small,
     get_cached_online_user_ids,

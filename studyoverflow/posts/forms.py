@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from posts.models import Comment, LowercaseTag, Post
 from posts.services import normalize_tag_name
 from taggit.forms import TagWidget
-from users.services.infrastructure import CustomUsernameValidator
+from users.services import CustomUsernameValidator
 
 
 class PostCreateForm(forms.ModelForm):

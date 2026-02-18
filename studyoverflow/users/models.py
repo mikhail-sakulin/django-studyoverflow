@@ -7,7 +7,7 @@ from django.db.models.functions import Upper
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy
-from users.services.infrastructure import (
+from users.services import (
     AvatarFileValidator,
     CustomUsernameValidator,
     PersonalNameValidator,

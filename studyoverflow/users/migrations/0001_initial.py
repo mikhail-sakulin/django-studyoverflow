@@ -2,7 +2,7 @@
 
 import django.contrib.auth.models
 import django.contrib.auth.validators
-import users.services.infrastructure
+import users.services
 from django.db import migrations, models
 
 
@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 ('email', models.EmailField(blank=True, max_length=254, verbose_name='email address')),
                 ('is_staff', models.BooleanField(default=False, help_text='Designates whether the user can log into this admin site.', verbose_name='staff status')),
                 ('is_active', models.BooleanField(default=True, help_text='Designates whether this user should be treated as active. Unselect this instead of deleting accounts.', verbose_name='active')),
-                ('avatar', models.ImageField(blank=True, default='avatars/default_avatar.jpg', upload_to=users.services.infrastructure.avatar_upload_to, verbose_name='Аватар')),
+                ('avatar', models.ImageField(blank=True, default='avatars/default_avatar.jpg', upload_to=users.services.avatar_upload_to, verbose_name='Аватар')),
                 ('bio', models.TextField(blank=True, verbose_name='Информация о пользователе')),
                 ('reputation', models.IntegerField(blank=True, default=0, verbose_name='Репутация')),
                 ('date_birth', models.DateTimeField(blank=True, null=True, verbose_name='Дата рождения')),

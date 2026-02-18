@@ -1,12 +1,7 @@
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
-from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest
-
-
-if TYPE_CHECKING:
-    from users.models import User
 
 
 class IsAuthorOrModeratorMixin:
@@ -65,27 +60,3 @@ class SocialUserPasswordChangeForbiddenMixin:
             )
 
         return super().dispatch(request, *args, **kwargs)  # type: ignore[misc]
-
-
-def can_moderate(actor: "User", target: "User") -> bool:
-    """
-    Проверяет, может ли пользователь actor модерировать пользователя target.
-
-    Бросает PermissionDenied, если модерировать нельзя.
-    """
-    user_model = get_user_model()
-
-    role_priority = {
-        user_model.Role.ADMIN: 3,
-        user_model.Role.MODERATOR: 2,
-        user_model.Role.STAFF_VIEWER: -1,
-        user_model.Role.USER: -1,
-    }
-
-    if actor == target:
-        return False
-
-    if role_priority[actor.role] <= role_priority[target.role]:
-        return False
-
-    return True

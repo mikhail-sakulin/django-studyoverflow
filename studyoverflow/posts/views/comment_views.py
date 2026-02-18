@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 from posts.forms import CommentCreateForm, CommentUpdateForm
 from posts.models import Comment, Post
-from users.services.infrastructure import IsAuthorOrModeratorMixin
+from users.views.mixins import IsAuthorOrModeratorMixin
 
 from .mixins import (
     CommentGetMethodMixin,

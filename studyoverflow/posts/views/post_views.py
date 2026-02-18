@@ -8,7 +8,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from posts.forms import CommentCreateForm, PostCreateForm, PostFilterForm
 from posts.models import Post
-from users.services.infrastructure import IsAuthorOrModeratorMixin
+from users.views.mixins import IsAuthorOrModeratorMixin
 
 from .mixins import (
     ContextTagMixin,

@@ -1,23 +1,11 @@
 """
-Модуль содержит бизнес-логику приложения users.
+Утилиты для обработки изображений приложения users.
 """
 
-import os
-import uuid
 from io import BytesIO
 
 from PIL import ImageSequence
 from PIL.Image import Image as PILImage
-
-
-def generate_new_filename_with_uuid(filename: str) -> str:
-    """
-    Генерирует уникальное имя файла на основе UUID, сохраняет исходное расширение, если оно есть.
-    """
-    root, ext = os.path.splitext(filename)
-    ext = ext.lower()
-    new_filename = f"{uuid.uuid4().hex}{ext}"
-    return new_filename
 
 
 def generate_image(img: PILImage, ext: str, size: tuple[float, float]) -> BytesIO:

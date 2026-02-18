@@ -1,7 +1,7 @@
 from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 from posts.models import Comment, Like, Post
-from users.services.infrastructure import update_user_counter_field
+from users.services import update_user_counter_field
 
 
 @receiver(post_save, sender=Post)

@@ -5,7 +5,7 @@ WebSocket-консьюмеры.
 import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
-from users.services.infrastructure import set_user_online
+from users.services import set_user_online
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):

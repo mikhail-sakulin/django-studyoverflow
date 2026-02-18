@@ -1,5 +1,6 @@
 import logging
 import os
+import uuid
 from io import BytesIO
 from typing import TYPE_CHECKING, Type
 
@@ -8,7 +9,8 @@ from django.core.files import File
 from django.core.files.base import ContentFile
 from django.core.files.storage import storages
 from PIL import Image
-from users.services.domain import generate_image, generate_new_filename_with_uuid
+
+from .image_processing import generate_image
 
 
 if TYPE_CHECKING:
@@ -19,6 +21,16 @@ logger = logging.getLogger(__name__)
 
 
 storage_default = storages["default"]
+
+
+def generate_new_filename_with_uuid(filename: str) -> str:
+    """
+    Генерирует уникальное имя файла на основе UUID, сохраняет исходное расширение, если оно есть.
+    """
+    root, ext = os.path.splitext(filename)
+    ext = ext.lower()
+    new_filename = f"{uuid.uuid4().hex}{ext}"
+    return new_filename
 
 
 def avatar_upload_to(instance: "User", filename: str) -> str:

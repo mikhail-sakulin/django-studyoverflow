@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import redirect
 from django.utils import timezone
-from users.services.infrastructure import SOCIAL_HANDLERS
+from users.services import SOCIAL_HANDLERS
 from users.tasks import download_and_set_avatar
 
 
