@@ -1,5 +1,6 @@
 import json
 import logging
+from abc import ABC, abstractmethod
 from typing import Type
 
 from django.contrib import messages
@@ -532,15 +533,23 @@ class CommentDeleteView(
 # ----------------------------------------
 
 
-class ToggleLikeBaseView(LoginRequiredHTMXMixin, HTMXMessageMixin, View):
+class ToggleLikeBaseView(LoginRequiredHTMXMixin, HTMXMessageMixin, View, ABC):
     """
-    Базовое представление для добавления/удаления лайков.
+    Абстрактное базовое представление для добавления/удаления лайков.
 
     Работает с HTMX и логирует действия с лайками.
     """
 
     model: Type[models.Model]
     pk_url_kwarg: str = "pk"
+
+    @abstractmethod
+    def _get_toggle_like_url(self, liked_object: models.Model) -> str:
+        """
+        Должен возвращать URL для кнопки лайка.
+
+        Нужно переопределять в дочерних классах."""
+        pass
 
     def post(self, request, *args, **kwargs):
         """
@@ -593,10 +602,6 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, HTMXMessageMixin, View):
         return self.htmx_message(
             message_text=message_text, message_type=message_type, response=response
         )
-
-    def _get_toggle_like_url(self, liked_object):
-        """Возвращает URL для кнопки лайка. Нужно переопределять в дочерних классах."""
-        return reverse_lazy("home")
 
 
 class ToggleLikePostView(ToggleLikeBaseView):
