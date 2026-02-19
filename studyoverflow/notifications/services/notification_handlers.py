@@ -5,22 +5,24 @@
 асинхронные задачи (Celery) для создания уведомлений для различных событий.
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.utils.text import Truncator
-from notifications.models import NotificationType
+from notifications.models import Notification, NotificationType
 from notifications.tasks import create_notification, send_channel_notify_event
 from posts.models import Comment, Like, Post
 
 
 if TYPE_CHECKING:
-    from users.models import User as UserType
+    from users.models import User
 
 
-def handle_send_channel_notify_event(notification):
+def handle_send_channel_notify_event(notification: Notification) -> None:
     """
     Обработчик для отправки обновления счетчика непрочитанных уведомлений через Channels WebSocket.
 
@@ -34,7 +36,7 @@ def handle_send_channel_notify_event(notification):
     )
 
 
-def handle_notification_post_like(like: Like):
+def handle_notification_post_like(like: Like) -> None:
     """
     Обработчик для уведомления о лайке поста.
 
@@ -57,13 +59,13 @@ def handle_notification_post_like(like: Like):
             actor_id=like.user_id,
             message=message,
             notification_type=NotificationType.LIKE_POST,
-            content_type_id=ContentType.objects.get_for_model(Like).id,
-            object_id=like.id,
+            content_type_id=ContentType.objects.get_for_model(Like).pk,
+            object_id=like.pk,
         )
     )
 
 
-def handle_notification_comment_like(like: Like):
+def handle_notification_comment_like(like: Like) -> None:
     """
     Обработчик для уведомления о лайке комментария через Channels WebSocket.
 
@@ -86,13 +88,13 @@ def handle_notification_comment_like(like: Like):
             actor_id=like.user_id,
             message=message,
             notification_type=NotificationType.LIKE_COMMENT,
-            content_type_id=ContentType.objects.get_for_model(Like).id,
-            object_id=like.id,
+            content_type_id=ContentType.objects.get_for_model(Like).pk,
+            object_id=like.pk,
         )
     )
 
 
-def handle_notification_post_created(post: Post):
+def handle_notification_post_created(post: Post) -> None:
     """
     Обработчик для уведомления о создании нового поста.
 
@@ -107,13 +109,13 @@ def handle_notification_post_created(post: Post):
             actor_id=post.author_id,
             message=message,
             notification_type=NotificationType.POST,
-            content_type_id=ContentType.objects.get_for_model(Post).id,
-            object_id=post.id,
+            content_type_id=ContentType.objects.get_for_model(Post).pk,
+            object_id=post.pk,
         )
     )
 
 
-def handle_notification_comment_on_post_created(comment: Comment):
+def handle_notification_comment_on_post_created(comment: Comment) -> None:
     """
     Обработчик для уведомления о новом комментарии к посту.
 
@@ -139,13 +141,13 @@ def handle_notification_comment_on_post_created(comment: Comment):
             actor_id=comment.author_id,
             message=message,
             notification_type=NotificationType.COMMENT,
-            content_type_id=ContentType.objects.get_for_model(Comment).id,
-            object_id=comment.id,
+            content_type_id=ContentType.objects.get_for_model(Comment).pk,
+            object_id=comment.pk,
         )
     )
 
 
-def handle_notification_reply_to_comment_created(comment: Comment):
+def handle_notification_reply_to_comment_created(comment: Comment) -> None:
     """
     Обработчик для уведомления о новом ответе на комментарий.
 
@@ -171,13 +173,13 @@ def handle_notification_reply_to_comment_created(comment: Comment):
             actor_id=comment.author_id,
             message=message,
             notification_type=NotificationType.REPLY,
-            content_type_id=ContentType.objects.get_for_model(Comment).id,
-            object_id=comment.id,
+            content_type_id=ContentType.objects.get_for_model(Comment).pk,
+            object_id=comment.pk,
         )
     )
 
 
-def handle_notification_user_created(user: "UserType"):
+def handle_notification_user_created(user: User) -> None:
     """
     Обработчик для уведомления о регистрации пользователя.
 
@@ -194,7 +196,7 @@ def handle_notification_user_created(user: "UserType"):
             actor_id=user.pk,
             message=message,
             notification_type=NotificationType.REGISTER,
-            content_type_id=ContentType.objects.get_for_model(user_model).id,
+            content_type_id=ContentType.objects.get_for_model(user_model).pk,
             object_id=user.pk,
         )
     )
