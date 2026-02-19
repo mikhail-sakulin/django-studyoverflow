@@ -22,10 +22,10 @@ class IsAuthorOrModeratorMixin:
         if not user.is_authenticated:
             return False
 
-        if hasattr(obj, "author") and obj.author_id == user.id:
+        if hasattr(obj, "author") and obj.author_id == user.pk:
             return True
 
-        if hasattr(obj, "user") and obj.user_id == user.id:
+        if hasattr(obj, "user") and obj.user_id == user.pk:
             return True
 
         if self.permission_required and user.has_perm(self.permission_required):

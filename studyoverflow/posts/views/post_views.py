@@ -93,10 +93,10 @@ class PostCreateView(PostAuthorMixin, LoginRequiredHTMXMixin, SuccessMessageMixi
         response = super().form_valid(form)
         post = self.object
         logger.info(
-            f"Пост создан: {post.title} (id: {post.id}).",
+            f"Пост создан: {post.title} (id: {post.pk}).",
             extra={
-                "post_id": post.id,
-                "author_id": self.request.user.id,
+                "post_id": post.pk,
+                "author_id": self.request.user.pk,
                 "event_type": "post_create",
             },
         )
@@ -115,7 +115,7 @@ class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
     def get_object(self, queryset=None):
         """Возвращает объект поста с кешированием."""
         post_id = self.kwargs.get(self.pk_url_kwarg)
-        user_id = self.request.user.id if self.request.user.is_authenticated else "anon"
+        user_id = self.request.user.pk if self.request.user.is_authenticated else "anon"
         cache_key = f"post_detail_{post_id}_u{user_id}"
 
         obj = cache.get(cache_key)
@@ -166,10 +166,10 @@ class PostUpdateView(
         response = super().form_valid(form)
         post = self.object
         logger.info(
-            f"Пост отредактирован: {post.title} (id: {post.id}).",
+            f"Пост отредактирован: {post.title} (id: {post.pk}).",
             extra={
-                "post_id": post.id,
-                "editor_id": self.request.user.id,
+                "post_id": post.pk,
+                "editor_id": self.request.user.pk,
                 "event_type": "post_update",
             },
         )
@@ -192,10 +192,10 @@ class PostDeleteView(
     def form_valid(self, form):
         post = self.get_object()
         logger.info(
-            f"Пост удален: {post.title} (id: {post.id}).",
+            f"Пост удален: {post.title} (id: {post.pk}).",
             extra={
-                "post_id": post.id,
-                "deleter_id": self.request.user.id,
+                "post_id": post.pk,
+                "deleter_id": self.request.user.pk,
                 "event_type": "post_delete",
             },
         )

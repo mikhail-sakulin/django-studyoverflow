@@ -1,7 +1,14 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 
-def handle_github(user, data):
+if TYPE_CHECKING:
+    from users.models import User
+
+
+def handle_github(user: User, data: dict[str, Any]) -> str | None:
     """
     Обрабатывает данные пользователя, полученные от GitHub OAuth.
 
@@ -23,7 +30,7 @@ def handle_github(user, data):
     return data.get("avatar_url")
 
 
-def handle_google(user, data):
+def handle_google(user: User, data: dict[str, Any]) -> str | None:
     """
     Обрабатывает данные пользователя, полученные от Google OAuth.
 
@@ -41,7 +48,7 @@ def handle_google(user, data):
     return avatar_url.replace("s96-c", "s1024-c")
 
 
-def handle_yandex(user, data):
+def handle_yandex(user: User, data: dict[str, Any]) -> str | None:
     """
     Обрабатывает данные пользователя, полученные от Yandex OAuth.
 
@@ -58,7 +65,7 @@ def handle_yandex(user, data):
     return None
 
 
-def handle_vk(user, data):
+def handle_vk(user: User, data: dict[str, Any]) -> str | None:
     """
     Обрабатывает данные пользователя, полученные от VK OAuth.
 
@@ -77,7 +84,7 @@ def handle_vk(user, data):
     query = parse_qs(parsed.query)
     query["cs"] = ["1080x1080"]
 
-    return urlunparse(parsed._replace(query=urlencode(query, doseq=True)))
+    return str(urlunparse(parsed._replace(query=urlencode(query, doseq=True))))
 
 
 SOCIAL_HANDLERS = {

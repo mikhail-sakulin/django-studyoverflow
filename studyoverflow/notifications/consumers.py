@@ -20,12 +20,12 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         if not self.scope["user"].is_authenticated:
             return await self.close()
 
-        self.group_name = f"user_{self.scope['user'].id}"
+        self.group_name = f"user_{self.scope['user'].pk}"
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
-        set_user_online(self.scope["user"].id)
+        set_user_online(self.scope["user"].pk)
 
     async def disconnect(self, code):
         """
@@ -48,7 +48,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             data = json.loads(text_data)
 
             if data.get("type") == "heartbeat":
-                set_user_online(self.scope["user"].id)
+                set_user_online(self.scope["user"].pk)
 
     async def notify(self, event):
         """

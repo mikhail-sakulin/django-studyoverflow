@@ -28,7 +28,7 @@ def get_user_key_for_redis(user_id: int) -> str:
     return f"{REDIS_KEY_PREFIX}:{user_id}"
 
 
-def set_user_online(user_id: int):
+def set_user_online(user_id: int) -> None:
     """
     Помечает пользователя как онлайн.
 
@@ -56,7 +56,7 @@ def is_user_online(user_id: int) -> bool:
     return redis_conn.exists(user_key) == 1
 
 
-def remove_user_offline(user_id: int):
+def remove_user_offline(user_id: int) -> None:
     """
     Удаляет пользователя из онлайн.
     """
@@ -68,7 +68,7 @@ def remove_user_offline(user_id: int):
         pipe.execute()
 
 
-def get_online_user_ids() -> list:
+def get_online_user_ids() -> list[int]:
     """
     Возвращает список ID всех пользователей онлайн и чистит устаревшие записи.
 
@@ -106,12 +106,12 @@ def get_online_user_ids() -> list:
     return active_ids
 
 
-def get_cached_online_user_ids() -> list:
+def get_cached_online_user_ids() -> list[int]:
     """
     Возвращает список ID всех пользователей онлайн из кеша.
     """
     cache_key = "cached_online_users_set"
-    data = cache.get(cache_key)
+    data: list[int] | None = cache.get(cache_key)
 
     if data is None:
         data = get_online_user_ids()

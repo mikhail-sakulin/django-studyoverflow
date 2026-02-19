@@ -65,11 +65,11 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, HTMXMessageMixin, View, ABC):
         event_type = "like_add" if created else "like_remove"
 
         logger.info(
-            f"Лайк {event_type} для {self.model.__name__} (id: {liked_object.id}).",
+            f"Лайк {event_type} для {self.model.__name__} (id: {liked_object.pk}).",
             extra={
                 "object_type": self.model.__name__.lower(),
-                "object_id": liked_object.id,
-                "user_id": request.user.id,
+                "object_id": liked_object.pk,
+                "user_id": request.user.pk,
                 "event_type": event_type,
             },
         )

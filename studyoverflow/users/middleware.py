@@ -29,8 +29,8 @@ class OnlineStatusMiddleware:
         """
         response = self.get_response(request)
 
-        if request.user.is_authenticated and request.user.id:
-            set_user_online(request.user.id)
+        if request.user.is_authenticated and request.user.pk:
+            set_user_online(request.user.pk)
 
         return response
 

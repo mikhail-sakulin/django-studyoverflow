@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import uuid
@@ -33,7 +35,7 @@ def generate_new_filename_with_uuid(filename: str) -> str:
     return new_filename
 
 
-def avatar_upload_to(instance: "User", filename: str) -> str:
+def avatar_upload_to(instance: User, filename: str) -> str:
     """
     DEPRECATED - используется в старых файлах миграций схемы БД.
 
@@ -45,7 +47,7 @@ def avatar_upload_to(instance: "User", filename: str) -> str:
     return f"avatars/{generate_new_filename_with_uuid(filename)}"
 
 
-def user_avatar_upload_path(instance, filename):
+def user_avatar_upload_path(instance: User, filename: str) -> str:
     """
     Генерирует путь загрузки основного аватара пользователя в хранилище.
 
@@ -63,7 +65,7 @@ def user_avatar_upload_path(instance, filename):
     return f"avatars/tmp/{new_filename}"
 
 
-def generate_avatar_small(user: "User", size_type: int) -> bool | str:
+def generate_avatar_small(user: User, size_type: int) -> bool | str:
     """
     Генерирует уменьшенную версию avatar пользователя.
 
@@ -128,7 +130,7 @@ def generate_avatar_small(user: "User", size_type: int) -> bool | str:
     return storage_path_to_avatar_small
 
 
-def get_storage_path_to_avatar_with_ext(user: "User") -> tuple[str, str]:
+def get_storage_path_to_avatar_with_ext(user: User) -> tuple[str, str]:
     """
     Возвращает кортеж (путь без расширения, расширение файла) для avatar пользователя.
     """
@@ -145,7 +147,7 @@ def save_img_in_storage(buffer: BytesIO, storage_path_to_avatar_small: str) -> N
     storage_default.save(storage_path_to_avatar_small, ContentFile(buffer.read()))
 
 
-def get_user_avatar_paths_list(user) -> list[str]:
+def get_user_avatar_paths_list(user: User) -> list[str]:
     """
     Возвращает список путей всех файлов аватаров пользователя, исключая стандартные.
     """
@@ -171,7 +173,7 @@ def get_user_avatar_paths_list(user) -> list[str]:
     return paths
 
 
-def get_old_avatar_names(user: "User") -> tuple[str | None, list[str]]:
+def get_old_avatar_names(user: User) -> tuple[str | None, list[str]]:
     """
     Возвращает путь avatar из БД и список путей файлов аватаров, которые нужно удалить
     при обновлении пользователя.
@@ -210,7 +212,7 @@ def delete_old_avatar_names(old_avatar_names: list[str]) -> None:
                 pass
 
 
-def generate_default_avatar_in_different_sizes(user_model: Type["User"]) -> None:
+def generate_default_avatar_in_different_sizes(user_model: Type[User]) -> None:
     """
     Генерирует уменьшенные версии стандартного default_avatar
     для всех размеров, указанных в AVATAR_SMALL_SIZES.
@@ -230,7 +232,7 @@ def generate_default_avatar_in_different_sizes(user_model: Type["User"]) -> None
 
 
 def generate_default_avatar_small(
-    user_model: Type["User"],
+    user_model: Type[User],
     default_avatar: File,
     storage_path_to_avatar_small: str,
     size_type: int,

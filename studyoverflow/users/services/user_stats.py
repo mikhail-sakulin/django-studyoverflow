@@ -1,9 +1,12 @@
+from typing import Any, Type
+
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.db.models import Count, F
 from django.db.models.functions import Greatest
 
 
-def update_user_counter_field(author_id: int, counter_field: str, value_change: int):
+def update_user_counter_field(author_id: int, counter_field: str, value_change: int) -> None:
     """
     Обновляет числовое поле счетчика у пользователя (например, posts_count или comments_count).
 
@@ -22,7 +25,7 @@ def update_user_counter_field(author_id: int, counter_field: str, value_change: 
     )
 
 
-def get_counts_map(model, group_field):
+def get_counts_map(model: Type[models.Model], group_field: str) -> dict[Any, int]:
     """
     Функция для подсчета объектов (posts/comments), сгруппированных по указанному полю (author_id).
 
@@ -30,12 +33,14 @@ def get_counts_map(model, group_field):
     """
     return {
         row[group_field]: row["count"]
-        for row in model.objects.values(group_field).annotate(count=Count("id"))
+        for row in model.objects.values(group_field).annotate(count=Count("pk"))
         if row[group_field] is not None
     }
 
 
-def get_reputation_map(Post, Comment):  # noqa: N803
+def get_reputation_map(
+    Post: Type[models.Model], Comment: Type[models.Model]  # noqa: N803
+) -> dict[Any, int]:
     """
     Создает словарь репутации пользователей на основе количества лайков их постов и комментариев.
 

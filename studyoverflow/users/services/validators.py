@@ -1,5 +1,6 @@
 import filetype
 from django.core.exceptions import ValidationError
+from django.core.files import File
 from django.core.validators import RegexValidator
 from django.utils.deconstruct import deconstructible
 from django.utils.translation import gettext_lazy
@@ -37,7 +38,7 @@ class PersonalNameValidator:
     message = gettext_lazy("Имя и фамилия должны состоять только из букв, дефис разрешен.")
     code = "invalid_name"
 
-    def __call__(self, value):
+    def __call__(self, value: str):
         # Пустое значение разрешено
         if not value:
             return
@@ -100,7 +101,7 @@ class AvatarFileValidator:
     MIN_ASPECT_RATION = 0.25
     MAX_ASPECT_RATION = 4
 
-    def __call__(self, file, *args, **kwargs):
+    def __call__(self, file: File, *args, **kwargs):
         # Проверка размера файла
         if file.size > self.MAX_SIZE:
             max_size_mb = self.MAX_SIZE / (1024 * 1024)

@@ -126,11 +126,11 @@ class CommentRootCreateView(
         context = self.get_context_data(form, form_valid=True)
 
         logger.info(
-            f"Создан комментарий (id: {self.object.id}) к посту (id: {form.post.id}).",
+            f"Создан комментарий (id: {self.object.pk}) к посту (id: {form.post.pk}).",
             extra={
-                "comment_id": self.object.id,
-                "post_id": form.post.id,
-                "author_id": self.request.user.id,
+                "comment_id": self.object.pk,
+                "post_id": form.post.pk,
+                "author_id": self.request.user.pk,
                 "event_type": "comment_create",
             },
         )
@@ -167,7 +167,7 @@ class CommentChildCreateView(CommentRootCreateView):
         reply_to = form.cleaned_data.get("reply_to")
 
         # Определяется commentId для события
-        comment_id = reply_to.id
+        comment_id = reply_to.pk
 
         # Передаются данные в формате JSON для HX-Trigger
         response["HX-Trigger"] = json.dumps(
@@ -191,7 +191,7 @@ class CommentChildCreateView(CommentRootCreateView):
             response["HX-Refresh"] = "true"
             return response
 
-        comment_id = reply_to.id
+        comment_id = reply_to.pk
 
         response["HX-Trigger"] = json.dumps({"commentChildFormError": {"commentId": comment_id}})
 
@@ -257,18 +257,18 @@ class CommentUpdateView(
         context = self.get_context_data(form)
 
         logger.info(
-            f"Комментарий обновлен (id: {self.object.id}) "
+            f"Комментарий обновлен (id: {self.object.pk}) "
             f"пользователем {self.request.user.username}.",
             extra={
-                "comment_id": self.object.id,
-                "post_id": self.object.post.id,
-                "user_id": self.request.user.id,
+                "comment_id": self.object.pk,
+                "post_id": self.object.post.pk,
+                "user_id": self.request.user.pk,
                 "event_type": "comment_update",
             },
         )
 
         response = render(self.request, self.template_name, context)
-        response["HX-Trigger"] = json.dumps({"commentUpdateSuccess": {"commentId": self.object.id}})
+        response["HX-Trigger"] = json.dumps({"commentUpdateSuccess": {"commentId": self.object.pk}})
 
         return self.htmx_message(
             message_text="Комментарий изменен.", message_type="success", response=response
@@ -278,7 +278,7 @@ class CommentUpdateView(
         context = self.get_context_data(form)
 
         response = render(self.request, self.template_name, context)
-        response["HX-Trigger"] = json.dumps({"commentUpdateError": {"commentId": self.object.id}})
+        response["HX-Trigger"] = json.dumps({"commentUpdateError": {"commentId": self.object.pk}})
         return response
 
 
@@ -304,8 +304,8 @@ class CommentDeleteView(
     permission_required = "posts.moderate_comment"
 
     def form_valid(self, form):
-        comment_id = self.object.id
-        post_id = self.object.post.id
+        comment_id = self.object.pk
+        post_id = self.object.post.pk
         self.object.delete()
 
         logger.info(
@@ -313,7 +313,7 @@ class CommentDeleteView(
             extra={
                 "comment_id": comment_id,
                 "post_id": post_id,
-                "user_id": self.request.user.id,
+                "user_id": self.request.user.pk,
                 "event_type": "comment_delete",
             },
         )

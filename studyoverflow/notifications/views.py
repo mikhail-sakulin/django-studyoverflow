@@ -80,7 +80,7 @@ class NotificationMarkAllReadView(View):
     def post(self, request, *args, **kwargs):
         Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
 
-        send_channel_notify_event.delay(user_id=request.user.id, update_list=False)
+        send_channel_notify_event.delay(user_id=request.user.pk, update_list=False)
 
         return HttpResponse()
 

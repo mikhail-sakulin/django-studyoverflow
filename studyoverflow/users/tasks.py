@@ -154,9 +154,9 @@ def sync_user_activity_counters(batch_size: int = 1000):
 
     # Обновление батчами для оптимизации нагрузки на БД.
     for user in users_queryset.iterator(chunk_size=batch_size):
-        new_posts_count = posts_map.get(user.id, 0)
-        new_comments_count = comments_map.get(user.id, 0)
-        new_reputation = reputation_map.get(user.id, 0)
+        new_posts_count = posts_map.get(user.pk, 0)
+        new_comments_count = comments_map.get(user.pk, 0)
+        new_reputation = reputation_map.get(user.pk, 0)
 
         if (
             user.posts_count != new_posts_count
@@ -247,7 +247,7 @@ def download_and_set_avatar(user_id: int, avatar_url: str):
         logger.error(
             f"Неожиданная ошибка при установке avatar пользователя {user.username}.",
             extra={
-                "user_id": user.id,
+                "user_id": user.pk,
                 "username": user.username,
                 "avatar_url": avatar_url,
                 "error": str(e),

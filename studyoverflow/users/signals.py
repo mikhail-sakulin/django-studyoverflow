@@ -41,7 +41,7 @@ def log_user_login(sender, request, user, **kwargs):
         f"Пользователь авторизовался: {user.username}.",
         extra={
             "username": user.username,
-            "user_id": user.id,
+            "user_id": user.pk,
             "email": user.email,
             "is_social": user.is_social,
             "event_type": "user_login",
@@ -68,7 +68,7 @@ def log_user_signup(sender, request, user, **kwargs):
         f"Новый пользователь зарегистрировался: {user.username}.",
         extra={
             "username": user.username,
-            "user_id": user.id,
+            "user_id": user.pk,
             "email": user.email,
             "is_social": user.is_social,
             "provider": provider,
@@ -88,7 +88,7 @@ def log_user_logout(sender, request, user, **kwargs):
         f"Пользователь вышел из системы: {user.username}.",
         extra={
             "username": user.username,
-            "user_id": user.id,
+            "user_id": user.pk,
             "email": user.email,
             "is_social": user.is_social,
             "event_type": "user_logout",
@@ -103,7 +103,7 @@ def remove_user_offline_when_logged_out(sender, request, user, **kwargs):
 
     Удаляет информацию о присутствии пользователя (online status) из Redis.
     """
-    remove_user_offline(user.id)
+    remove_user_offline(user.pk)
 
 
 @receiver(post_delete, sender=UserModel)
@@ -118,7 +118,7 @@ def log_user_deletion(sender, instance, **kwargs):
         f"Аккаунт удален: {user.username}.",
         extra={
             "username": user.username,
-            "user_id": user.id,
+            "user_id": user.pk,
             "email": user.email,
             "is_social": user.is_social,
             "event_type": "user_deletion",

@@ -343,7 +343,7 @@ class UserPasswordResetConfirmView(SuccessMessageMixin, PasswordResetConfirmView
             f"Пользователь {user.username} успешно восстановил пароль через email.",
             extra={
                 "username": user.username,
-                "user_id": user.id,
+                "user_id": user.pk,
                 "event_type": "user_password_reset_confirm_success",
             },
         )
@@ -427,8 +427,8 @@ def unblock_user(request, user_id):
     logger.info(
         f"Модератор {request.user.username} разблокировал пользователя {user.username}.",
         extra={
-            "moderator_id": request.user.id,
-            "target_user_id": user.id,
+            "moderator_id": request.user.pk,
+            "target_user_id": user.pk,
             "event_type": "user_unblocked",
         },
     )
