@@ -18,7 +18,7 @@ class HTMXMessageMixin:
     Миксин для формирования сообщения клиенту при HTMX запросе.
     """
 
-    def htmx_message(
+    def add_htmx_message_to_response(
         self,
         *,
         message_text: str,

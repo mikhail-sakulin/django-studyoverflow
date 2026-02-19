@@ -138,10 +138,11 @@ class CommentRootCreateView(
         response = render(self.request, self.template_name, context)
         response["HX-Trigger"] = json.dumps({"commentsUpdated": {}, "commentRootFormSuccess": {}})
 
-        # add htmx_message to response
-        return self.htmx_message(
+        response = self.add_htmx_message_to_response(
             message_text="Комментарий создан.", message_type="success", response=response
         )
+
+        return response
 
     def form_invalid(self, form):
         context = self.get_context_data(form, form_valid=False)
@@ -174,9 +175,11 @@ class CommentChildCreateView(CommentRootCreateView):
             {"commentsUpdated": {}, "commentChildFormSuccess": {"commentId": comment_id}}
         )
 
-        return self.htmx_message(
+        response = self.add_htmx_message_to_response(
             message_text="Комментарий создан.", message_type="success", response=response
         )
+
+        return response
 
     def form_invalid(self, form):
         response = super().form_invalid(form)
@@ -270,9 +273,11 @@ class CommentUpdateView(
         response = render(self.request, self.template_name, context)
         response["HX-Trigger"] = json.dumps({"commentUpdateSuccess": {"commentId": self.object.pk}})
 
-        return self.htmx_message(
+        response = self.add_htmx_message_to_response(
             message_text="Комментарий изменен.", message_type="success", response=response
         )
+
+        return response
 
     def form_invalid(self, form):
         context = self.get_context_data(form)
@@ -321,6 +326,8 @@ class CommentDeleteView(
         response = HttpResponse()
         response["HX-Trigger"] = json.dumps({"commentsUpdated": {}})
 
-        return self.htmx_message(
+        response = self.add_htmx_message_to_response(
             message_text="Комментарий удален.", message_type="info", response=response
         )
+
+        return response

@@ -83,9 +83,11 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, HTMXMessageMixin, View, ABC):
 
         response = render(request, "posts/likes/_like-button.html", context)
 
-        return self.htmx_message(
+        response = self.add_htmx_message_to_response(
             message_text=message_text, message_type=message_type, response=response
         )
+
+        return response
 
 
 class ToggleLikePostView(ToggleLikeBaseView):
