@@ -30,6 +30,7 @@ from .user_stats import (
 )
 from .validators import (
     AvatarFileValidator,
+    BirthDateValidator,
     CustomUsernameValidator,
     PersonalNameValidator,
 )
@@ -65,4 +66,5 @@ __all__ = [
     "CustomUsernameValidator",
     "PersonalNameValidator",
     "AvatarFileValidator",
+    "BirthDateValidator",
 ]

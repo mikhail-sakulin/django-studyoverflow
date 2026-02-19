@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy
 from users.services import (
     AvatarFileValidator,
+    BirthDateValidator,
     CustomUsernameValidator,
     PersonalNameValidator,
     generate_default_avatar_in_different_sizes,
@@ -100,6 +101,7 @@ class User(AbstractUser):
     username_validator = CustomUsernameValidator()
     first_name_last_name_validator = PersonalNameValidator()
     avatar_validator = AvatarFileValidator()
+    date_birth_validator = BirthDateValidator()
 
     # Поля модели
     username = models.CharField(
@@ -132,7 +134,9 @@ class User(AbstractUser):
         validators=[MaxLengthValidator(300)],
         verbose_name="Информация о пользователе",
     )
-    date_birth = models.DateField(blank=True, null=True, verbose_name="Дата рождения")
+    date_birth = models.DateField(
+        blank=True, null=True, validators=[date_birth_validator], verbose_name="Дата рождения"
+    )
 
     avatar = models.ImageField(
         upload_to=user_avatar_upload_path,

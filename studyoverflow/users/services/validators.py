@@ -1,10 +1,16 @@
+from datetime import date
+from typing import Final
+
 import filetype
 from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.core.validators import RegexValidator
+from django.utils import timezone
 from django.utils.deconstruct import deconstructible
 from django.utils.translation import gettext_lazy
 from PIL import Image
+
+from studyoverflow import settings
 
 
 @deconstructible
@@ -95,11 +101,11 @@ class AvatarFileValidator:
         "image/x-icon",
     )
 
-    MAX_SIZE = 10 * 1024 * 1024
-    MIN_HEIGHT = 100
-    MIN_WIDTH = 100
-    MIN_ASPECT_RATION = 0.25
-    MAX_ASPECT_RATION = 4
+    MAX_SIZE: Final = 10 * 1024 * 1024
+    MIN_HEIGHT: Final = 100
+    MIN_WIDTH: Final = 100
+    MIN_ASPECT_RATION: Final = 0.25
+    MAX_ASPECT_RATION: Final = 4
 
     def __call__(self, file: File, *args, **kwargs):
         # Проверка размера файла
@@ -150,4 +156,33 @@ class AvatarFileValidator:
                     f"{self.MIN_ASPECT_RATION}-{self.MAX_ASPECT_RATION}."
                 ),
                 code="invalid_file_aspect_ration",
+            )
+
+
+@deconstructible
+class BirthDateValidator:
+    """
+    Валидатор для проверки даты рождения пользователя.
+
+    Проверяет:
+    - дата рождения не в будущем;
+    - текущий возраст не превышает MAX_AGE лет.
+    """
+
+    MAX_AGE: Final = 120
+
+    def __call__(self, value: date):
+        today = timezone.localdate()
+        if value > today:
+            raise ValidationError(
+                "Дата рождения не может быть в будущем. "
+                f'Указывайте дату с учетом часового пояса "{settings.TIME_ZONE}".',
+                code="future_date",
+            )
+
+        age = today.year - value.year - ((today.month, today.day) < (value.month, value.day))
+
+        if age > self.MAX_AGE:
+            raise ValidationError(
+                f"Возраст не может превышать {self.MAX_AGE} лет.", code="max_age_exceeded"
             )
