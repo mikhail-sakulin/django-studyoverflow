@@ -1,8 +1,8 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from posts.models import Comment, LowercaseTag, Post
-from posts.services import normalize_tag_name
+from posts.models import Comment, Post
+from posts.services import validate_and_normalize_tags
 from taggit.forms import TagWidget
 from users.services import CustomUsernameValidator
 
@@ -25,43 +25,15 @@ class PostCreateForm(forms.ModelForm):
             "tags": TagWidget(attrs={"class": "form-control", "placeholder": "Введите теги..."}),
         }
 
-    def clean_title(self):
-        """
-        Валидация заголовка title.
-        """
-        title = self.cleaned_data["title"]
-
-        if len(title) < 10:
-            raise ValidationError("Длина заголовка должна быть не менее 10 символов")
-
-        if len(title) > Post.MAX_TITLE_SLUG_LENGTH_POST:
-            raise ValidationError(
-                f"Длина заголовка должна быть не более {Post.MAX_TITLE_SLUG_LENGTH_POST} символов"
-            )
-
-        return title
-
     def clean_tags(self):
         """
         Валидация и нормализация тегов.
         """
         tags_list = self.cleaned_data["tags"]
 
-        if len(tags_list) == 0:
-            raise ValidationError("Укажите хотя бы 1 тег.")
+        normalized_tags = validate_and_normalize_tags(tags_list)
 
-        if len(tags_list) > 10:
-            raise ValidationError("Укажите не более 10 тегов.")
-
-        normalized_tags = []
-        for el in tags_list:
-            if len(el) > LowercaseTag.MAX_NAME_LENGTH_TAG:
-                raise ValidationError(
-                    f"Длина тега не может превышать {LowercaseTag.MAX_NAME_LENGTH_TAG} символов."
-                )
-            normalized_tags.append(normalize_tag_name(el))
-
-        return tags_list
+        return normalized_tags
 
 
 class PostFilterForm(forms.Form):
