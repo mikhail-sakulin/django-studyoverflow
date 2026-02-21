@@ -31,3 +31,28 @@ def can_moderate(actor: User, target: User) -> bool:
         return False
 
     return True
+
+
+def is_author_or_moderator(user, obj, permission_required: str | None = None) -> bool:
+    """
+    Проверяет права на изменение объекта.
+
+    Доступ разрешён, если выполняется одно из условий:
+    - Пользователь является автором объекта (obj.author_id == user.pk или obj.user_id == user.pk)
+    - Пользователь имеет permission на модерацию объекта
+    """
+    if not user.is_authenticated:
+        return False
+
+    # Проверка авторства
+    is_author = (hasattr(obj, "author_id") and obj.author_id == user.pk) or (
+        hasattr(obj, "user_id") and obj.user_id == user.pk
+    )
+    if is_author:
+        return True
+
+    # Проверка прав модератора
+    if permission_required and user.has_perm(permission_required):
+        return True
+
+    return False

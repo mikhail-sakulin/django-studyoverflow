@@ -19,6 +19,7 @@ from .online import (
 )
 from .permissions import (
     can_moderate,
+    is_author_or_moderator,
 )
 from .social_providers import (
     SOCIAL_HANDLERS,
@@ -56,6 +57,7 @@ __all__ = [
     "get_cached_online_user_ids",
     # permissions
     "can_moderate",
+    "is_author_or_moderator",
     # social_providers
     "SOCIAL_HANDLERS",
     # user_stats

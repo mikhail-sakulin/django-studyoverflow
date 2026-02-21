@@ -2,6 +2,7 @@ from typing import Optional
 
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest
+from users.services import is_author_or_moderator
 
 
 class IsAuthorOrModeratorMixin:
@@ -9,7 +10,7 @@ class IsAuthorOrModeratorMixin:
     Mixin для проверки прав на изменение объекта.
 
     Доступ разрешён, если выполняется одно из условий:
-    - Пользователь является автором объекта (obj.author_id == user.pk или obj.user_id == user.pk)
+    - Пользователь является автором объекта
     - Пользователь имеет permission на модерацию объекта
     """
 
@@ -17,21 +18,9 @@ class IsAuthorOrModeratorMixin:
     request: HttpRequest
 
     def has_permission(self, obj):
-        user = self.request.user
-
-        if not user.is_authenticated:
-            return False
-
-        if hasattr(obj, "author") and obj.author_id == user.pk:
-            return True
-
-        if hasattr(obj, "user") and obj.user_id == user.pk:
-            return True
-
-        if self.permission_required and user.has_perm(self.permission_required):
-            return True
-
-        return False
+        return is_author_or_moderator(
+            user=self.request.user, obj=obj, permission_required=self.permission_required
+        )
 
     def dispatch(self, request, *args, **kwargs):
         """
