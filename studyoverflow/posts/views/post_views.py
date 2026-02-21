@@ -8,6 +8,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from posts.forms import CommentCreateForm, PostCreateForm, PostFilterForm
 from posts.models import Post
+from posts.services import log_post_event
 from users.views.mixins import IsAuthorOrModeratorMixin
 
 from .mixins import (
@@ -71,7 +72,9 @@ class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMix
         return context
 
 
-class PostCreateView(PostAuthorMixin, LoginRequiredHTMXMixin, SuccessMessageMixin, CreateView):
+class PostCreateView(
+    ContextTagMixin, PostAuthorMixin, LoginRequiredHTMXMixin, SuccessMessageMixin, CreateView
+):
     """
     Страница создания нового поста.
 
@@ -91,15 +94,7 @@ class PostCreateView(PostAuthorMixin, LoginRequiredHTMXMixin, SuccessMessageMixi
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        post = self.object
-        logger.info(
-            f"Пост создан: {post.title} (id: {post.pk}).",
-            extra={
-                "post_id": post.pk,
-                "author_id": self.request.user.pk,
-                "event_type": "post_create",
-            },
-        )
+        log_post_event("post_create", self.object, self.request.user, source="web")
         return response
 
 
@@ -164,15 +159,7 @@ class PostUpdateView(
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        post = self.object
-        logger.info(
-            f"Пост отредактирован: {post.title} (id: {post.pk}).",
-            extra={
-                "post_id": post.pk,
-                "editor_id": self.request.user.pk,
-                "event_type": "post_update",
-            },
-        )
+        log_post_event("post_update", self.object, self.request.user, source="web")
         return response
 
 
@@ -191,14 +178,7 @@ class PostDeleteView(
 
     def form_valid(self, form):
         post = self.get_object()
-        logger.info(
-            f"Пост удален: {post.title} (id: {post.pk}).",
-            extra={
-                "post_id": post.pk,
-                "deleter_id": self.request.user.pk,
-                "event_type": "post_delete",
-            },
-        )
+        log_post_event("post_delete", post, self.request.user, source="web")
 
         messages.info(self.request, "Пост удален.")
         return super().form_valid(form)
