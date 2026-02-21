@@ -9,7 +9,12 @@ from django.db import models
 from django.urls import reverse
 from django.utils.text import Truncator
 from notifications.models import Notification
-from posts.services import generate_slug, normalize_tag_name, render_markdown_safe
+from posts.services import (
+    PostTitleValidator,
+    generate_slug,
+    normalize_tag_name,
+    render_markdown_safe,
+)
 from taggit.managers import TaggableManager
 from taggit.models import GenericTaggedItemBase, TagBase
 
@@ -99,13 +104,19 @@ class Post(models.Model):
     MAX_TITLE_SLUG_LENGTH_POST: Final = 255  # максимальная длина заголовка и slug поста
     MAX_CONTENT_LENGTH: Final = 15000  # максимальная длина содержимого поста
 
+    title_validator = PostTitleValidator(min_len=10, max_len=MAX_TITLE_SLUG_LENGTH_POST)
+
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="posts",
         verbose_name="Автор",
     )
-    title = models.CharField(max_length=MAX_TITLE_SLUG_LENGTH_POST, verbose_name="Заголовок")
+    title = models.CharField(
+        max_length=MAX_TITLE_SLUG_LENGTH_POST,
+        validators=[title_validator],
+        verbose_name="Заголовок",
+    )
     slug = models.SlugField(max_length=MAX_TITLE_SLUG_LENGTH_POST, verbose_name="Slug")
 
     content = models.TextField(
