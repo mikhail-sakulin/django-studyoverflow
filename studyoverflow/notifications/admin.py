@@ -47,7 +47,6 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = ["notification_type", IsReadFilter]
     search_fields = [
         "user__username",
-        "actor__username",
     ]
     ordering = ["-time_create", "-id"]
     list_per_page = 15
@@ -83,6 +82,10 @@ class NotificationAdmin(admin.ModelAdmin):
             actions.pop("make_is_unread", None)
 
         return actions
+
+    def has_add_permission(self, request):
+        """Запрещает создание уведомлений через админ-паенль."""
+        return False
 
     @admin.action(description="Отметить прочитанными")
     def make_is_read(self, request, queryset):

@@ -206,7 +206,15 @@ class CommentAdmin(admin.ModelAdmin):
         "reply_to",
         "content",
     ]
-    readonly_fields = ["id", "time_create", "time_update", "post", "author"]
+    readonly_fields = [
+        "id",
+        "time_create",
+        "time_update",
+        "author",
+        "post",
+        "parent_comment",
+        "reply_to",
+    ]
 
     def get_queryset(self, request):
         """Добавляет content_len для сортировки по объему текста."""
@@ -224,6 +232,10 @@ class CommentAdmin(admin.ModelAdmin):
     @admin.display(description="Пост")
     def short_post(self, comment: Comment):
         return Truncator(comment.post.title).chars(40, truncate="...")
+
+    def has_add_permission(self, request):
+        """Запрещает создание комментариев через админ-паенль."""
+        return False
 
 
 @admin.register(LowercaseTag)
@@ -264,8 +276,8 @@ class TaggedPostAdmin(admin.ModelAdmin):
 
     list_display = ("id", "tag__name", "short_content_object")
     list_display_links = ("id", "tag__name", "short_content_object")
-    fields = ["id", "tag", "content_type", "short_content_object", "object_id"]
-    readonly_fields = ("id", "content_type", "short_content_object")
+    fields = ["id", "tag", "content_type", "object_id"]
+    readonly_fields = ("id",)
     list_per_page = 15
     ordering = ["-tag__name", "-id"]
     search_fields = [
@@ -277,6 +289,13 @@ class TaggedPostAdmin(admin.ModelAdmin):
         if not tagged_post.content_object:
             return "—"
         return Truncator(str(tagged_post.content_object)).chars(40, truncate="…")
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Ограничивает выбор ContentType только моделью Post."""
+        if db_field.name == "content_type":
+            # Фильтрация ContentType по приложению и имени модели
+            kwargs["queryset"] = ContentType.objects.filter(app_label="posts", model="post")
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(Like)
