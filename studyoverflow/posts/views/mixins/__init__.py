@@ -12,6 +12,7 @@ from .htmx_mixins import (
 )
 from .queryset_mixins import (
     CommentSortMixin,
+    CommentTreeQuerysetMixin,
     LikeAnnotationsMixin,
     PostAnnotateQuerysetMixin,
     PostFilterSortMixin,
@@ -34,4 +35,5 @@ __all__ = [
     "PostAnnotateQuerysetMixin",
     "PostFilterSortMixin",
     "CommentSortMixin",
+    "CommentTreeQuerysetMixin",
 ]

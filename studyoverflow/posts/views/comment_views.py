@@ -2,7 +2,7 @@ import json
 import logging
 
 from django.contrib import messages
-from django.db.models import Count, Prefetch
+from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
@@ -13,6 +13,7 @@ from users.views.mixins import IsAuthorOrModeratorMixin
 from .mixins import (
     CommentGetMethodMixin,
     CommentSortMixin,
+    CommentTreeQuerysetMixin,
     HTMXHandle404CommentMixin,
     HTMXMessageMixin,
     LikeAnnotationsMixin,
@@ -24,7 +25,7 @@ from .mixins import (
 logger = logging.getLogger(__name__)
 
 
-class CommentListView(LikeAnnotationsMixin, CommentSortMixin, ListView):
+class CommentListView(LikeAnnotationsMixin, CommentSortMixin, CommentTreeQuerysetMixin, ListView):
     """
     Страница со списком комментариев к посту с аннотациями и сортировкой.
     """
@@ -32,6 +33,24 @@ class CommentListView(LikeAnnotationsMixin, CommentSortMixin, ListView):
     model = Comment
     template_name = "posts/comments/comment_list.html"
     context_object_name = "root_comments"
+
+    def get_queryset(self):
+        """
+        Возвращает оптимизированный queryset родительских комментариев с
+        prefetch_related queryset дочерних комментариев.
+        """
+        post = self._get_post_object()
+
+        queryset = self.get_comment_tree_queryset(post)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        post = self._get_post_object()
+        context["post"] = post
+        context["comment_form"] = CommentCreateForm()
+        return context
 
     def _get_post_object(self):
         """
@@ -43,42 +62,6 @@ class CommentListView(LikeAnnotationsMixin, CommentSortMixin, ListView):
                 Post.objects.annotate(comments_count=Count("comments")), pk=post_pk
             )
         return self._post_object
-
-    def get_queryset(self):
-        """
-        Возвращает queryset родительских комментариев с
-        prefetch_related queryset дочерних комментариев.
-
-        Используются select_related для оптимизации запроса и аннотации.
-        """
-        post = self._get_post_object()
-
-        child_queryset = self.annotate_queryset(
-            Comment.objects.select_related(
-                "author", "post", "reply_to", "reply_to__author"
-            ).order_by("-time_create")
-        )
-
-        queryset = (
-            post.comments.roots()
-            .select_related("author", "post")
-            # prefetch_related для обратного доступа ForeignKey через related_name
-            .prefetch_related(Prefetch("child_comments", queryset=child_queryset))
-            .order_by("-time_create")
-        )
-
-        queryset = self.annotate_queryset(queryset)
-
-        queryset = self.sort_comments(queryset)
-
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        post = self._get_post_object()
-        context["post"] = post
-        context["comment_form"] = CommentCreateForm()
-        return context
 
 
 class CommentRootCreateView(
@@ -136,7 +119,7 @@ class CommentRootCreateView(
         )
 
         response = render(self.request, self.template_name, context)
-        response["HX-Trigger"] = json.dumps({"commentsUpdated": {}, "commentRootFormSuccess": {}})
+        response["HX-Trigger"] = json.dumps({"commentsUpdated": {}})
 
         response = self.add_htmx_message_to_response(
             message_text="Комментарий создан.", message_type="success", response=response
@@ -166,14 +149,20 @@ class CommentChildCreateView(CommentRootCreateView):
         response = super().form_valid(form)
 
         reply_to = form.cleaned_data.get("reply_to")
-
-        # Определяется commentId для события
-        comment_id = reply_to.pk
+        if not reply_to:
+            response["HX-Trigger"] = json.dumps({"commentsUpdated": {}})
+            response = self.add_htmx_message_to_response(
+                message_text=(
+                    "Не был указан 'reply_to' для дочернего комментария, "
+                    "создан родительский комментарий."
+                ),
+                message_type="info",
+                response=response,
+            )
+            return response
 
         # Передаются данные в формате JSON для HX-Trigger
-        response["HX-Trigger"] = json.dumps(
-            {"commentsUpdated": {}, "commentChildFormSuccess": {"commentId": comment_id}}
-        )
+        response["HX-Trigger"] = json.dumps({"commentsUpdated": {}})
 
         response = self.add_htmx_message_to_response(
             message_text="Комментарий создан.", message_type="success", response=response
@@ -237,7 +226,7 @@ class CommentUpdateView(
     form_class = CommentUpdateForm
     pk_url_kwarg = "comment_pk"
     template_name = "posts/comments/_comment_card.html"
-    permission_required = "posts.moderate_comment"
+    moderator_permission_name = "posts.moderate_comment"
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related("author", "post")
@@ -306,7 +295,7 @@ class CommentDeleteView(
 
     model = Comment
     pk_url_kwarg = "comment_pk"
-    permission_required = "posts.moderate_comment"
+    moderator_permission_name = "posts.moderate_comment"
 
     def form_valid(self, form):
         comment_id = self.object.pk

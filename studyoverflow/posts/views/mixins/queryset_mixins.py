@@ -3,9 +3,9 @@
 """
 
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Count, Exists, OuterRef, Q
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q, QuerySet
 from django.http import HttpRequest
-from posts.models import Like
+from posts.models import Comment, Like, Post
 
 
 class LikeAnnotationsMixin:
@@ -173,5 +173,49 @@ class CommentSortMixin:
             field = f"-{field}"
 
         queryset = queryset.order_by(field, "-time_create")
+
+        return queryset
+
+
+class CommentTreeQuerysetMixin:
+    """
+    Миксин для построения queryset комментариев с вложенностью, аннотациями и сортировкой.
+
+    Требует реализации:
+    - annotate_queryset(queryset)
+    - sort_comments(queryset)
+    """
+
+    def get_comment_tree_queryset(
+        self, post: Post, root_id: int | None = None
+    ) -> QuerySet[Comment]:
+        """
+        Возвращает queryset родительских комментариев с
+        prefetch_related queryset дочерних комментариев.
+
+        Используются select_related для оптимизации запроса и аннотации.
+        """
+        child_queryset = self.annotate_queryset(  # type: ignore[attr-defined]
+            Comment.objects.select_related(
+                "author", "post", "reply_to", "reply_to__author"
+            ).order_by("-time_create")
+        )
+
+        if root_id:
+            queryset = Comment.objects.filter(pk=root_id)
+        else:
+            queryset = post.comments.roots()  # type: ignore[attr-defined]
+
+        queryset = (
+            queryset.select_related("author", "post")
+            # prefetch_related для обратного доступа ForeignKey через related_name
+            .prefetch_related(Prefetch("child_comments", queryset=child_queryset)).order_by(
+                "-time_create"
+            )
+        )
+
+        queryset = self.annotate_queryset(queryset)  # type: ignore[attr-defined]
+
+        queryset = self.sort_comments(queryset)  # type: ignore[attr-defined]
 
         return queryset

@@ -14,12 +14,12 @@ class IsAuthorOrModeratorMixin:
     - Пользователь имеет permission на модерацию объекта
     """
 
-    permission_required: Optional[str] = None
+    moderator_permission_name: Optional[str] = None
     request: HttpRequest
 
     def has_permission(self, obj):
         return is_author_or_moderator(
-            user=self.request.user, obj=obj, permission_required=self.permission_required
+            user=self.request.user, obj=obj, permission_required=self.moderator_permission_name
         )
 
     def dispatch(self, request, *args, **kwargs):

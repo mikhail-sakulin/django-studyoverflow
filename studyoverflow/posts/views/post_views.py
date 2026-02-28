@@ -137,6 +137,7 @@ class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
 class PostUpdateView(
     LoginRequiredMixin,
     IsAuthorOrModeratorMixin,
+    ContextTagMixin,
     SingleObjectCacheMixin,
     SuccessMessageMixin,
     UpdateView,
@@ -151,7 +152,7 @@ class PostUpdateView(
     form_class = PostCreateForm
     template_name = "posts/post_edit.html"
     context_object_name = "post"
-    permission_required = "posts.moderate_post"
+    moderator_permission_name = "posts.moderate_post"
     success_message = "Пост успешно изменен!"
 
     def get_queryset(self):
@@ -174,7 +175,7 @@ class PostDeleteView(
 
     model = Post
     success_url = reverse_lazy("posts:list")
-    permission_required = "posts.moderate_post"
+    moderator_permission_name = "posts.moderate_post"
 
     def form_valid(self, form):
         post = self.get_object()
