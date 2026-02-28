@@ -1,3 +1,4 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.prefetch import GenericPrefetch
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
@@ -6,15 +7,16 @@ from django.views.generic import ListView, TemplateView
 from notifications.models import Notification
 from notifications.tasks import send_channel_notify_event
 from posts.models import Comment, Like, Post
+from posts.views.mixins import LoginRequiredRedirectHTMXMixin
 
 
-class NotificationTemplateView(TemplateView):
+class NotificationTemplateView(LoginRequiredMixin, TemplateView):
     """Отображает базовый шаблон страницы уведомлений."""
 
     template_name = "notifications/notification_base.html"
 
 
-class NotificationListView(ListView):
+class NotificationListView(LoginRequiredRedirectHTMXMixin, ListView):
     """
     Возвращает список уведомлений текущего пользователя.
     """
@@ -52,7 +54,7 @@ class NotificationListView(ListView):
         return queryset
 
 
-class NotificationMarkReadView(View):
+class NotificationMarkReadView(LoginRequiredRedirectHTMXMixin, View):
     """
     Помечает уведомление как прочитанное, если оно принадлежит текущему пользователю.
     """
@@ -70,7 +72,7 @@ class NotificationMarkReadView(View):
         return HttpResponse()
 
 
-class NotificationMarkAllReadView(View):
+class NotificationMarkAllReadView(LoginRequiredRedirectHTMXMixin, View):
     """
     Помечает все уведомления текущего пользователя прочитанными и создает
     Celery задачу для обновления счетчика непрочитанных уведомлений
@@ -85,7 +87,7 @@ class NotificationMarkAllReadView(View):
         return HttpResponse()
 
 
-class NotificationDeleteView(View):
+class NotificationDeleteView(LoginRequiredRedirectHTMXMixin, View):
     """
     Удаляет уведомление текущего пользователя.
     """
@@ -101,7 +103,7 @@ class NotificationDeleteView(View):
         return HttpResponse()
 
 
-class NotificationDeleteAllView(View):
+class NotificationDeleteAllView(LoginRequiredRedirectHTMXMixin, View):
     """
     Удаляет все уведомления текущего пользователя.
     """
