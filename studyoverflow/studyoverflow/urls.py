@@ -5,11 +5,9 @@ from django.urls import include, path
 from django.views.generic import RedirectView
 from navigation.views import (
     bad_request,
-    method_not_allowed,
     page_not_found,
     permission_denied,
     server_error,
-    unauthorized,
 )
 
 from studyoverflow import settings
@@ -33,10 +31,8 @@ if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 handler400 = bad_request
-handler401 = unauthorized
 handler403 = permission_denied
 handler404 = page_not_found
-handler405 = method_not_allowed
 handler500 = server_error
 
 

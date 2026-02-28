@@ -34,10 +34,18 @@ def bad_request(request, exception):
 
 
 def unauthorized(request, exception):
-    """Страница ошибки 401 (Неавторизованный доступ)."""
+    """
+    Страница ошибки 401 (Неавторизованный доступ).
+
+    В текущей версии проекта не используется.
+    """
     return render(request, "http_statuses/401.html", status=401)
 
 
 def method_not_allowed(request, exception):
-    """Страница ошибки 405 (Метод не разрешен)."""
+    """
+    Страница ошибки 405 (Метод не разрешен).
+
+    В текущей версии проекта не используется.
+    """
     return render(request, "http_statuses/405.html", status=405)
