@@ -3,7 +3,6 @@ from urllib.parse import urlencode
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
 from django.core.validators import MaxLengthValidator
 from django.db import models
 from django.urls import reverse
@@ -325,55 +324,9 @@ class Comment(models.Model):
 
         super().save(*args, **kwargs)
 
-    def clean(self):
-        """
-        Валидация комментария.
-
-        Проверяет:
-        - что комментарий не пустой;
-        - что текущий комментарий и комментарий, на который отвечают (reply_to),
-          относятся к одному и тому же родительскому комментарию;
-        - невозможность ссылок на самого себя;
-        - принадлежность всех комментариев одному посту.
-        """
-        errors = {}
-
-        post = getattr(self, "post", None)
-
-        if not self.content or not self.content.strip():
-            errors["content"] = "Комментарий не может быть пустым."
-
-        if self.parent_comment:
-            if self.parent_comment == self:
-                errors["parent_comment"] = "Комментарий не может быть родителем сам себе."
-            elif post and self.parent_comment.post != post:
-                errors["parent_comment"] = "Родительский комментарий не принадлежит этому посту."
-
-        if self.reply_to:
-            if (
-                self.parent_comment
-                and self.reply_to.parent_comment
-                and self.reply_to.parent_comment != self.parent_comment
-            ):
-                errors["reply_to"] = "Неверный комментарий для ответа."
-
-            elif self.reply_to == self:
-                errors["reply_to"] = "Комментарий не может отвечать сам себе."
-
-            elif post and self.reply_to.post != post:
-                errors["reply_to"] = "Комментарий для ответа не принадлежит этому посту."
-
-        if errors:
-            raise ValidationError(errors)
-
     def get_absolute_url(self):
         """Возвращает уникальный URL комментария (страница поста с якорем на комментарий)."""
         return f"{self.post.get_absolute_url()}#comment-card-{self.pk}"
-
-    @property
-    def has_parent_comment(self):
-        """Проверяет, есть ли родительский комментарий."""
-        return self.parent_comment is not None
 
     @property
     def is_edited(self):

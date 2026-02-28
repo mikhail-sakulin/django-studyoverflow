@@ -10,6 +10,7 @@ from .text_processing import (
 from .validators import (
     PostTitleValidator,
     validate_and_normalize_tags,
+    validate_comment,
 )
 
 
@@ -22,6 +23,7 @@ __all__ = [
     # validators
     "PostTitleValidator",
     "validate_and_normalize_tags",
+    "validate_comment",
     # loggers
     "log_post_event",
 ]

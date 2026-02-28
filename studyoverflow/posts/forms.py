@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from posts.models import Comment, Post
-from posts.services import validate_and_normalize_tags
+from posts.services import validate_and_normalize_tags, validate_comment
 from taggit.forms import TagWidget
 from users.services import CustomUsernameValidator
 
@@ -86,27 +86,24 @@ class CommentCreateForm(forms.ModelForm):
 
     def clean(self):
         """
-        Проверка иерархии: родительский комментарий и комментарий, на который отвечают,
-        должны быть в том же посту, к которому создается новый комментарий.
+        Валидация иерархии и принадлежности комментария к посту.
+
+        Проверки адаптированы из модели для работы в контексте формы:
+        - Поля parent_comment и reply_to должны идти в связке.
+        - Все объекты (родитель, ответ) должны принадлежать текущему self.post.
+        - Нельзя отвечать самому себе (актуально при редактировании).
+        - reply_to должен находиться внутри ветки parent_comment.
         """
         cleaned_data = super().clean()
-        parent_comment = cleaned_data.get("parent_comment")
-        reply_to = cleaned_data.get("reply_to")
 
-        errors = {}
-
-        # Проверка принадлежности parent_comment посту
-        if parent_comment and parent_comment.post.id != self.post.id:
-            errors["parent_comment"] = ValidationError(
-                "Родительский комментарий не принадлежит этому посту."
-            )
-
-        # Проверка reply_to
-        if reply_to:
-            if reply_to.post.id != self.post.id:
-                errors["reply_to"] = ValidationError(
-                    "Комментарий для ответа не принадлежит этому посту."
-                )
+        # Валидация данных комментария и получение словаря ошибок
+        errors = validate_comment(
+            content=cleaned_data.get("content"),
+            parent_comment=cleaned_data.get("parent_comment"),
+            reply_to=cleaned_data.get("reply_to"),
+            post_id=self.post.pk,
+            instance_pk=self.instance.pk,
+        )
 
         if errors:
             raise ValidationError(errors)
