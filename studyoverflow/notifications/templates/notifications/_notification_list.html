@@ -1,10 +1,10 @@
 {# Управление списком уведомлений и контейнер карточек уведомлений #}
 <div class="d-flex justify-content-center gap-5 mt-3 mb-4">
-  <button class="btn btn-warning"
+  <button id="mark-all-read-btn"
+          class="btn btn-warning"
           hx-post="{% url 'notifications:mark_all_read' %}"
           hx-trigger="click"
-          hx-swap="none"
-          id="mark-all-read-btn">
+          hx-swap="none">
       Отметить все прочитанными
   </button>
 

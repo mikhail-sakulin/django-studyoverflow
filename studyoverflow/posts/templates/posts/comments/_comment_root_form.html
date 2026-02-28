@@ -1,4 +1,4 @@
-{# Основная форма создания нового комментария (первого уровня) #}
+{# Форма создания родительского нового комментария (первого уровня) #}
 <form id="root-comment-form"
       method="POST"
       action="{% url 'posts:comment_root_create' post.pk post.slug %}"

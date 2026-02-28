@@ -128,11 +128,11 @@
 
       {# Загрузка комментариев поста#}
       <div id="comments-wrapper"
+           class="position-relative"
            hx-get="{% url 'posts:comment_list' post.pk post.slug %}"
            hx-trigger="load, commentsUpdated from:body"
            hx-swap="innerHTML"
-           hx-indicator="#loading-indicator"
-           class="position-relative">
+           hx-indicator="#loading-indicator">
 
         {% include 'posts/comments/comment_list.html' %}
 
