@@ -135,6 +135,35 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
+    // --- Скрытие форм при отправке запросов до ответа сервера ---
+    document.body.addEventListener("htmx:beforeRequest", function(event) {
+        const element = event.target;
+
+        // Форма родительского комментария (Root)
+        if (element.id === "root-comment-form") {
+            hideForm("comment-form-container", document.getElementById("show-comment-form"));
+            return;
+        }
+
+        // Форма ответа (Reply)
+        const replyContainer = element.closest('.reply-form-container');
+        if (replyContainer) {
+            const commentId = replyContainer.id.replace('reply-form-', '');
+            const replyBtn = document.querySelector(`.reply-btn[data-comment-id="${commentId}"]`);
+            hideForm(replyContainer.id, replyBtn);
+            return;
+        }
+
+        // Форма редактирования (Edit)
+        const editContainer = element.closest('.edit-form-container');
+        if (editContainer) {
+            const commentId = editContainer.id.replace('edit-form-', '');
+            const editBtn = document.querySelector(`.edit-comment-btn[data-comment-id="${commentId}"]`);
+            hideForm(editContainer.id, editBtn);
+            return;
+        }
+    });
+
     // --- HTMX события ---
     document.body.addEventListener("htmx:afterSwap", function(event) {
         const swappedEl = event.target;
@@ -159,25 +188,11 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // --- Кастомные события root формы ---
-    document.body.addEventListener("commentRootFormSuccess", function() {
-        hideForm("comment-form-container", document.getElementById("show-comment-form"));
-    });
-
     document.body.addEventListener("commentRootFormError", function() {
         showForm("comment-form-container", document.getElementById("show-comment-form"));
     });
 
     // --- Кастомные события reply формы ---
-    document.body.addEventListener("commentChildFormSuccess", function(event) {
-        const commentId = event.detail?.commentId;
-        if (!commentId) return;
-        hideForm(
-            `reply-form-${commentId}`,
-            document.querySelector(`.reply-btn[data-comment-id="${commentId}"]`)
-        );
-    });
-
     document.body.addEventListener("commentChildFormError", function(event) {
         const commentId = event.detail?.commentId;
         if (!commentId) return;
