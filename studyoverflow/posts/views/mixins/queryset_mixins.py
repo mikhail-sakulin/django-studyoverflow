@@ -58,6 +58,7 @@ class PostAnnotateQuerysetMixin(LikeAnnotationsMixin):
         queryset = (
             queryset.select_related("author")
             .prefetch_related("tags")
+            .defer("author__bio")
             .annotate(
                 likes_count=Count("likes", distinct=True),
                 comments_count=Count("comments", distinct=True),
@@ -195,10 +196,39 @@ class CommentTreeQuerysetMixin:
 
         Используются select_related для оптимизации запроса и аннотации.
         """
+        # Список полей пользователя, загружаемых через .only()
+        user_fields = [
+            "id",
+            "username",
+            "role",
+            "avatar",
+            "avatar_small_size1",
+            "avatar_small_size2",
+            "avatar_small_size3",
+        ]
+
         child_queryset = self.annotate_queryset(  # type: ignore[attr-defined]
-            Comment.objects.select_related(
-                "author", "post", "reply_to", "reply_to__author"
-            ).order_by("-time_create")
+            Comment.objects.select_related("author", "reply_to", "reply_to__author")
+            .only(
+                # поля комментария
+                "id",
+                "post_id",
+                "author_id",
+                "parent_comment_id",
+                "reply_to_id",
+                "content",
+                "rendered_content",
+                "time_create",
+                "time_update",
+                # поля автора комментария
+                *[f"author__{f}" for f in user_fields],
+                # поля reply_to
+                "reply_to__id",
+                "reply_to__author_id",
+                # поля автора reply_to комментария
+                *[f"reply_to__author__{f}" for f in user_fields],
+            )
+            .order_by("-time_create")
         )
 
         if root_id:
@@ -207,11 +237,24 @@ class CommentTreeQuerysetMixin:
             queryset = post.comments.roots()  # type: ignore[attr-defined]
 
         queryset = (
-            queryset.select_related("author", "post")
-            # prefetch_related для обратного доступа ForeignKey через related_name
-            .prefetch_related(Prefetch("child_comments", queryset=child_queryset)).order_by(
-                "-time_create"
+            queryset.select_related("author")
+            .only(
+                # поля комментария
+                "id",
+                "post_id",
+                "author_id",
+                "parent_comment_id",
+                "reply_to_id",
+                "content",
+                "rendered_content",
+                "time_create",
+                "time_update",
+                # поля автора комментария
+                *[f"author__{f}" for f in user_fields],
             )
+            # prefetch_related для обратного доступа ForeignKey через related_name
+            .prefetch_related(Prefetch("child_comments", queryset=child_queryset))
+            .order_by("-time_create")
         )
 
         queryset = self.annotate_queryset(queryset)  # type: ignore[attr-defined]

@@ -1,8 +1,8 @@
 {# Форма создания родительского нового комментария (первого уровня) #}
 <form id="root-comment-form"
       method="POST"
-      action="{% url 'posts:comment_root_create' post.pk post.slug %}"
-      hx-post="{% url 'posts:comment_root_create' post.pk post.slug %}"
+      action="{% url 'posts:comment_root_create' post_pk post_slug %}"
+      hx-post="{% url 'posts:comment_root_create' post_pk post_slug %}"
       hx-swap="outerHTML"
       hx-indicator="#loading-indicator">
   {% csrf_token %}

@@ -49,6 +49,8 @@ class CommentListView(LikeAnnotationsMixin, CommentSortMixin, CommentTreeQueryse
         context = super().get_context_data(**kwargs)
         post = self._get_post_object()
         context["post"] = post
+        context["post_pk"] = post.pk
+        context["post_slug"] = post.slug
         context["comment_form"] = CommentCreateForm()
         return context
 
@@ -58,8 +60,13 @@ class CommentListView(LikeAnnotationsMixin, CommentSortMixin, CommentTreeQueryse
         """
         if not hasattr(self, "_post_object"):
             post_pk = self.kwargs.get("post_pk")
+            post_slug = self.kwargs.get("post_slug")
             self._post_object = get_object_or_404(
-                Post.objects.annotate(comments_count=Count("comments")), pk=post_pk
+                Post.objects.only("pk", "slug", "author_id").annotate(
+                    comments_count=Count("comments")
+                ),
+                pk=post_pk,
+                slug=post_slug,
             )
         return self._post_object
 
@@ -94,11 +101,14 @@ class CommentRootCreateView(
         context = super().get_context_data(**kwargs)
         context.pop("form")
         reply_to = form.cleaned_data.get("reply_to")
-        context = {
-            "post": form.post,
-            "comment": reply_to,
-            "comment_form": self.form_class() if form_valid else form,
-        }
+        context.update(
+            {
+                "post_pk": form.post.pk,
+                "post_slug": form.post.slug,
+                "comment": reply_to,
+                "comment_form": self.form_class() if form_valid else form,
+            }
+        )
         return context
 
     def form_valid(self, form):
@@ -236,12 +246,15 @@ class CommentUpdateView(
     def get_context_data(self, form, **kwargs):
         context = super().get_context_data(**kwargs)
         context.pop("form")
-        context = {
-            "comment_update_form": form,
-            "comment_form": self.form_class(),
-            "comment": self.object,
-            "post": self.object.post,
-        }
+        context.update(
+            {
+                "comment_update_form": form,
+                "comment_form": self.form_class(),
+                "comment": self.object,
+                "post_pk": self.object.post.pk,
+                "post_slug": self.object.post.slug,
+            }
+        )
         return context
 
     def form_valid(self, form):

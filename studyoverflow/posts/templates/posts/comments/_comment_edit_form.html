@@ -1,7 +1,7 @@
 {# Форма редактирования комментария через HTMX #}
 <form method="POST"
-      action="{% url 'posts:comment_update' comment.post.pk comment.post.slug comment.pk %}"
-      hx-post="{% url 'posts:comment_update' comment.post.pk comment.post.slug comment.pk %}"
+      action="{% url 'posts:comment_update' post_pk post_slug comment.pk %}"
+      hx-post="{% url 'posts:comment_update' post_pk post_slug comment.pk %}"
       hx-target="#comment-card-{{ comment.id }}"
       hx-swap="outerHTML"
       hx-indicator="#loading-indicator">

@@ -166,7 +166,11 @@ class Post(models.Model):
         """
         super().__init__(*args, **kwargs)
         # Сохранение записанного в БД значения content для проверки изменения поля
-        self._original_content = self.content
+        # Проверка, загружено ли поле 'content' из БД в текущий экземпляр
+        if "content" in self.__dict__:
+            self._original_content = self.content
+        else:
+            self._original_content = None
 
     def __str__(self):
         """Возвращает строковое представление объекта."""
@@ -308,7 +312,11 @@ class Comment(models.Model):
         """
         super().__init__(*args, **kwargs)
         # Сохранение записанного в БД значения content для проверки изменения поля
-        self._original_content = self.content
+        # Проверка, загружено ли поле 'content' из БД в текущий экземпляр
+        if "content" in self.__dict__:
+            self._original_content = self.content
+        else:
+            self._original_content = None
 
     def __str__(self):
         """Возвращает строковое представление объекта."""

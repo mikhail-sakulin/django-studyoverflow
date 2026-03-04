@@ -123,7 +123,7 @@
       {# Форма комментария поста #}
       <div id="comment-form-container"
            style="display: none;" class="w-100 mb-4 px-0">
-        {% include 'posts/comments/_comment_root_form.html' %}
+        {% include 'posts/comments/_comment_root_form.html' with post_pk=post.pk post_slug=post.slug %}
       </div>
 
       {# Загрузка комментариев поста#}
