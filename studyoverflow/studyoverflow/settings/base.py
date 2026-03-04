@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.sites",
     # Сторонние библиотеки
+    "rest_framework",
     "django_extensions",  # management-команды, shell_plus и т.д.
     "storages",  # backend для S3 и других хранилищ
     "widget_tweaks",  # функционал для работы с формами в шаблонах
