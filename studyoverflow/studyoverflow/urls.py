@@ -19,16 +19,18 @@ urlpatterns = [
     path("posts/", include("posts.urls")),
     path("users/", include("users.urls")),
     path("notifications/", include("notifications.urls")),
-    path("__debug__", include(debug_toolbar_urls())),
     path(
         "favicon.ico",
         RedirectView.as_view(url=settings.STATIC_URL + "img/favicon.ico"),
     ),
     path("social-auth/", include("users.socialaccount_urls")),
+    # api
+    path("api/v1/", include("studyoverflow.urls_api_v1")),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += [path("__debug__", include(debug_toolbar_urls()))]
 
 handler400 = bad_request
 handler403 = permission_denied
