@@ -30,19 +30,35 @@ class NotificationListView(LoginRequiredRedirectHTMXMixin, ListView):
 
         queryset = (
             queryset.filter(user=self.request.user)
-            .select_related("user", "actor", "content_type")
+            .select_related("actor", "content_type")
+            .only(
+                "notification_type",
+                "message",
+                "is_read",
+                "time_create",
+                "actor__username",
+                "actor__avatar",
+                "actor__avatar_small_size1",
+                "actor__avatar_small_size2",
+                "actor__avatar_small_size3",
+                "actor__role",
+                "content_type_id",
+                "object_id",
+            )
             .prefetch_related(
                 GenericPrefetch(
                     "content_object",
                     [
-                        Post.objects.all(),
-                        Comment.objects.select_related("post"),
+                        Post.objects.only("id", "slug"),
+                        Comment.objects.select_related("post").only("id", "post__id", "post__slug"),
                         Like.objects.prefetch_related(
                             GenericPrefetch(
                                 "content_object",
                                 [
-                                    Post.objects.all(),
-                                    Comment.objects.select_related("post"),
+                                    Post.objects.only("id", "slug"),
+                                    Comment.objects.select_related("post").only(
+                                        "id", "post__id", "post__slug"
+                                    ),
                                 ],
                             )
                         ),
