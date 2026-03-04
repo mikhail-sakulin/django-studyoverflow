@@ -9,6 +9,9 @@ WORKDIR /app/studyoverflow
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
+COPY new_requirements.txt .
+RUN pip install -r new_requirements.txt
+
 COPY . .
 
 RUN mkdir -p /app/studyoverflow/celerybeat_data
