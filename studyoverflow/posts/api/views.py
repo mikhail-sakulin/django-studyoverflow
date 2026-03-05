@@ -12,20 +12,9 @@ from posts.views.mixins import (
 )
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
-
-
-class PostViewSetPagination(PageNumberPagination):
-    """
-    Пагинация для постов и комментариев.
-    """
-
-    page_size = 7
-    page_size_query_param = "page_size"
-    max_page_size = 100
 
 
 class PostViewSet(
@@ -42,7 +31,6 @@ class PostViewSet(
 
     queryset = Post.objects.all()
     serializer_class = PostSerializer
-    pagination_class = PostViewSetPagination
     moderator_permission_name = "posts.moderate_post"
 
     def get_permissions(self):
@@ -112,7 +100,6 @@ class CommentViewSet(
 
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    pagination_class = PostViewSetPagination
     moderator_permission_name = "posts.moderate_comment"
 
     def get_permissions(self):
