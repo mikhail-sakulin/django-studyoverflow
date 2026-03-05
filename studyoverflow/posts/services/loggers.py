@@ -1,10 +1,18 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from posts.models import Comment, Post
+    from users.models import User
 
 
 logger = logging.getLogger(__name__)
 
 
-def log_post_event(event_type: str, post, user, source: str = "web"):
+def log_post_event(event_type: str, post: Post, user: User, source: str = "web") -> None:
     """
     Логирует различные события поста. Указывает источник: 'web' или 'api'.
 
@@ -38,3 +46,34 @@ def log_post_event(event_type: str, post, user, source: str = "web"):
         extra_data["deleter_id"] = user_id
 
     logger.info(event_messages.get(event_type, "Событие поста"), extra=extra_data)
+
+
+def log_comment_event(event_type: str, comment: Comment, user: User, source: str = "web") -> None:
+    """
+    Логирует различные события комментария. Указывает источник: 'web' или 'api'.
+
+    :param event_type: тип события (создание, обновление, удаление)
+    :param comment: объект комментария
+    :param user: объект пользователя
+    :param source: источник события ('web' для Django views, 'api' для DRF)
+    """
+    event_messages = {
+        "comment_create": f"Создан комментарий (id: {comment.pk}) "
+        f"пользователем {user.username} к посту (id: {comment.post_id}).",
+        "comment_update": f"Комментарий обновлен (id: {comment.pk}) "
+        f"пользователем {user.username} к посту (id: {comment.post_id}).",
+        "comment_delete": f"Комментарий удален (id: {comment.pk}) "
+        f"пользователем {user.username} к посту (id: {comment.post_id}).",
+    }
+
+    user_id = user.pk if user and user.is_authenticated else None
+
+    extra_data = {
+        "comment_id": comment.pk,
+        "post_id": comment.post_id,
+        "user_id": user_id,
+        "event_type": event_type,
+        "source": source,
+    }
+
+    logger.info(event_messages.get(event_type, "Событие комментария"), extra=extra_data)

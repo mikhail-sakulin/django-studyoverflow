@@ -221,6 +221,9 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def get_children_count(self, comment):
         """Количество дочерних комментариев для родительского. Возвращает None для дочерних."""
+        if not hasattr(comment, "children_count"):
+            return None
+
         if comment.parent_comment_id is not None:
             return None
 

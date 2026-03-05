@@ -2,7 +2,7 @@ from django.db.models import Count
 from posts.api.permissions import IsAuthorOrModeratorPermission
 from posts.api.serializers import CommentSerializer, PostSerializer
 from posts.models import Comment, Post
-from posts.services import log_post_event
+from posts.services import log_comment_event, log_post_event
 from posts.views.mixins import (
     CommentSortMixin,
     CommentTreeQuerysetMixin,
@@ -90,7 +90,7 @@ class PostViewSet(
         log_post_event("post_create", post, self.request.user, source="api")
 
     def perform_update(self, serializer):
-        post = super().perform_update(serializer)
+        post = serializer.save()
         log_post_event("post_update", post, self.request.user, source="api")
 
     def perform_destroy(self, instance):
@@ -176,10 +176,6 @@ class CommentViewSet(
         serializer = self.get_serializer(root_comment)
         return Response(serializer.data)
 
-    def perform_create(self, serializer):
-        """Создание комментария с добавлением текущего пользователя и указанного pk поста."""
-        serializer.save(author=self.request.user, post_id=self.kwargs["post_pk"])
-
     def get_serializer_context(self):
         """Передает post в serializer context."""
         context = super().get_serializer_context()
@@ -192,3 +188,20 @@ class CommentViewSet(
         if not hasattr(self, "_post"):
             self._post = get_object_or_404(Post, pk=self.kwargs["post_pk"])
         return self._post
+
+    def perform_create(self, serializer):
+        """Создание комментария с добавлением текущего пользователя и указанного pk поста."""
+        comment = serializer.save(author=self.request.user, post_id=self.kwargs["post_pk"])
+        user = self.request.user
+        log_comment_event("comment_create", comment, user, source="api")
+
+    def perform_update(self, serializer):
+        comment = serializer.save()
+        user = self.request.user
+        log_comment_event("comment_update", comment, user, source="api")
+
+    def perform_destroy(self, instance):
+        comment = instance
+        user = self.request.user
+        log_comment_event("comment_delete", comment, user, source="api")
+        instance.delete()

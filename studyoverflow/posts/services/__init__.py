@@ -1,4 +1,5 @@
 from .loggers import (
+    log_comment_event,
     log_post_event,
 )
 from .text_processing import (
@@ -26,4 +27,5 @@ __all__ = [
     "validate_comment",
     # loggers
     "log_post_event",
+    "log_comment_event",
 ]
