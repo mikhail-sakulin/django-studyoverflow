@@ -1,8 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Count
 from posts.api.permissions import IsAuthorOrModeratorPermission
-from posts.api.serializers import AuthorSerializer, CommentSerializer, PostSerializer
-from posts.models import Comment, Post
+from posts.api.serializers import AuthorSerializer, CommentSerializer, PostSerializer, TagSerializer
+from posts.models import Comment, LowercaseTag, Post
 from posts.services import log_comment_event, log_post_event, perform_toggle_like
 from posts.views.mixins import (
     CommentSortMixin,
@@ -12,10 +12,11 @@ from posts.views.mixins import (
     PostFilterSortMixin,
 )
 from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 
 User = get_user_model()
@@ -244,3 +245,17 @@ class CommentViewSet(
         user = self.request.user
         log_comment_event("comment_delete", comment, user, source="api")
         instance.delete()
+
+
+class TagReadOnlyViewSet(ReadOnlyModelViewSet):
+    """
+    API endpoint для просмотра списка тегов.
+
+    Поддерживает поиск по подстроке: ?search=python.
+    """
+
+    queryset = LowercaseTag.objects.all().order_by("name")
+    serializer_class = TagSerializer
+    pagination_class = None
+    filter_backends = [SearchFilter]
+    search_fields = ["name"]

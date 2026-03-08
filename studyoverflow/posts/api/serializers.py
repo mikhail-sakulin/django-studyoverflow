@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.utils.timezone import localtime
-from posts.models import Comment, Post
+from posts.models import Comment, LowercaseTag, Post
 from posts.services import validate_and_normalize_tags, validate_comment
 from rest_framework import serializers
 from taggit.serializers import TagListSerializerField
@@ -247,3 +247,13 @@ class CommentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
 
         return attrs
+
+
+class TagSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для тегов.
+    """
+
+    class Meta:
+        model = LowercaseTag
+        fields = ["id", "name"]
