@@ -1,5 +1,9 @@
+from .like_handler import (
+    perform_toggle_like,
+)
 from .loggers import (
     log_comment_event,
+    log_like_event,
     log_post_event,
 )
 from .text_processing import (
@@ -28,4 +32,7 @@ __all__ = [
     # loggers
     "log_post_event",
     "log_comment_event",
+    "log_like_event",
+    # like_handler
+    "perform_toggle_like",
 ]

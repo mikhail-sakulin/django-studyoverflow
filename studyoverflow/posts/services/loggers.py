@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
+    from django.db import models
     from posts.models import Comment, Post
     from users.models import User
 
@@ -77,3 +78,31 @@ def log_comment_event(event_type: str, comment: Comment, user: User, source: str
     }
 
     logger.info(event_messages.get(event_type, "Событие комментария"), extra=extra_data)
+
+
+def log_like_event(event_type: str, obj: models.Model, user: User, source: str) -> None:
+    """
+    Логирует события лайков (добавление / удаление). Указывает источник: 'web' или 'api'.
+
+    :param event_type: тип события (создание, удаление)
+    :param obj: объект, к которому относится лайк
+    :param user: объект пользователя
+    :param source: источник события ('web' для Django views, 'api' для DRF)
+    """
+    model_name = obj._meta.verbose_name.lower()
+    model_type = obj._meta.model_name
+
+    event_messages = {
+        "like_add": f"Лайк добавлен к {model_name}у (id: {obj.pk}) пользователем {user.username}.",
+        "like_remove": f"Лайк удален у {model_name}а (id: {obj.pk}) пользователем {user.username}.",
+    }
+
+    extra_data = {
+        "object_id": obj.pk,
+        "object_type": model_type,
+        "user_id": user.pk,
+        "event_type": event_type,
+        "source": source,
+    }
+
+    logger.info(event_messages.get(event_type, "Событие лайка"), extra=extra_data)

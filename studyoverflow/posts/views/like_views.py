@@ -10,6 +10,7 @@ from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views import View
 from posts.models import Comment, Post
+from posts.services import perform_toggle_like
 
 from .mixins import HTMXMessageMixin, LoginRequiredHTMXMixin
 
@@ -52,33 +53,20 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, HTMXMessageMixin, View, ABC):
 
             return response
 
-        like, created = liked_object.likes.get_or_create(user=request.user)
+        user_has_liked, likes_count = perform_toggle_like(request.user, liked_object, source="web")
 
-        if not created:
-            like.delete()
+        if not user_has_liked:
             message_text = "Лайк удален."
             message_type = "info"
         else:
             message_text = "Лайк добавлен."
             message_type = "success"
 
-        event_type = "like_add" if created else "like_remove"
-
-        logger.info(
-            f"Лайк {event_type} для {self.model.__name__} (id: {liked_object.pk}).",
-            extra={
-                "object_type": self.model.__name__.lower(),
-                "object_id": liked_object.pk,
-                "user_id": request.user.pk,
-                "event_type": event_type,
-            },
-        )
-
         context = {
             "toggle_like_url": self._get_toggle_like_url(liked_object),
             "liked_object": liked_object,
             "likes_count": liked_object.likes.count(),
-            "user_has_liked": created,
+            "user_has_liked": user_has_liked,
         }
 
         response = render(request, "posts/likes/_like-button.html", context)
