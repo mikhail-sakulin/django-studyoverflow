@@ -25,7 +25,7 @@ class LikeAnnotationsMixin:
         Добавляет к выборке счетчик лайков и флаг 'user_has_liked'.
         """
         if "likes_count" not in queryset.query.annotations:
-            queryset = queryset.annotate(likes_count=Count(self.like_related_field))
+            queryset = queryset.annotate(likes_count=Count(self.like_related_field, distinct=True))
 
         user = getattr(self.request, "user", None)
 

@@ -1,8 +1,9 @@
+from django.contrib.auth import get_user_model
 from django.db.models import Count
 from posts.api.permissions import IsAuthorOrModeratorPermission
-from posts.api.serializers import CommentSerializer, PostSerializer
+from posts.api.serializers import AuthorSerializer, CommentSerializer, PostSerializer
 from posts.models import Comment, Post
-from posts.services import log_comment_event, log_post_event
+from posts.services import log_comment_event, log_post_event, perform_toggle_like
 from posts.views.mixins import (
     CommentSortMixin,
     CommentTreeQuerysetMixin,
@@ -17,9 +18,59 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 
+User = get_user_model()
+
+
+class LikeMixin:
+    """
+    Mixin, добавляющий ViewSet действия для работы с лайками объекта.
+
+    Добавляет два кастомных endpoint'а:
+
+    1) toggle-like (POST):
+    Инвертирует лайк пользователя:
+    - если пользователь еще не лайкал объект — лайк добавляется;
+    - если лайк уже существует — лайк удаляется.
+
+    2) likers-list (GET):
+    Возвращает список пользователей, поставивших лайк объекту.
+    """
+
+    @action(detail=True, methods=["post"], url_path="toggle-like")
+    def like(self, request, *args, **kwargs):
+        """
+        Кастомное действие, которое инвертирует лайк от пользователя к объекту:
+        ставит, если нет, убирает, если есть.
+        """
+        obj = self.get_object()  # type: ignore[attr-defined]
+        user = request.user
+
+        liked_now, likes_count = perform_toggle_like(user, obj, source="api")
+
+        return Response({"liked_now": liked_now, "likes_count_on_object": likes_count})
+
+    @action(detail=True, methods=["get"], url_path="likers-list")
+    def likes(self, request, *args, **kwargs):
+        """
+        Кастомное действие, которое возвращает список пользователей, лайкнувших объект.
+        """
+        obj = self.get_object()  # type: ignore[attr-defined]
+        user_ids = obj.likes.values_list("user_id", flat=True)
+        queryset = User.objects.filter(id__in=user_ids).order_by("id")
+
+        page = self.paginate_queryset(queryset)  # type: ignore[attr-defined]
+        if page is not None:
+            serializer = AuthorSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)  # type: ignore[attr-defined]
+
+        serializer = AuthorSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+
 class PostViewSet(
     PostAnnotateQuerysetMixin,
     PostFilterSortMixin,
+    LikeMixin,
     ModelViewSet,
 ):
     """
@@ -90,6 +141,7 @@ class CommentViewSet(
     LikeAnnotationsMixin,
     CommentSortMixin,
     CommentTreeQuerysetMixin,
+    LikeMixin,
     ModelViewSet,
 ):
     """
@@ -132,12 +184,12 @@ class CommentViewSet(
             # для отображения списка комментариев поста
             queryset = self.get_comment_tree_queryset(post)
         else:
-            # select_related автора и аннотирование поста для детального отображения 1 поста
+            # select_related автора и аннотирование комментария для его детального отображения
             queryset = super().get_queryset().filter(post_id=post.pk).select_related("author")
             # Аннотирование полями для лайков
             queryset = self.annotate_queryset(queryset)
 
-        queryset = queryset.annotate(children_count=Count("child_comments"))
+        queryset = queryset.annotate(children_count=Count("child_comments", distinct=True))
 
         return queryset
 
@@ -156,7 +208,7 @@ class CommentViewSet(
 
         queryset = self.get_comment_tree_queryset(post=self.get_post(), root_id=root_id)
 
-        queryset = queryset.annotate(children_count=Count("child_comments"))
+        queryset = queryset.annotate(children_count=Count("child_comments", distinct=True))
 
         root_comment = queryset.first()
 
