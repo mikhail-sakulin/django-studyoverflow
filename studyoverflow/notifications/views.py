@@ -1,12 +1,11 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.contenttypes.prefetch import GenericPrefetch
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.views import View
 from django.views.generic import ListView, TemplateView
+from notifications.mixins import NotificationOptimizeMixin
 from notifications.models import Notification
 from notifications.tasks import send_channel_notify_event
-from posts.models import Comment, Like, Post
 from posts.views.mixins import LoginRequiredRedirectHTMXMixin
 
 
@@ -16,7 +15,7 @@ class NotificationTemplateView(LoginRequiredMixin, TemplateView):
     template_name = "notifications/notification_base.html"
 
 
-class NotificationListView(LoginRequiredRedirectHTMXMixin, ListView):
+class NotificationListView(LoginRequiredRedirectHTMXMixin, NotificationOptimizeMixin, ListView):
     """
     Возвращает список уведомлений текущего пользователя.
     """
@@ -28,44 +27,9 @@ class NotificationListView(LoginRequiredRedirectHTMXMixin, ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        queryset = (
-            queryset.filter(user=self.request.user)
-            .select_related("actor", "content_type")
-            .only(
-                "notification_type",
-                "message",
-                "is_read",
-                "time_create",
-                "actor__username",
-                "actor__avatar",
-                "actor__avatar_small_size1",
-                "actor__avatar_small_size2",
-                "actor__avatar_small_size3",
-                "actor__role",
-                "content_type_id",
-                "object_id",
-            )
-            .prefetch_related(
-                GenericPrefetch(
-                    "content_object",
-                    [
-                        Post.objects.only("id", "slug"),
-                        Comment.objects.select_related("post").only("id", "post__id", "post__slug"),
-                        Like.objects.prefetch_related(
-                            GenericPrefetch(
-                                "content_object",
-                                [
-                                    Post.objects.only("id", "slug"),
-                                    Comment.objects.select_related("post").only(
-                                        "id", "post__id", "post__slug"
-                                    ),
-                                ],
-                            )
-                        ),
-                    ],
-                )
-            )
-        )
+        queryset = queryset.filter(user=self.request.user)
+
+        queryset = self.optimize_notification_queryset(queryset)
 
         return queryset
 
