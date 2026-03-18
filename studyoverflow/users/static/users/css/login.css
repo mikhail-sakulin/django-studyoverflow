@@ -3,6 +3,10 @@
   text-decoration: none;
 }
 
+.create-account-link:hover {
+    color: #0a58ca !important;
+}
+
 .yandex-btn {
     background-color: #ffbfb2;
     color: #000;
