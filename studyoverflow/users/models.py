@@ -11,6 +11,7 @@ from users.services import (
     AvatarFileValidator,
     BirthDateValidator,
     CustomUsernameValidator,
+    EmailUniqueValidator,
     PersonalNameValidator,
     generate_default_avatar_in_different_sizes,
     get_old_avatar_names,
@@ -99,6 +100,7 @@ class User(AbstractUser):
 
     # Валидаторы
     username_validator = CustomUsernameValidator()
+    email_validator = EmailUniqueValidator()
     first_name_last_name_validator = PersonalNameValidator()
     avatar_validator = AvatarFileValidator()
     date_birth_validator = BirthDateValidator()
@@ -117,7 +119,9 @@ class User(AbstractUser):
             "unique": gettext_lazy("A user with that username already exists."),
         },
     )
-    email = models.EmailField(unique=True, verbose_name=gettext_lazy("email address"))
+    email = models.EmailField(
+        unique=True, validators=[email_validator], verbose_name=gettext_lazy("email address")
+    )
 
     first_name = models.CharField(
         max_length=50, blank=True, validators=[first_name_last_name_validator], verbose_name="Имя"
@@ -234,6 +238,9 @@ class User(AbstractUser):
         post_save_context = {}
         if not is_creation and (not update_fields or "avatar" in update_fields):
             post_save_context = self._handle_update_avatar()
+
+        if self.email:
+            self.email = self.email.lower()
 
         with transaction.atomic():
             super().save(*args, **kwargs)

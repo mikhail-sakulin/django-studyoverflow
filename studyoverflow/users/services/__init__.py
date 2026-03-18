@@ -33,6 +33,7 @@ from .validators import (
     AvatarFileValidator,
     BirthDateValidator,
     CustomUsernameValidator,
+    EmailUniqueValidator,
     PersonalNameValidator,
 )
 
@@ -69,4 +70,5 @@ __all__ = [
     "PersonalNameValidator",
     "AvatarFileValidator",
     "BirthDateValidator",
+    "EmailUniqueValidator",
 ]

@@ -24,7 +24,7 @@ class CustomUsernameValidator(RegexValidator):
     regex = r"^[a-zA-Z0-9_-]{4,}$"
     message = gettext_lazy(
         "Имя пользователя должно быть не менее 4 символов и "
-        "состоять только из латинских букв, цифр, символов _ и -."
+        "состоять только из латинских букв, цифр, символов '_' и '-'."
     )
     flags = 0
 
@@ -185,4 +185,25 @@ class BirthDateValidator:
         if age > self.MAX_AGE:
             raise ValidationError(
                 f"Возраст не может превышать {self.MAX_AGE} лет.", code="max_age_exceeded"
+            )
+
+
+@deconstructible
+class EmailUniqueValidator:
+    """
+    Валидатор для проверки email пользователя.
+
+    Проверяет уникальность без учета регистра.
+    """
+
+    def __call__(self, email, instance=None, *args, **kwargs):
+        from users.models import User
+
+        qs = User.objects.filter(email__iexact=email)
+        if instance and instance.pk:
+            qs = qs.exclude(pk=instance.pk)
+
+        if qs.exists():
+            raise ValidationError(
+                "Пользователь с таким email (в любом регистре) уже существует.", code="email_exists"
             )
