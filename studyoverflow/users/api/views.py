@@ -1,4 +1,5 @@
-from django.contrib.auth import get_user_model, logout
+from allauth.account.signals import user_signed_up
+from django.contrib.auth import authenticate, get_user_model, login, logout
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
@@ -8,11 +9,62 @@ from users.api.serializers import (
     UserListSerializer,
     UserMyProfileSerializer,
     UserPublicProfileSerializer,
+    UserRegisterSerializer,
 )
 from users.views.mixins import UserOnlineFilterMixin, UserSortMixin
 
 
 User = get_user_model()
+
+
+class AuthViewSet(viewsets.GenericViewSet):
+    """
+    ViewSet для управления аутентификацией.
+
+    Обеспечивает вход (login), выход (logout) и регистрацию пользователей.
+    Использует сессионную аутентификацию и отправляет сигнал allauth при регистрации.
+    """
+
+    @action(detail=False, methods=["post"])
+    def login(self, request):
+        """
+        Логин через сессию.
+        """
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        user = authenticate(request, username=username, password=password)
+
+        if user and user.is_active:
+            login(request, user)
+            return Response(UserMyProfileSerializer(user, context={"request": request}).data)
+
+        return Response({"detail": "Неверные учетные данные."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
+    def logout(self, request):
+        """
+        Выход из системы, удаление сессии.
+        """
+        logout(request)
+        return Response({"detail": "Вы успешно вышли из аккаунта."}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"])
+    def register(self, request):
+        """
+        Регистрация пользователя.
+        """
+        serializer = UserRegisterSerializer(data=request.data)
+
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.save()
+        user_signed_up.send(sender=User, request=request, user=user)
+
+        return Response(
+            UserMyProfileSerializer(user, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class UserViewSet(

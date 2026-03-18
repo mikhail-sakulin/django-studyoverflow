@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core import exceptions
 from rest_framework import serializers
 from users.services import is_user_online
 
@@ -77,6 +79,53 @@ class UserMyProfileSerializer(UserPublicProfileSerializer):
             "role",
             "is_blocked",
         ]
+
+
+class UserRegisterSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для регистрации новых пользователей.
+
+    Включает валидацию пароля и username.
+    """
+
+    password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    password_confirm = serializers.CharField(write_only=True, style={"input_type": "password"})
+
+    class Meta:
+        model = User
+        fields = ("username", "first_name", "last_name", "email", "password", "password_confirm")
+
+    def validate_username(self, value):
+        """Проверка уникальности имени пользователя без учета регистра."""
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError(
+                "Пользователь с таким именем (в любом регистре) уже существует."
+            )
+        return value
+
+    def validate(self, attrs):
+        """
+        Валидация пароля и совпадения паролей.
+        """
+        if attrs["password"] != attrs["password_confirm"]:
+            raise serializers.ValidationError({"password_confirm": "Пароли не совпадают."})
+
+        user_data = attrs.copy()
+        user_data.pop("password_confirm", None)
+
+        user = User(**user_data)
+        password = attrs.get("password")
+        try:
+            validate_password(password, user)
+        except exceptions.ValidationError as e:
+            raise serializers.ValidationError({"password": list(e.messages)})
+
+        return attrs
+
+    def create(self, validated_data):
+        """Создание пользователя с использованием UserManager для хеширования пароля."""
+        validated_data.pop("password_confirm")
+        return User.objects.create_user(**validated_data)
 
 
 class UserListSerializer(serializers.ModelSerializer):
