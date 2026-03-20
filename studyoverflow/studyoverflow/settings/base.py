@@ -100,16 +100,17 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # Сообщения
     "django.contrib.messages.middleware.MessageMiddleware",
-    # Кастомные middleware проекта
-    "users.middleware.BlockedUserMiddleware",
-    "users.middleware.OnlineStatusMiddleware",
-    "navigation.middleware.UserActivityMiddleware",
     # allauth
     "allauth.account.middleware.AccountMiddleware",
     # Защита от clickjacking
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     #  Debug toolbar
     "debug_toolbar.middleware.DebugToolbarMiddleware",
+    # Кастомные middleware проекта
+    "users.middleware.BlockedUserMiddleware",
+    "users.middleware.OnlineStatusMiddleware",
+    "navigation.middleware.UserActivityMiddleware",
+    "navigation.middleware.RequestSourceMiddleware",
 ]
 
 # ----------------------------------------

@@ -45,3 +45,26 @@ class UserActivityMiddleware:
         )
 
         return response
+
+
+class RequestSourceMiddleware:
+    """
+    Промежуточное ПО для определения источника запроса.
+
+    Добавляет в request 'source_for_logging', чтобы в логах
+    можно было фильтровать события, пришедшие из API и из веб-интерфейса.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        """
+        Маркирует источник запроса (api / web) в request для логирования.
+        """
+        if request.path.startswith("/api/"):
+            request.source_for_logging = "api"
+        else:
+            request.source_for_logging = "web"
+
+        return self.get_response(request)
