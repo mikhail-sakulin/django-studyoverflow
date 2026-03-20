@@ -37,6 +37,8 @@ def log_user_login(sender, request, user, **kwargs):
 
     Логирует факт входа в систему с записью данных пользователя.
     """
+    source = getattr(request, "source_for_logging", "unknown") if request else "unknown"
+
     logger.info(
         f"Пользователь авторизовался: {user.username}.",
         extra={
@@ -45,6 +47,7 @@ def log_user_login(sender, request, user, **kwargs):
             "email": user.email,
             "is_social": user.is_social,
             "event_type": "user_login",
+            "source": source,
         },
     )
 
@@ -64,6 +67,8 @@ def log_user_signup(sender, request, user, **kwargs):
 
     provider = sociallogin.account.provider if sociallogin else None
 
+    source = getattr(request, "source_for_logging", "unknown") if request else "unknown"
+
     logger.info(
         f"Новый пользователь зарегистрировался: {user.username}.",
         extra={
@@ -73,6 +78,7 @@ def log_user_signup(sender, request, user, **kwargs):
             "is_social": user.is_social,
             "provider": provider,
             "event_type": "user_registration",
+            "source": source,
         },
     )
 
@@ -84,6 +90,8 @@ def log_user_logout(sender, request, user, **kwargs):
 
     Логирует выход пользователя из системы с сохранением данных пользователя.
     """
+    source = getattr(request, "source_for_logging", "unknown") if request else "unknown"
+
     logger.info(
         f"Пользователь вышел из системы: {user.username}.",
         extra={
@@ -92,6 +100,7 @@ def log_user_logout(sender, request, user, **kwargs):
             "email": user.email,
             "is_social": user.is_social,
             "event_type": "user_logout",
+            "source": source,
         },
     )
 
@@ -136,10 +145,13 @@ def log_user_login_failed(sender, credentials, request, **kwargs):
     """
     login_attempted = credentials.get("username") or credentials.get("email") or "unknown"
 
+    source = getattr(request, "source_for_logging", "unknown") if request else "unknown"
+
     logger.info(
         f"Неудачная попытка входа для пользователя: {login_attempted}.",
         extra={
             "attempted_login": login_attempted,
             "event_type": "auth_failed",
+            "source": source,
         },
     )

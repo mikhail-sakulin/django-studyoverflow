@@ -302,6 +302,7 @@ class UserPasswordChangeView(
                 "username": user.username,
                 "user_id": user.id,
                 "event_type": "user_password_change_success",
+                "source": getattr(self.request, "source_for_logging", "web"),
             },
         )
         return response
@@ -345,6 +346,7 @@ class UserPasswordResetConfirmView(SuccessMessageMixin, PasswordResetConfirmView
                 "username": user.username,
                 "user_id": user.pk,
                 "event_type": "user_password_reset_confirm_success",
+                "source": getattr(self.request, "source_for_logging", "web"),
             },
         )
         return response
