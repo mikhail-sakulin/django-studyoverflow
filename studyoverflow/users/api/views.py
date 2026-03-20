@@ -8,12 +8,15 @@ from django.contrib.auth import (
     logout,
     update_session_auth_hash,
 )
+from django.contrib.auth.forms import PasswordResetForm
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from users.api.serializers import (
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     UserListSerializer,
     UserMyProfileSerializer,
     UserPasswordChangeSerializer,
@@ -46,6 +49,8 @@ class AuthViewSet(viewsets.GenericViewSet):
             "login": UserMyProfileSerializer,
             "register": UserRegisterSerializer,
             "password_change": UserPasswordChangeSerializer,
+            "password_reset": PasswordResetRequestSerializer,
+            "password_reset_confirm": PasswordResetConfirmSerializer,
         }
 
         return serializers.get(self.action, self.serializer_class)
@@ -121,6 +126,55 @@ class AuthViewSet(viewsets.GenericViewSet):
         )
 
         return Response({"detail": "Пароль успешно изменен."}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"], url_path="password-reset")
+    def password_reset(self, request):
+        """
+        Запрос на восстановление пароля (отправка письма).
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+
+        form = PasswordResetForm({"email": email})
+
+        if form.is_valid():
+            form.save(
+                request=request,
+                use_https=request.is_secure(),
+                email_template_name="users/password_reset_email.html",
+            )
+
+            return Response(
+                {
+                    "detail": "Если введенный email зарегистрирован в системе, "
+                    "на него отправлена инструкция по восстановлению пароля."
+                }
+            )
+
+        return Response({"detail": "Ошибка обработки"}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["post"], url_path="password-reset-confirm")
+    def password_reset_confirm(self, request):
+        """
+        Установка нового пароля по токену.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.save()
+
+        logger.info(
+            f"Пользователь {user.username} успешно восстановил пароль через email.",
+            extra={
+                "username": user.username,
+                "user_id": user.pk,
+                "event_type": "password_reset_success",
+                "source": getattr(self.request, "source_for_logging", "api"),
+            },
+        )
+
+        return Response({"detail": "Пароль успешно изменен."})
 
 
 class UserViewSet(

@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
 from django.core import exceptions
+from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 from users.services import is_user_online
 
@@ -206,3 +208,60 @@ class UserPasswordChangeSerializer(serializers.ModelSerializer):
         user.set_password(self.validated_data["password_new"])
         user.save()
         return user
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """
+    Сериализатор для запроса на восстановление пароля.
+
+    Принимает email пользователя, на который будет отправлена ссылка со сбросом.
+    """
+
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """
+    Сериализатор для подтверждения сброса пароля.
+
+    Использует уникальный идентификатор (uidb64) и токен безопасности для
+    проверки прав на смену пароля без аутентификации (по ссылке из письма).
+    """
+
+    uidb64 = serializers.CharField()
+    token = serializers.CharField()
+    password_new = serializers.CharField(write_only=True, min_length=8)
+    password_new_confirm = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        """
+        Проверка токена, UID и валидация нового пароля.
+        """
+        # Валидация совпаения паролей
+        if attrs["password_new"] != attrs["password_new_confirm"]:
+            raise serializers.ValidationError({"password_new_confirm": "Пароли не совпадают."})
+
+        # Поиск пользователя по закодированному id
+        try:
+            uid = urlsafe_base64_decode(attrs["uidb64"]).decode()
+            self.user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            raise serializers.ValidationError({"uidb64": "Неверный идентификатор пользователя."})
+
+        # Валидация токена
+        if not default_token_generator.check_token(self.user, attrs["token"]):
+            raise serializers.ValidationError({"token": "Ссылка устарела или неверна."})
+
+        # Валидация пароля - проверка сложности
+        try:
+            validate_password(attrs["password_new"], self.user)
+        except exceptions.ValidationError as e:
+            raise serializers.ValidationError({"password_new": list(e.messages)})
+
+        return attrs
+
+    def save(self):
+        """Хеширует и сохраняет новый пароль."""
+        self.user.set_password(self.validated_data["password_new"])
+        self.user.save()
+        return self.user
