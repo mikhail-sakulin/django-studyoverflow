@@ -157,3 +157,52 @@ class UserListSerializer(serializers.ModelSerializer):
         """
         online_ids = self.context.get("online_ids", set())
         return user.id in online_ids
+
+
+class UserPasswordChangeSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для смены пароля авторизованного пользователя.
+
+    Проверяет корректность старого пароля и валидирует новый пароль.
+    """
+
+    password_old = serializers.CharField(
+        required=True, write_only=True, style={"input_type": "password"}
+    )
+    password_new = serializers.CharField(
+        required=True, write_only=True, style={"input_type": "password"}
+    )
+    password_new_confirm = serializers.CharField(
+        required=True, write_only=True, style={"input_type": "password"}
+    )
+
+    class Meta:
+        model = User
+        fields = ["password_old", "password_new", "password_new_confirm"]
+
+    def validate_password_old(self, value):
+        """Проверка правильности введенного старого пароля."""
+        user = self.context["request"].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Текущий пароль введен неверно.")
+        return value
+
+    def validate(self, attrs):
+        """Валидация новых паролей и их совпадения."""
+        if attrs["password_new"] != attrs["password_new_confirm"]:
+            raise serializers.ValidationError({"password_new_confirm": "Пароли не совпадают."})
+
+        user = self.context["request"].user
+        try:
+            validate_password(attrs["password_new"], user)
+        except exceptions.ValidationError as e:
+            raise serializers.ValidationError({"password_new": list(e.messages)})
+
+        return attrs
+
+    def save(self):
+        """Хеширует и сохраняет новый пароль."""
+        user = self.context["request"].user
+        user.set_password(self.validated_data["password_new"])
+        user.save()
+        return user

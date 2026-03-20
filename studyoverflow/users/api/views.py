@@ -1,5 +1,13 @@
+import logging
+
 from allauth.account.signals import user_signed_up
-from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth import (
+    authenticate,
+    get_user_model,
+    login,
+    logout,
+    update_session_auth_hash,
+)
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
@@ -8,6 +16,7 @@ from rest_framework.response import Response
 from users.api.serializers import (
     UserListSerializer,
     UserMyProfileSerializer,
+    UserPasswordChangeSerializer,
     UserPublicProfileSerializer,
     UserRegisterSerializer,
 )
@@ -15,6 +24,8 @@ from users.views.mixins import UserOnlineFilterMixin, UserSortMixin
 
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 class AuthViewSet(viewsets.GenericViewSet):
@@ -24,6 +35,20 @@ class AuthViewSet(viewsets.GenericViewSet):
     Обеспечивает вход (login), выход (logout) и регистрацию пользователей.
     Использует сессионную аутентификацию и отправляет сигнал allauth при регистрации.
     """
+
+    serializer_class = UserMyProfileSerializer
+
+    def get_serializer_class(self):
+        """
+        Выбор сериализатора в зависимости от действия.
+        """
+        serializers = {
+            "login": UserMyProfileSerializer,
+            "register": UserRegisterSerializer,
+            "password_change": UserPasswordChangeSerializer,
+        }
+
+        return serializers.get(self.action, self.serializer_class)
 
     @action(detail=False, methods=["post"])
     def login(self, request):
@@ -37,7 +62,8 @@ class AuthViewSet(viewsets.GenericViewSet):
 
         if user and user.is_active:
             login(request, user)
-            return Response(UserMyProfileSerializer(user, context={"request": request}).data)
+            serializer = self.get_serializer(user)
+            return Response(serializer.data)
 
         return Response({"detail": "Неверные учетные данные."}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -54,17 +80,47 @@ class AuthViewSet(viewsets.GenericViewSet):
         """
         Регистрация пользователя.
         """
-        serializer = UserRegisterSerializer(data=request.data)
-
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         user = serializer.save()
         user_signed_up.send(sender=User, request=request, user=user)
 
         return Response(
-            UserMyProfileSerializer(user, context={"request": request}).data,
+            UserMyProfileSerializer(user, context=self.get_serializer_context()).data,
             status=status.HTTP_201_CREATED,
         )
+
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[IsAuthenticated],
+        url_path="password-change",
+    )
+    def password_change(self, request):
+        """
+        Смена пароля текущего авторизованного пользователя.
+        """
+        serializer = self.get_serializer(data=request.data)
+
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.save()
+
+        # Обновление сессии, чтобы пользователя не разлогинило из системы после смены пароля
+        update_session_auth_hash(request, user)
+
+        logger.info(
+            f"Пользователь {user.username} успешно сменил пароль.",
+            extra={
+                "username": user.username,
+                "user_id": user.id,
+                "event_type": "user_password_change_success",
+                "source": getattr(self.request, "source_for_logging", "api"),
+            },
+        )
+
+        return Response({"detail": "Пароль успешно изменен."}, status=status.HTTP_200_OK)
 
 
 class UserViewSet(
@@ -85,6 +141,7 @@ class UserViewSet(
     queryset = User.objects.all()
     lookup_field = "username"
     parser_classes = [MultiPartParser, JSONParser]
+    serializer_class = UserPublicProfileSerializer
 
     def get_queryset(self):
         """
@@ -119,7 +176,7 @@ class UserViewSet(
             ):
                 return UserMyProfileSerializer
 
-        return serializers.get(self.action, UserPublicProfileSerializer)
+        return serializers.get(self.action, self.serializer_class)
 
     def list(self, request, *args, **kwargs):  # noqa: A003
         """
