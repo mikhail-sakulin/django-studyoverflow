@@ -10,6 +10,7 @@ from .avatars import (
     save_img_in_storage,
     user_avatar_upload_path,
 )
+from .moderation import _set_user_block_state, block_user_service, unblock_user_service
 from .online import (
     get_cached_online_user_ids,
     get_online_user_ids,
@@ -71,4 +72,8 @@ __all__ = [
     "AvatarFileValidator",
     "BirthDateValidator",
     "EmailUniqueValidator",
+    # moderation
+    "block_user_service",
+    "unblock_user_service",
+    "_set_user_block_state",
 ]
