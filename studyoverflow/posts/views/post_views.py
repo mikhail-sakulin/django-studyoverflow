@@ -85,12 +85,9 @@ class PostCreateView(
     template_name = "posts/post_create.html"
     success_url = reverse_lazy("posts:list")
     success_message = "Пост успешно создан!"
-
-    def get_context_data(self, **kwargs):
-        """Добавляет выбранный раздел меню в контекст."""
-        context = super().get_context_data(**kwargs)
-        context["section_of_menu_selected"] = "posts:create"
-        return context
+    extra_context = {
+        "section_of_menu_selected": "posts:create"
+    }  # Добавляет выбранный раздел меню в контекст
 
     def form_valid(self, form):
         response = super().form_valid(form)
