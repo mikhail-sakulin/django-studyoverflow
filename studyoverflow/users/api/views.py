@@ -25,9 +25,9 @@ from users.api.serializers import (
     UserPublicProfileSerializer,
     UserRegisterSerializer,
 )
+from users.mixins import UserOnlineFilterMixin, UserSortMixin
 from users.services import block_user_service, unblock_user_service
 from users.tasks import send_password_reset_email_task
-from users.views.mixins import UserOnlineFilterMixin, UserSortMixin
 
 
 User = get_user_model()

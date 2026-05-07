@@ -9,10 +9,9 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views import View
+from posts.mixins import HTMXMessageMixin, LoginRequiredHTMXMixin
 from posts.models import Comment, Post
 from posts.services import perform_toggle_like
-
-from .mixins import HTMXMessageMixin, LoginRequiredHTMXMixin
 
 
 logger = logging.getLogger(__name__)

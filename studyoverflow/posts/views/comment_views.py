@@ -7,11 +7,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 from posts.forms import CommentCreateForm, CommentUpdateForm
-from posts.models import Comment, Post
-from posts.services import log_comment_event
-from users.views.mixins import IsAuthorOrModeratorMixin
-
-from .mixins import (
+from posts.mixins import (
     CommentGetMethodMixin,
     CommentSortMixin,
     CommentTreeQuerysetMixin,
@@ -21,6 +17,9 @@ from .mixins import (
     LoginRequiredHTMXMixin,
     SingleObjectCacheMixin,
 )
+from posts.models import Comment, Post
+from posts.services import log_comment_event
+from users.mixins import IsAuthorOrModeratorMixin
 
 
 logger = logging.getLogger(__name__)

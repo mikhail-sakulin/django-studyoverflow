@@ -6,7 +6,7 @@ from django.views.generic import ListView, TemplateView
 from notifications.mixins import NotificationOptimizeMixin
 from notifications.models import Notification
 from notifications.tasks import send_channel_notify_event
-from posts.views.mixins import LoginRequiredRedirectHTMXMixin
+from posts.mixins import LoginRequiredRedirectHTMXMixin
 
 
 class NotificationTemplateView(LoginRequiredMixin, TemplateView):

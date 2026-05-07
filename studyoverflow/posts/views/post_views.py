@@ -7,11 +7,7 @@ from django.core.cache import cache
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from posts.forms import CommentCreateForm, PostCreateForm, PostFilterForm
-from posts.models import Post
-from posts.services import log_post_event
-from users.views.mixins import IsAuthorOrModeratorMixin
-
-from .mixins import (
+from posts.mixins import (
     ContextTagMixin,
     LoginRequiredHTMXMixin,
     PostAnnotateQuerysetMixin,
@@ -19,6 +15,9 @@ from .mixins import (
     PostFilterSortMixin,
     SingleObjectCacheMixin,
 )
+from posts.models import Post
+from posts.services import log_post_event
+from users.mixins import IsAuthorOrModeratorMixin
 
 
 logger = logging.getLogger(__name__)

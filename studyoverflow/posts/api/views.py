@@ -2,15 +2,15 @@ from django.contrib.auth import get_user_model
 from django.db.models import Count
 from posts.api.permissions import IsAuthorOrModeratorPermission
 from posts.api.serializers import AuthorSerializer, CommentSerializer, PostSerializer, TagSerializer
-from posts.models import Comment, LowercaseTag, Post
-from posts.services import log_comment_event, log_post_event, perform_toggle_like
-from posts.views.mixins import (
+from posts.mixins import (
     CommentSortMixin,
     CommentTreeQuerysetMixin,
     LikeAnnotationsMixin,
     PostAnnotateQuerysetMixin,
     PostFilterSortMixin,
 )
+from posts.models import Comment, LowercaseTag, Post
+from posts.services import log_comment_event, log_post_event, perform_toggle_like
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import get_object_or_404

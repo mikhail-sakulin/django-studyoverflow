@@ -27,17 +27,16 @@ from users.forms import (
     UserRegisterForm,
     UserSetPasswordForm,
 )
-from users.services import (
-    block_user_service,
-    get_cached_online_user_ids,
-    unblock_user_service,
-)
-
-from .mixins import (
+from users.mixins import (
     SocialUserPasswordChangeForbiddenMixin,
     UserHTMXPaginationMixin,
     UserOnlineFilterMixin,
     UserSortMixin,
+)
+from users.services import (
+    block_user_service,
+    get_cached_online_user_ids,
+    unblock_user_service,
 )
 
 
