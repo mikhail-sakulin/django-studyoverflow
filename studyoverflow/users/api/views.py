@@ -8,21 +8,25 @@ from django.contrib.auth import (
     logout,
     update_session_auth_hash,
 )
-from django.contrib.auth.forms import PasswordResetForm
+from django.db import transaction
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from users.api.permissions import CanBlockUserPermission
 from users.api.serializers import (
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
+    UserBlockResponseSerializer,
     UserListSerializer,
     UserMyProfileSerializer,
     UserPasswordChangeSerializer,
     UserPublicProfileSerializer,
     UserRegisterSerializer,
 )
+from users.services import block_user_service, unblock_user_service
+from users.tasks import send_password_reset_email_task
 from users.views.mixins import UserOnlineFilterMixin, UserSortMixin
 
 
@@ -134,25 +138,27 @@ class AuthViewSet(viewsets.GenericViewSet):
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         email = serializer.validated_data["email"]
 
-        form = PasswordResetForm({"email": email})
+        domain = request.get_host()
+        use_https = request.is_secure()
 
-        if form.is_valid():
-            form.save(
-                request=request,
-                use_https=request.is_secure(),
-                email_template_name="users/password_reset_email.html",
+        # отправка письма после подтверждения транзакции
+        transaction.on_commit(
+            lambda: send_password_reset_email_task.delay(
+                email=email,
+                domain=domain,
+                use_https=use_https,
             )
+        )
 
-            return Response(
-                {
-                    "detail": "Если введенный email зарегистрирован в системе, "
-                    "на него отправлена инструкция по восстановлению пароля."
-                }
-            )
-
-        return Response({"detail": "Ошибка обработки"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "detail": "Если введенный email зарегистрирован в системе, "
+                "на него отправлена инструкция по восстановлению пароля."
+            }
+        )
 
     @action(detail=False, methods=["post"], url_path="password-reset-confirm")
     def password_reset_confirm(self, request):
@@ -213,12 +219,14 @@ class UserViewSet(
         """
         Выбор сериализатора в зависимости от действия.
 
-        Испольует подмену публичного профиля пользователя на личный при просмотре своего аккаунта.
+        Использует подмену публичного профиля пользователя на личный при просмотре своего аккаунта.
         """
         serializers = {
             "list": UserListSerializer,
             "retrieve": UserPublicProfileSerializer,
             "me": UserMyProfileSerializer,
+            "block": UserBlockResponseSerializer,
+            "unblock": UserBlockResponseSerializer,
         }
 
         # Если пользователь хочет посмотреть свой профиль не через "/users/me/", а
@@ -290,3 +298,48 @@ class UserViewSet(
                 "full_avatar_url": request.build_absolute_uri(user.avatar.url),
             }
         )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsAuthenticated, CanBlockUserPermission],
+        url_path="block",
+    )
+    def block(self, request, username=None):
+        """
+        Блокирует пользователя при наличии у модератора на это прав.
+        """
+        target_user = self.get_object()
+        source = getattr(request, "source_for_logging", "api")
+
+        success, message = block_user_service(
+            moderator=request.user, target_user=target_user, source=source
+        )
+
+        serializer = self.get_serializer({"message": message, "is_blocked": target_user.is_blocked})
+
+        status_code = status.HTTP_200_OK if success else status.HTTP_400_BAD_REQUEST
+        return Response(serializer.data, status=status_code)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsAuthenticated, CanBlockUserPermission],
+        url_path="unblock",
+    )
+    def unblock(self, request, username=None):
+        """
+        Разблокирует пользователя при наличии у модератора на это прав.
+        """
+        target_user = self.get_object()
+
+        source = getattr(request, "source_for_logging", "api")
+
+        success, message = unblock_user_service(
+            moderator=request.user, target_user=target_user, source=source
+        )
+
+        serializer = self.get_serializer({"message": message, "is_blocked": target_user.is_blocked})
+
+        status_code = status.HTTP_200_OK if success else status.HTTP_400_BAD_REQUEST
+        return Response(serializer.data, status=status_code)
