@@ -18,6 +18,10 @@ class ActorSerializer(serializers.ModelSerializer):
 
 
 class NotificationSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для модели уведомлений. Предоставляет подробную информацию об уведомлении.
+    """
+
     type_display = serializers.CharField(source="get_notification_type_display", read_only=True)
     actor = ActorSerializer()
     content_object_url = serializers.SerializerMethodField()
@@ -38,6 +42,12 @@ class NotificationSerializer(serializers.ModelSerializer):
         ]
 
     def get_content_object_url(self, notification):
+        """
+        Формирует URL связанного с уведомлением объекта.
+
+        Если уведомление связано с лайком, ссылка формируется на объект, который лайкнули.
+        Для остальных объектов используется их метод 'get_absolute_url'.
+        """
         target = notification.content_object
         request = self.context.get("request")
 
