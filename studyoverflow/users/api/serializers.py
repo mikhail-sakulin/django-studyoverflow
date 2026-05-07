@@ -244,7 +244,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         # Поиск пользователя по закодированному id
         try:
             uid = urlsafe_base64_decode(attrs["uidb64"]).decode()
-            self.user = User.objects.get(pk=uid)
+            self.user = User.objects.get(pk=int(uid))
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             raise serializers.ValidationError({"uidb64": "Неверный идентификатор пользователя."})
 
@@ -265,3 +265,16 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         self.user.set_password(self.validated_data["password_new"])
         self.user.save()
         return self.user
+
+
+class UserBlockResponseSerializer(serializers.Serializer):
+    """
+    Сериализатор для ответа после блокировки/разблокировки.
+
+    Поля:
+        message - сообщение о результате операции
+        is_blocked - новый статус блокировки пользователя
+    """
+
+    message = serializers.CharField(read_only=True)
+    is_blocked = serializers.BooleanField(read_only=True)
