@@ -16,10 +16,8 @@ from django.contrib.auth.views import (
 )
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.cache import cache
-from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
-from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from users.forms import (
     UserLoginForm,
@@ -30,8 +28,9 @@ from users.forms import (
     UserSetPasswordForm,
 )
 from users.services import (
-    can_moderate,
+    block_user_service,
     get_cached_online_user_ids,
+    unblock_user_service,
 )
 
 from .mixins import (
@@ -42,7 +41,7 @@ from .mixins import (
 )
 
 
-UserModel = get_user_model()
+User = get_user_model()
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +53,7 @@ class UsersListView(UserHTMXPaginationMixin, ListView):
     Использует кеширование первой страницы. Список сортируется по репутации и имени пользователя.
     """
 
-    model = UserModel
+    model = User
     template_name = "users/user_list.html"
     context_object_name = "users"
     extra_context = {"section_of_menu_selected": "users:list"}
@@ -102,7 +101,7 @@ class UsersListHTMXView(UserHTMXPaginationMixin, UserSortMixin, UserOnlineFilter
     без полной перезагрузки страницы.
     """
 
-    model = UserModel
+    model = User
     template_name = "users/_user_grid.html"
     context_object_name = "users"
 
@@ -200,7 +199,7 @@ class AuthorProfileView(DetailView):
     редирект на страницу личного профиля.
     """
 
-    model = UserModel
+    model = User
     template_name = "users/profile_author.html"
     context_object_name = "author"
 
@@ -211,7 +210,7 @@ class AuthorProfileView(DetailView):
         author = cache.get(cache_key)
 
         if not author:
-            author = get_object_or_404(UserModel, username=username)
+            author = get_object_or_404(User, username=username)
             # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
             cache.set(cache_key, author, timeout=2)
 
@@ -232,7 +231,7 @@ class UserProfileUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView)
     Страница редактирования профиля текущего пользователя.
     """
 
-    model = UserModel
+    model = User
     form_class = UserProfileUpdateForm
     template_name = "users/profile_current_user.html"
     success_url = reverse_lazy("users:my_profile")
@@ -249,7 +248,7 @@ def avatar_preview(request, username):
 
     Используется для отображения аватара в модальном окне.
     """
-    author = get_object_or_404(UserModel, username=username)
+    author = get_object_or_404(User, username=username)
     return render(request, "users/_avatar_only_for_modal.html", {"author": author})
 
 
@@ -260,7 +259,7 @@ class UserDeleteView(LoginRequiredMixin, DeleteView):
     После удаления выполняется logout и редирект на главную страницу.
     """
 
-    model = UserModel
+    model = User
     success_url = reverse_lazy("home")
 
     def get_object(self, queryset=None):
@@ -368,34 +367,17 @@ def block_user(request, user_id):
 
     Проверяет права модератора (кто блокирует) и возможность модерации целевого пользователю.
     """
-    user = get_object_or_404(UserModel, pk=user_id)
+    user = get_object_or_404(User, pk=user_id)
 
-    # Проверка возможности заблокировать целевого пользователя
-    if not can_moderate(request.user, user):
-        raise PermissionDenied(
-            "Нельзя модерировать пользователя с равной или более высокой ролью. / "
-            "Нельзя модерировать самого себя."
-        )
+    source = getattr(request, "source_for_logging", "web")
 
-    if user.is_blocked:
-        messages.info(request, f"Пользователь {user.username} уже заблокирован.")
-        return redirect(user.get_absolute_url())
+    success, message = block_user_service(moderator=request.user, target_user=user, source=source)
 
-    user.is_blocked = True
-    user.blocked_at = timezone.now()
-    user.blocked_by = request.user
-    user.save(update_fields=["is_blocked", "blocked_at", "blocked_by"])
+    if success:
+        messages.success(request, message)
+    else:
+        messages.info(request, message)
 
-    logger.info(
-        f"Модератор {request.user.username} заблокировал пользователя {user.username}.",
-        extra={
-            "moderator_id": request.user.id,
-            "target_user_id": user.id,
-            "event_type": "user_blocked",
-        },
-    )
-
-    messages.success(request, f"Пользователь {user.username} заблокирован.")
     return redirect(user.get_absolute_url())
 
 
@@ -408,32 +390,15 @@ def unblock_user(request, user_id):
     Проверяет права модератора (кто разблокирует) и возможность
     снятия блокировки целевого пользователю.
     """
-    user = get_object_or_404(UserModel, pk=user_id)
+    user = get_object_or_404(User, pk=user_id)
 
-    # Проверка возможности разблокировать целевого пользователя
-    if not can_moderate(request.user, user):
-        raise PermissionDenied(
-            "Нельзя модерировать пользователя с равной или более высокой ролью. / "
-            "Нельзя модерировать самого себя."
-        )
+    source = getattr(request, "source_for_logging", "web")
 
-    if not user.is_blocked:
-        messages.info(request, f"Пользователь {user.username} не заблокирован.")
-        return redirect(user.get_absolute_url())
+    success, message = unblock_user_service(moderator=request.user, target_user=user, source=source)
 
-    user.is_blocked = False
-    user.blocked_at = None
-    user.blocked_by = None
-    user.save(update_fields=["is_blocked", "blocked_at", "blocked_by"])
+    if success:
+        messages.success(request, message)
+    else:
+        messages.info(request, message)
 
-    logger.info(
-        f"Модератор {request.user.username} разблокировал пользователя {user.username}.",
-        extra={
-            "moderator_id": request.user.pk,
-            "target_user_id": user.pk,
-            "event_type": "user_unblocked",
-        },
-    )
-
-    messages.success(request, f"Пользователь {user.username} разблокирован.")
     return redirect(user.get_absolute_url())
