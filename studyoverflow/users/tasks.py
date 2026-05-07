@@ -6,7 +6,9 @@ import logging
 from typing import Optional
 
 import requests
+from celery import shared_task
 from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import PasswordResetForm
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -267,3 +269,25 @@ def delete_files_from_storage_task(file_paths: list[str]):
     """
     if file_paths:
         delete_old_avatar_names(file_paths)
+
+
+@shared_task(autoretry_for=(Exception,), retry_backoff=5, retry_kwargs={"max_retries": 3})
+def send_password_reset_email_task(email: str, domain: str, use_https: bool) -> None:
+    """
+    Задача для отправки письма для сброса пароля пользователя.
+    """
+    form = PasswordResetForm({"email": email})
+
+    if form.is_valid():
+        form.save(
+            domain_override=domain,
+            use_https=use_https,
+            email_template_name="users/password_reset_email.html",
+        )
+    else:
+        logger.info(
+            "Запрос на сброс пароля для недействительного email.",
+            extra={
+                "email": email,
+            },
+        )
