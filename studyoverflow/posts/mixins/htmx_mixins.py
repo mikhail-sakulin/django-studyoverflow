@@ -76,7 +76,7 @@ class LoginRequiredHTMXMixin(LoginRequiredMixin, HTMXMessageMixin):
         Вместо редиректа возвращает сообщение.
         """
         if request.headers.get("Hx-Request") and not request.user.is_authenticated:
-            return self.htmx_message(
+            return self.add_htmx_message_to_response(
                 message_text=self.message_text,
                 message_type=self.message_type,
                 reswap_none=True,

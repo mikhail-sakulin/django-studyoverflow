@@ -10,6 +10,7 @@ from django.contrib.auth import (
 )
 from django.db import transaction
 from rest_framework import mixins, status, viewsets
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
@@ -50,7 +51,8 @@ class AuthViewSet(viewsets.GenericViewSet):
         Выбор сериализатора в зависимости от действия.
         """
         serializers = {
-            "login": UserMyProfileSerializer,
+            "session_login": UserMyProfileSerializer,
+            "drf_token_login": UserMyProfileSerializer,
             "register": UserRegisterSerializer,
             "password_change": UserPasswordChangeSerializer,
             "password_reset": PasswordResetRequestSerializer,
@@ -59,8 +61,8 @@ class AuthViewSet(viewsets.GenericViewSet):
 
         return serializers.get(self.action, self.serializer_class)
 
-    @action(detail=False, methods=["post"])
-    def login(self, request):
+    @action(detail=False, methods=["post"], url_path="session-login")
+    def session_login(self, request):
         """
         Логин через сессию.
         """
@@ -76,13 +78,79 @@ class AuthViewSet(viewsets.GenericViewSet):
 
         return Response({"detail": "Неверные учетные данные."}, status=status.HTTP_401_UNAUTHORIZED)
 
-    @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
-    def logout(self, request):
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[IsAuthenticated],
+        url_path="session-logout",
+    )
+    def session_logout(self, request):
         """
-        Выход из системы, удаление сессии.
+        Удаление сессии.
         """
+        if not request.session.session_key:
+            return Response(
+                {"detail": "У вас нет активной сессии."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
         logout(request)
-        return Response({"detail": "Вы успешно вышли из аккаунта."}, status=status.HTTP_200_OK)
+        return Response({"detail": "Сессия удалена."}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"], url_path="drf-token-login")
+    def drf_token_login(self, request):
+        """
+        Логин через DRF token.
+        """
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        user = authenticate(request, username=username, password=password)
+
+        if user and user.is_active:
+            token, created = Token.objects.get_or_create(user=user)
+
+            serializer = self.get_serializer(user)
+
+            return Response(
+                {"drf_token": token.key, "user": serializer.data}, status=status.HTTP_200_OK
+            )
+
+        return Response({"detail": "Неверные учетные данные."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[IsAuthenticated],
+        url_path="drf-token-logout",
+    )
+    def drf_token_logout(self, request):
+        """
+        Удаление DRF token.
+        """
+        token = getattr(request.user, "auth_token", None)
+
+        if token:
+            token.delete()
+
+            return Response({"detail": "DRF token удален."}, status=status.HTTP_200_OK)
+
+        return Response({"detail": "Нет активного DRF token."}, status=400)
+
+    @action(
+        detail=False, methods=["post"], permission_classes=[IsAuthenticated], url_path="logout-all"
+    )
+    def logout_all(self, request):
+        """
+        Выход из системы, удаляет токены пользователя и сессию.
+        """
+        Token.objects.filter(user=request.user).delete()
+
+        logout(request)
+
+        return Response(
+            {"detail": "Вы успешно вышли из системы, все сессии и токены удалены."},
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=False, methods=["post"])
     def register(self, request):
