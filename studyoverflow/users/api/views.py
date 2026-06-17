@@ -15,6 +15,8 @@ from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
 from users.api.permissions import CanBlockUserPermission
 from users.api.serializers import (
     PasswordResetConfirmSerializer,
@@ -134,21 +136,91 @@ class AuthViewSet(viewsets.GenericViewSet):
 
             return Response({"detail": "DRF token удален."}, status=status.HTTP_200_OK)
 
-        return Response({"detail": "Нет активного DRF token."}, status=400)
+        return Response({"detail": "Нет активного DRF token."}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[IsAuthenticated],
+        url_path="jwt-token-logout",
+    )
+    def jwt_token_logout(self, request):
+        """
+        Блокирует JWT refresh токен текущего клиента (помещает его в blacklist).
+        """
+        refresh = request.data.get("refresh")
+
+        if not refresh:
+            return Response(
+                {"detail": "Не передан refresh токен."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            token = RefreshToken(refresh)
+            token.blacklist()
+            return Response(
+                {"detail": "JWT refresh токен теперь заблокирован."}, status=status.HTTP_200_OK
+            )
+
+        except TokenError:
+            return Response(
+                {"detail": "Передан неверный или просроченный JWT refresh токен."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        except Exception as error:
+            logger.error(
+                f"Ошибка обработки JWT refresh токена: {error}.",
+                extra={"error": str(error), "refresh_token": refresh},
+            )
+            return Response(
+                {"detail": "Ошибка обработки JWT refresh токена."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(
         detail=False, methods=["post"], permission_classes=[IsAuthenticated], url_path="logout-all"
     )
-    def logout_all(self, request):
+    def logout_all_methods(self, request):
         """
-        Выход из системы, удаляет токены пользователя и сессию.
+        Выход из системы текущего клиента,
+        удаляет токены пользователя и сессию для текущего клиента.
         """
+        # Удаление DRF токена
         Token.objects.filter(user=request.user).delete()
 
+        # Удаление текущей сессии
         logout(request)
 
+        # Блокировка переданного JWT refresh токена
+        refresh = request.data.get("refresh")
+
+        if refresh:
+            try:
+                token = RefreshToken(refresh)
+                token.blacklist()
+
+            except TokenError:
+                return Response(
+                    {"detail": "Передан неверный или просроченный JWT refresh токен."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            except Exception as error:
+                logger.error(
+                    f"Ошибка обработки JWT refresh токена: {error}.",
+                    extra={"error": str(error), "refresh_token": refresh},
+                )
+                return Response(
+                    {"detail": "Ошибка обработки JWT refresh токена."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
         return Response(
-            {"detail": "Вы успешно вышли из системы, все сессии и токены удалены."},
+            {
+                "detail": "Вы успешно вышли из системы,"
+                "все сессии и токены для текущего устройства удалены."
+            },
             status=status.HTTP_200_OK,
         )
 

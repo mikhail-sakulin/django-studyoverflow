@@ -57,8 +57,9 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.sites",
     # Сторонние библиотеки
-    "rest_framework",
-    "rest_framework.authtoken",
+    "rest_framework",  # DRF
+    "rest_framework.authtoken",  # DRF token
+    "rest_framework_simplejwt.token_blacklist",  # отзыв refresh-токенов
     "django_extensions",  # management-команды, shell_plus и т.д.
     "storages",  # backend для S3 и других хранилищ
     "widget_tweaks",  # функционал для работы с формами в шаблонах
@@ -72,7 +73,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.vk",
     "allauth.socialaccount.providers.yandex",
-    # Локальные приложения проекта
+    # Кастомные приложения проекта
     "navigation.apps.NavigationConfig",
     "posts.apps.PostsConfig",
     "users.apps.UsersConfig",
