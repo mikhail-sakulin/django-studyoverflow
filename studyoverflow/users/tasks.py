@@ -12,6 +12,7 @@ from django.contrib.auth.forms import PasswordResetForm
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.core.management import call_command
 from django.utils import timezone
 from users.services import (
     delete_old_avatar_names,
@@ -291,3 +292,13 @@ def send_password_reset_email_task(email: str, domain: str, use_https: bool) -> 
                 "email": email,
             },
         )
+
+
+@shared_task
+def clear_expired_sessions():
+    call_command("clearsessions")
+
+
+@shared_task
+def flush_expired_jwt_tokens():
+    call_command("flushexpiredtokens")

@@ -2,7 +2,6 @@ import logging.config
 import os
 
 from celery import Celery
-from celery.schedules import crontab
 from celery.signals import after_setup_logger, after_setup_task_logger
 
 from studyoverflow import settings
@@ -23,8 +22,16 @@ app.conf.beat_schedule = {
     },
     "sync_user_activity_counters_every_1_min": {
         "task": "users.tasks.sync_user_activity_counters",
-        "schedule": crontab(minute=0),
+        "schedule": 60,
         "kwargs": {"batch_size": 1000},
+    },
+    "clear-expired-sessions": {
+        "task": "users.tasks.clear_expired_sessions",
+        "schedule": 60,  # crontab(hour=3, minute=0) - каждый день в 3 часа ночи
+    },
+    "flush-expired-jwt-tokens": {
+        "task": "users.tasks.flush_expired_jwt_tokens",
+        "schedule": 60,  # crontab(hour=3, minute=0) - каждый день в 3 часа ночи
     },
 }
 
