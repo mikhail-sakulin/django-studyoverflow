@@ -51,7 +51,7 @@
         </ul>
 
         <form method="GET" action="{% url 'posts:list' %}" class="col-12 col-xl-3 mb-3 mb-xl-0 me-xl-3">
-          <input id="base-search" name="q" type="search" class="form-control form-control-dark" placeholder="Поиск по постам..." aria-label="Search">
+          <input id="base-search" name="q" type="search" class="form-control form-control-dark" value="{{ request.GET.q }}" placeholder="Поиск по постам..." aria-label="Search">
         </form>
 
         <div class="text-end">
