@@ -23,7 +23,7 @@ urlpatterns = [
         "favicon.ico",
         RedirectView.as_view(url=settings.STATIC_URL + "img/favicon.ico"),
     ),
-    path("social-auth/", include("users.socialaccount_urls")),
+    path("social-auth/", include("users.urls_socialaccount")),
     # api
     path("api/v1/", include("studyoverflow.urls_api_v1")),
 ]
