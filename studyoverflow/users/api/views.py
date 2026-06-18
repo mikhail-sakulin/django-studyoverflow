@@ -1,6 +1,12 @@
 import logging
 
 from allauth.account.signals import user_signed_up
+from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from allauth.socialaccount.providers.vk.views import VKOAuth2Adapter
+from allauth.socialaccount.providers.yandex.views import YandexOAuth2Adapter
+from dj_rest_auth.registration.views import SocialLoginView
 from django.contrib.auth import (
     authenticate,
     get_user_model,
@@ -483,3 +489,27 @@ class UserViewSet(
 
         status_code = status.HTTP_200_OK if success else status.HTTP_400_BAD_REQUEST
         return Response(serializer.data, status=status_code)
+
+
+class GoogleLoginAPI(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+    client_class = OAuth2Client
+    callback_url = "http://localhost:3000/oauth-callback/google/"
+
+
+class GitHubLoginAPI(SocialLoginView):
+    adapter_class = GitHubOAuth2Adapter
+    client_class = OAuth2Client
+    callback_url = "http://localhost:3000/oauth-callback/github/"
+
+
+class VKLoginAPI(SocialLoginView):
+    adapter_class = VKOAuth2Adapter
+    client_class = OAuth2Client
+    callback_url = "http://localhost:3000/oauth-callback/vk/"
+
+
+class YandexLoginAPI(SocialLoginView):
+    adapter_class = YandexOAuth2Adapter
+    client_class = OAuth2Client
+    callback_url = "http://localhost:3000/oauth-callback/yandex/"

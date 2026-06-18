@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import redirect
 from django.utils import timezone
+from rest_framework.exceptions import PermissionDenied
 from users.services import SOCIAL_HANDLERS
 from users.tasks import download_and_set_avatar
 
@@ -96,8 +97,12 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
             else:
                 date_str = '"неизвестно"'
 
-            messages.error(request, f"Ваш аккаунт заблокирован {date_str}.")
+            error_message = f"Ваш аккаунт заблокирован {date_str}."
 
+            if request.path.startswith("/api/"):
+                raise PermissionDenied(detail=error_message)
+
+            messages.error(request, error_message)
             raise ImmediateHttpResponse(redirect("home"))
 
 

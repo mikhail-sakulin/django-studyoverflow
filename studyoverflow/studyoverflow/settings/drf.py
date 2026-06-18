@@ -42,3 +42,11 @@ SIMPLE_JWT = {
     "TOKEN_TYPE_CLAIM": "token_type",  # Claim с типом токена: access/refresh
     "JTI_CLAIM": "jti",  # Уникальный идентификатор токена (есть и у access, и у refresh)
 }
+
+# Настройки dj_rest_auth
+REST_AUTH = {
+    "USE_JWT": True,  # Выдача JWT вместо DRF токенов
+    "JWT_AUTH_COOKIE": "studyoverflow-access",  # Имя COOKIE для access-токена
+    "JWT_AUTH_REFRESH_COOKIE": "studyoverflow-refresh",  # Имя COOKIE для refresh-токена
+    "JWT_AUTH_HTTPONLY": False,  # False, если токен забирает фронтенд сам из JSON
+}

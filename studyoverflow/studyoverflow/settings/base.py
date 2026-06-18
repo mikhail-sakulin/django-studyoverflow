@@ -65,9 +65,10 @@ INSTALLED_APPS = [
     "widget_tweaks",  # функционал для работы с формами в шаблонах
     "channels",  # WebSocket + async Django
     "debug_toolbar",  # панель отладки
-    "allauth",  # система аутентификации
+    "allauth",  # система аутентификации через OAuth2.0
     "allauth.account",
     "allauth.socialaccount",
+    "dj_rest_auth",  # интеграция allauth (OAuth2.0) с simplejwt (JWT) для DRF
     # Социальные провайдеры
     "allauth.socialaccount.providers.github",
     "allauth.socialaccount.providers.google",
