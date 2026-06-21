@@ -86,10 +86,23 @@ class PostFilterSortMixin:
         """
         # Поиск по тексту
         q = request.GET.get("q", "").strip()
+
         if q:
-            queryset = queryset.filter(
-                Q(title__icontains=q) | Q(content__icontains=q) | Q(tags__name__icontains=q)
-            ).distinct()
+            # Поиск текста по триграммам в постах (title, content) через кастомный lookup (ILIKE)
+            # для PostgreSQL, возвращаются id найденных постов
+            q_posts = queryset.filter(
+                Q(title__ilike_icontains=q) | Q(content__ilike_icontains=q)
+            ).values("id")
+
+            # Поиск текста по триграммам в именах тегов поста через кастомный lookup (ILIKE)
+            # для PostgreSQL, возвращаются id найденных постов
+            q_tags = queryset.filter(tags__name__ilike_icontains=q).values("id")
+
+            # Объединение id постов, в которых был найден текст
+            fast_searched_posts = q_posts.union(q_tags)
+
+            # Фильтрация queryset по найденным id
+            queryset = queryset.filter(id__in=fast_searched_posts)
 
         # Фильтр по тегам
         tags = request.GET.get("tags", "").strip()

@@ -3,6 +3,7 @@ from urllib.parse import urlencode
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.postgres.indexes import GinIndex
 from django.core.validators import MaxLengthValidator
 from django.db import models
 from django.urls import reverse
@@ -40,6 +41,17 @@ class LowercaseTag(TagBase):
     class Meta:
         verbose_name = "Тег"
         verbose_name_plural = "Теги"
+
+        indexes = [
+            # GIN + trigram индекс для поиска по названию тегов
+            #    Tag.objects.filter(name__ilike_icontains='django')  # кастомный лукап
+            #        WHERE name ILIKE '%django%'
+            GinIndex(
+                fields=["name"],
+                opclasses=["gin_trgm_ops"],
+                name="tag_name_trgm",
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         """Приводит имя тега к нормализованному виду."""
@@ -157,6 +169,22 @@ class Post(models.Model):
             #       WHERE author_id = 17
             #       ORDER BY time_create DESC
             models.Index(fields=["author", "-time_create"]),
+            # GIN + trigram индекс для поиска по заголовку поста
+            #    Post.objects.filter(title__ilike_icontains='django')  # кастомный лукап
+            #        WHERE title ILIKE '%django%'
+            GinIndex(
+                fields=["title"],
+                opclasses=["gin_trgm_ops"],
+                name="post_title_trgm",
+            ),
+            # GIN + trigram индекс для поиска по содержимому поста
+            #    Post.objects.filter(content__ilike_icontains='django')  # кастомный лукап
+            #        WHERE content ILIKE '%django%'
+            GinIndex(
+                fields=["content"],
+                opclasses=["gin_trgm_ops"],
+                name="post_content_trgm",
+            ),
         ]
 
     def __init__(self, *args, **kwargs):
