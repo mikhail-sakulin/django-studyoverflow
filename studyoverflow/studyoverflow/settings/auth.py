@@ -50,14 +50,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Бэкенды аутентификации
 AUTHENTICATION_BACKENDS = [
-    # Позволяет логин через стандартный ModelBackend (для админки)
+    # Позволяет логин через стандартный ModelBackend
     "django.contrib.auth.backends.ModelBackend",
-    # Позволяет логин через allauth (email, соцсети)
+    # Позволяет логин через allauth (соцсети)
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
-
-# Методы логина для allauth (можно через username или email)
-ACCOUNT_LOGIN_METHODS = {"username", "email"}
 
 # Кастомные адаптеры
 SOCIALACCOUNT_ADAPTER = "users.adapters.CustomSocialAccountAdapter"

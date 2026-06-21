@@ -56,6 +56,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
+    "django.contrib.sitemaps",
+    # специальные инструменты Postgres (для проекта нужны индекс GIN и расширение для БД pg_trgm)
+    "django.contrib.postgres",
     # Сторонние библиотеки
     "rest_framework",  # DRF
     "rest_framework.authtoken",  # DRF token

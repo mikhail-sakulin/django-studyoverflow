@@ -29,7 +29,7 @@ def custom_exception_handler(exc, context):
             user_id = None
 
         # Логирование
-        logger.warning(
+        logger.info(
             f"Validation Error in {view_name} | User: {username} | Errors: {response.data}.",
             extra={
                 "status_code": 400,

@@ -1,0 +1,34 @@
+{# Правила индексации для всех поисковых роботов #}
+User-agent: *
+
+{# Запрещена админка Django #}
+Disallow: /admin/
+
+{# Запрещены API-эндпоинты #}
+Disallow: /api/
+
+{# Запрещенные ресурсы приложения USERS #}
+Disallow: /users/list-htmx/
+Disallow: /users/logout/
+Disallow: /users/delete/
+Disallow: /users/profile/me/
+Disallow: /users/password-change/
+Disallow: /users/password-reset/
+Disallow: /users/block/
+Disallow: /users/unblock/
+
+{# Запрещенные ресурсы приложения POSTS #}
+Disallow: /posts/create/
+Disallow: /posts/edit/
+Disallow: /posts/delete/
+Disallow: /*/comments/
+Disallow: /*/likes/
+
+{# Запрещенные ресурсы приложения NOTIFICATIONS #}
+Disallow: /notifications/
+
+{# Запрещена индексация GET-параметров #}
+Disallow: /*?*
+
+{# Карта сайта #}
+Sitemap: {{ request.scheme }}://{{ request.get_host }}/sitemap.xml
