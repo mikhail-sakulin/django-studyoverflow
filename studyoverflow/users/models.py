@@ -1,6 +1,6 @@
 from celery import chain
 from django.contrib.auth.models import AbstractUser, Group, UserManager
-from django.core.validators import MaxLengthValidator
+from django.core.validators import MaxLengthValidator, validate_email
 from django.db import models, transaction
 from django.db.models import Q
 from django.db.models.functions import Upper
@@ -120,7 +120,9 @@ class User(AbstractUser):
         },
     )
     email = models.EmailField(
-        unique=True, validators=[email_validator], verbose_name=gettext_lazy("email address")
+        unique=True,
+        validators=[email_validator, validate_email],
+        verbose_name=gettext_lazy("email address"),
     )
 
     first_name = models.CharField(
