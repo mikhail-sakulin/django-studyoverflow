@@ -90,6 +90,8 @@ INSTALLED_APPS = [
 # ----------------------------------------
 
 MIDDLEWARE = [
+    # Профилирование через pyinstrument
+    # 'pyinstrument.middleware.ProfilerMiddleware',
     # Безопасность
     "django.middleware.security.SecurityMiddleware",
     # Статика через WhiteNoise
