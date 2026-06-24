@@ -64,7 +64,7 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, HTMXMessageMixin, View, ABC):
         context = {
             "toggle_like_url": self._get_toggle_like_url(liked_object),
             "liked_object": liked_object,
-            "likes_count": liked_object.likes.count(),
+            "likes_count": liked_object.likes_count,
             "user_has_liked": user_has_liked,
         }
 

@@ -3,7 +3,7 @@
 """
 
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Count, Exists, OuterRef, Prefetch, Q, QuerySet
+from django.db.models import Exists, OuterRef, Prefetch, Q, QuerySet
 from django.http import HttpRequest
 from posts.models import Comment, Like, Post
 
@@ -24,9 +24,6 @@ class LikeAnnotationsMixin:
         """
         Добавляет к выборке счетчик лайков и флаг 'user_has_liked'.
         """
-        if "likes_count" not in queryset.query.annotations:
-            queryset = queryset.annotate(likes_count=Count(self.like_related_field, distinct=True))
-
         user = getattr(self.request, "user", None)
 
         if user and user.is_authenticated:
@@ -50,20 +47,11 @@ class PostAnnotateQuerysetMixin(LikeAnnotationsMixin):
     Аннотированный queryset для постов:
     - select_related author
     - prefetch_related tags
-    - annotate likes_count и comments_count
     - флаг 'user_has_liked' через LikeAnnotationsMixin
     """
 
     def get_annotate_queryset(self, queryset):  # type: ignore
-        queryset = (
-            queryset.select_related("author")
-            .prefetch_related("tags")
-            .defer("author__bio")
-            .annotate(
-                likes_count=Count("likes", distinct=True),
-                comments_count=Count("comments", distinct=True),
-            )
-        )
+        queryset = queryset.select_related("author").prefetch_related("tags").defer("author__bio")
         queryset = super().annotate_queryset(queryset)
         return queryset
 
@@ -87,22 +75,26 @@ class PostFilterSortMixin:
         # Поиск по тексту
         q = request.GET.get("q", "").strip()
 
+        # Поиск текста по триграммам в постах (title, content, tags__name)
+        # через кастомный lookup (ILIKE)
         if q:
-            # Поиск текста по триграммам в постах (title, content) через кастомный lookup (ILIKE)
-            # для PostgreSQL, возвращаются id найденных постов
-            q_posts = queryset.filter(
-                Q(title__ilike_icontains=q) | Q(content__ilike_icontains=q)
-            ).values("id")
+            # Список id постов, в именах тегов которых найден текст q
+            post_ids_by_tags = list(
+                queryset.model.objects.filter(tags__name__ilike_icontains=q).values_list(
+                    "id", flat=True
+                )
+            )
 
-            # Поиск текста по триграммам в именах тегов поста через кастомный lookup (ILIKE)
-            # для PostgreSQL, возвращаются id найденных постов
-            q_tags = queryset.filter(tags__name__ilike_icontains=q).values("id")
+            # .values("id") -> [{'id': 1}, {'id': 5}, {'id': 12}]
+            # .values_list("id") -> [(1,), (5,), (12,)]
+            # .values_list("id", flat=True) -> [1, 5, 12]
 
-            # Объединение id постов, в которых был найден текст
-            fast_searched_posts = q_posts.union(q_tags)
-
-            # Фильтрация queryset по найденным id
-            queryset = queryset.filter(id__in=fast_searched_posts)
+            # Поиск постов, в title, content или tags__name которых есть текст q
+            queryset = queryset.filter(
+                Q(title__ilike_icontains=q)
+                | Q(content__ilike_icontains=q)
+                | Q(id__in=post_ids_by_tags)
+            )
 
         # Фильтр по тегам
         tags = request.GET.get("tags", "").strip()
@@ -126,8 +118,7 @@ class PostFilterSortMixin:
 
     def filter_and_sort_by_annotations(self, queryset, request):
         """
-        Фильтрация по аннотированному полю comments_count.
-        Сортировка по полям модели или аннотированным полям.
+        Фильтрация и сортировка по полям модели или аннотированным полям.
         """
         # Фильтр по наличию комментариев
         has_comments = request.GET.get("has_comments", "any")
@@ -238,6 +229,7 @@ class CommentTreeQuerysetMixin:
                 # поля reply_to
                 "reply_to__id",
                 "reply_to__author_id",
+                "likes_count",
                 # поля автора reply_to комментария
                 *[f"reply_to__author__{f}" for f in user_fields],
             )
@@ -262,6 +254,7 @@ class CommentTreeQuerysetMixin:
                 "rendered_content",
                 "time_create",
                 "time_update",
+                "likes_count",
                 # поля автора комментария
                 *[f"author__{f}" for f in user_fields],
             )

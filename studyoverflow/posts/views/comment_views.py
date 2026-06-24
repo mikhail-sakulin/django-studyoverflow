@@ -2,7 +2,6 @@ import json
 import logging
 
 from django.contrib import messages
-from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
@@ -62,9 +61,7 @@ class CommentListView(LikeAnnotationsMixin, CommentSortMixin, CommentTreeQueryse
             post_pk = self.kwargs.get("post_pk")
             post_slug = self.kwargs.get("post_slug")
             self._post_object = get_object_or_404(
-                Post.objects.only("pk", "slug", "author_id").annotate(
-                    comments_count=Count("comments")
-                ),
+                Post.objects.only("pk", "slug", "author_id", "comments_count"),
                 pk=post_pk,
                 slug=post_slug,
             )

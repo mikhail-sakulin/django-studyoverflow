@@ -27,4 +27,7 @@ def perform_toggle_like(user: User, obj: Post | Comment, source: str) -> tuple[b
     # Логирование действия
     log_like_event(event_type=event_type, obj=obj, user=user, source=source)
 
-    return created, obj.likes.count()
+    # Обновление счетчика лайков объекта из БД после отработки сигнала на увеличение счетчика
+    obj.refresh_from_db(fields=["likes_count"])
+
+    return created, obj.likes_count

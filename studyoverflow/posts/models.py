@@ -87,7 +87,7 @@ class TaggedPost(GenericTaggedItemBase):
             # Индекс используется при получении тегов поста:
             #   WHERE object_id = ? AND content_type_id = ?
             # (через join'ы Post, TaggedPost, LowercaseTag)
-            models.Index(fields=["object_id", "content_type_id"]),
+            models.Index(fields=["object_id", "content_type"]),
         ]
 
     def __str__(self):
@@ -108,6 +108,8 @@ class Post(models.Model):
     - tags (TaggableManager): Менеджер тегов, работающий через TaggedPost.
     - likes (GenericRelation): Связь с моделью лайков (Like).
     - notifications (GenericRelation): Связь с моделью уведомлений (Notification).
+    - likes_count (PositiveIntegerField): Количество лайков.
+    - comments_count (PositiveIntegerField): Количество комментариев.
     - time_create (DateTimeField): Дата и время создания.
     - time_update (DateTimeField): Дата и время последнего изменения.
     """
@@ -152,6 +154,9 @@ class Post(models.Model):
         verbose_name="Уведомления",
     )
 
+    likes_count = models.PositiveIntegerField(default=0, verbose_name="Количество лайков")
+    comments_count = models.PositiveIntegerField(default=0, verbose_name="Количество комментариев")
+
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
@@ -164,11 +169,25 @@ class Post(models.Model):
             # Индекс для сортировки постов по дате создания
             #   ORDER BY time_create DESC
             models.Index(fields=["-time_create"]),
-            # Индекс для получения постов конкретного автора в сортировке по дате создания:
+            # Индекс для получения постов конкретного автора в сортировке по дате создания
             #   Post.objects.filter(author=...).order_by('-time_create')
             #       WHERE author_id = 17
             #       ORDER BY time_create DESC
             models.Index(fields=["author", "-time_create"]),
+            # Индекс для вывода наиболее залайканных постов (по убыванию лайков)
+            # с вторичной сортировкой по дате создания
+            #   Post.objects.order_by('-likes_count', '-time_create')
+            #       ORDER BY likes_count DESC, time_create DESC
+            models.Index(fields=["-likes_count", "-time_create"]),
+            # ORDER BY likes_count ASC, time_create DESC
+            models.Index(fields=["likes_count", "-time_create"]),
+            # Индекс для вывода наиболее комментируемых постов (по убыванию комментариев)
+            # с вторичной сортировкой по дате создания
+            #   Post.objects.order_by('-comments_count', '-time_create')
+            #       ORDER BY comments_count DESC, time_create DESC
+            models.Index(fields=["-comments_count", "-time_create"]),
+            # ORDER BY comments_count ASC, time_create DESC
+            models.Index(fields=["comments_count", "-time_create"]),
             # GIN + trigram индекс для поиска по заголовку поста
             #    Post.objects.filter(title__ilike_icontains='django')  # кастомный лукап
             #        WHERE title ILIKE '%django%'
@@ -256,6 +275,7 @@ class Comment(models.Model):
     - rendered_content (TextField): Сгенерированный HTML-код из Markdown (для кеширования).
     - likes (GenericRelation): Связь с моделью лайков (Like).
     - notifications (GenericRelation): Связь с моделью уведомлений (Notification).
+    - likes_count (PositiveIntegerField): Количество лайков.
     - time_create (DateTimeField): Дата и время создания.
     - time_update (DateTimeField): Дата и время последнего изменения.
     """
@@ -308,6 +328,8 @@ class Comment(models.Model):
         verbose_name="Уведомления",
     )
 
+    likes_count = models.PositiveIntegerField(default=0, verbose_name="Количество лайков")
+
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
@@ -331,6 +353,13 @@ class Comment(models.Model):
             #       WHERE parent_comment_id = ?
             #       ORDER BY time_create DESC
             models.Index(fields=["parent_comment", "-time_create"]),
+            # Индекс для вывода наиболее залайканных комментариев (по убыванию лайков)
+            # с вторичной сортировкой по дате создания
+            #   Comment.objects.order_by('-likes_count', '-time_create')
+            #       ORDER BY likes_count DESC, time_create DESC
+            models.Index(fields=["-likes_count", "-time_create"]),
+            # ORDER BY likes_count ASC, time_create DESC
+            models.Index(fields=["likes_count", "-time_create"]),
         ]
 
     def __init__(self, *args, **kwargs):
