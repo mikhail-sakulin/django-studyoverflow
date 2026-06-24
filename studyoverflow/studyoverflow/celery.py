@@ -25,11 +25,19 @@ app.conf.beat_schedule = {
         "schedule": 60,
         "kwargs": {"batch_size": 1000},
     },
-    "clear-expired-sessions": {
+    "sync_post_counters_every_1_min": {
+        "task": "posts.tasks.sync_post_counters",
+        "schedule": 60,
+    },
+    "sync_comment_counters_every_1_min": {
+        "task": "posts.tasks.sync_comment_counters",
+        "schedule": 60,
+    },
+    "clear_expired_sessions": {
         "task": "users.tasks.clear_expired_sessions",
         "schedule": 60,  # crontab(hour=3, minute=0) - каждый день в 3 часа ночи
     },
-    "flush-expired-jwt-tokens": {
+    "flush_expired_jwt_tokens": {
         "task": "users.tasks.flush_expired_jwt_tokens",
         "schedule": 60,  # crontab(hour=3, minute=0) - каждый день в 3 часа ночи
     },
