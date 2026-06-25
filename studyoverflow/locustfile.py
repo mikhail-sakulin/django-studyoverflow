@@ -2,7 +2,7 @@ from locust import HttpUser, task
 
 
 class WebsiteUser(HttpUser):
-    host = "http://127.0.0.1:8000"
+    host = "http://127.0.0.1:80"
 
     @task
     def load_index(self):
@@ -11,3 +11,7 @@ class WebsiteUser(HttpUser):
     @task
     def load_posts_list(self):
         self.client.get("/posts/")
+
+    @task
+    def load_posts_create(self):
+        self.client.get("/posts/create/")
