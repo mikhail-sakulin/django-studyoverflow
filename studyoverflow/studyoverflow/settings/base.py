@@ -40,6 +40,11 @@ INTERNAL_IPS = [
     "172.18.0.1",  # IP хоста, видимый из Docker-контейнера
 ]
 
+# # Django Debug Toolbar всегда показывается при Debug == True
+# DEBUG_TOOLBAR_CONFIG = {
+#     "SHOW_TOOLBAR_CALLBACK": lambda request: DEBUG,
+# }
+
 
 # ----------------------------------------
 # Установленные приложения
@@ -94,8 +99,8 @@ MIDDLEWARE = [
     # 'pyinstrument.middleware.ProfilerMiddleware',
     # Безопасность
     "django.middleware.security.SecurityMiddleware",
-    # Статика через WhiteNoise
-    "whitenoise.middleware.WhiteNoiseMiddleware",
+    # Статика через WhiteNoise при Debug=False
+    # "whitenoise.middleware.WhiteNoiseMiddleware",
     # Сессии
     "django.contrib.sessions.middleware.SessionMiddleware",
     # Локализация (язык, формат дат)
