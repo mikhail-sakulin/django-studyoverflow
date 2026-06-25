@@ -11,6 +11,7 @@ from django.core.exceptions import ValidationError
 from django.forms import ClearableFileInput
 from django.utils import timezone
 from django.utils.translation import gettext_lazy
+from users.services import validate_email_unique
 
 
 UserModel = get_user_model()
@@ -88,6 +89,13 @@ class UserRegisterForm(BootstrapFormMixin, UserCreationForm):
 
         return username
 
+    def clean_email(self):
+        """Проверка уникальности email без учета регистра."""
+        email = self.cleaned_data.get("email")
+        if email:
+            validate_email_unique(email, instance=self.instance)
+        return email
+
 
 class UserLoginForm(AuthenticationForm):
     """
@@ -163,6 +171,13 @@ class UserProfileUpdateForm(BootstrapFormMixin, forms.ModelForm):
             ),
             "date_birth": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
+
+    def clean_email(self):
+        """Проверка уникальности email без учета регистра."""
+        email = self.cleaned_data.get("email")
+        if email:
+            validate_email_unique(email, instance=self.instance)
+        return email
 
 
 class UserPasswordChangeForm(BootstrapFormMixin, PasswordChangeForm):

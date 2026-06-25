@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser, Group, UserManager
 from django.core.validators import MaxLengthValidator, validate_email
 from django.db import models, transaction
 from django.db.models import Q
-from django.db.models.functions import Upper
+from django.db.models.functions import Lower, Upper
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy
@@ -11,7 +11,6 @@ from users.services import (
     AvatarFileValidator,
     BirthDateValidator,
     CustomUsernameValidator,
-    EmailUniqueValidator,
     PersonalNameValidator,
     generate_default_avatar_in_different_sizes,
     get_old_avatar_names,
@@ -98,9 +97,8 @@ class User(AbstractUser):
         Role.STAFF_VIEWER: ["StaffViewers"],
     }
 
-    # Валидаторы
+    # Кастомные валидаторы
     username_validator = CustomUsernameValidator()
-    email_validator = EmailUniqueValidator()
     first_name_last_name_validator = PersonalNameValidator()
     avatar_validator = AvatarFileValidator()
     date_birth_validator = BirthDateValidator()
@@ -120,8 +118,7 @@ class User(AbstractUser):
         },
     )
     email = models.EmailField(
-        unique=True,
-        validators=[email_validator, validate_email],
+        validators=[validate_email],
         verbose_name=gettext_lazy("email address"),
     )
 
@@ -195,6 +192,12 @@ class User(AbstractUser):
         ordering = ["username"]
         permissions = [
             ("block_user", "Can block/unblock users"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"),
+                name="unique_user_lowercase_email",
+            )
         ]
         indexes = [
             # Индекс для поиска пользователя по имени без учета регистра:

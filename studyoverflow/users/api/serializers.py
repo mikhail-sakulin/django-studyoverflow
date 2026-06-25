@@ -4,7 +4,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core import exceptions
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
-from users.services import is_user_online
+from users.services import is_user_online, validate_email_unique
 
 
 User = get_user_model()
@@ -82,6 +82,15 @@ class UserMyProfileSerializer(UserPublicProfileSerializer):
             "is_blocked",
         ]
 
+    def validate_email(self, value):
+        """Проверка уникальности email без учета регистра."""
+        if value:
+            try:
+                validate_email_unique(value, instance=self.instance)
+            except exceptions.ValidationError as e:
+                raise serializers.ValidationError(e.messages)
+        return value
+
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     """
@@ -103,6 +112,15 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Пользователь с таким именем (в любом регистре) уже существует."
             )
+        return value
+
+    def validate_email(self, value):
+        """Проверка уникальности email без учета регистра."""
+        if value:
+            try:
+                validate_email_unique(value, instance=None)
+            except exceptions.ValidationError as e:
+                raise serializers.ValidationError(e.messages)
         return value
 
     def validate(self, attrs):

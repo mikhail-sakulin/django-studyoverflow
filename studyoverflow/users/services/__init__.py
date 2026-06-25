@@ -34,8 +34,8 @@ from .validators import (
     AvatarFileValidator,
     BirthDateValidator,
     CustomUsernameValidator,
-    EmailUniqueValidator,
     PersonalNameValidator,
+    validate_email_unique,
 )
 
 
@@ -71,7 +71,7 @@ __all__ = [
     "PersonalNameValidator",
     "AvatarFileValidator",
     "BirthDateValidator",
-    "EmailUniqueValidator",
+    "validate_email_unique",
     # moderation
     "block_user_service",
     "unblock_user_service",

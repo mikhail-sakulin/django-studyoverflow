@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='user',
             name='email',
-            field=models.EmailField(max_length=254, unique=True, validators=[users.services.validators.EmailUniqueValidator(), django.core.validators.EmailValidator()], verbose_name='email address'),
+            field=models.EmailField(max_length=254, unique=True, validators=[django.core.validators.EmailValidator()], verbose_name='email address'),
         ),
     ]

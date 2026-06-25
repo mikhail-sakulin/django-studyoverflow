@@ -2,6 +2,7 @@ from datetime import date
 from typing import Final
 
 import filetype
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.core.validators import RegexValidator
@@ -188,22 +189,20 @@ class BirthDateValidator:
             )
 
 
-@deconstructible
-class EmailUniqueValidator:
+def validate_email_unique(email: str, instance=None) -> None:
     """
     Валидатор для проверки email пользователя.
 
     Проверяет уникальность без учета регистра.
     """
+    User = get_user_model()  # noqa: N806
 
-    def __call__(self, email, instance=None, *args, **kwargs):
-        from users.models import User
+    qs = User.objects.filter(email__iexact=email)
 
-        qs = User.objects.filter(email__iexact=email)
-        if instance and instance.pk:
-            qs = qs.exclude(pk=instance.pk)
+    if instance and instance.pk:
+        qs = qs.exclude(pk=instance.pk)
 
-        if qs.exists():
-            raise ValidationError(
-                "Пользователь с таким email (в любом регистре) уже существует.", code="email_exists"
-            )
+    if qs.exists():
+        raise ValidationError(
+            "Пользователь с таким email (в любом регистре) уже существует.", code="email_exists"
+        )
