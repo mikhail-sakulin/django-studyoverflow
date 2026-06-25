@@ -5,8 +5,9 @@ from .base import BASE_DIR, env
 # Database
 # ----------------------------------------
 
-# Основная база данных проекта
-# Используется пул соединений (через psycopg-pool)
+# Основная база данных проекта.
+# Используется пул соединений (через psycopg-pool),
+# пул привязан к 1 процессу.
 DATABASES = {
     "default": {
         **env.db("DATABASE_URL"),
@@ -33,6 +34,9 @@ AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
 # URL и протокол
 AWS_S3_ENDPOINT_URL = "https://s3.ru1.storage.beget.cloud"
 AWS_S3_USE_SSL = True
+
+# Кастомный домен S3 (Beget), который используется для генерации ссылок на файлы в S3
+AWS_S3_CUSTOM_DOMAIN = f"s3.ru1.storage.beget.cloud/{AWS_STORAGE_BUCKET_NAME}"
 
 # Настройки поведения при перезаписи файлов
 AWS_S3_FILE_OVERWRITE = True
@@ -65,7 +69,7 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Статика через WhiteNoise
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+# STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Директория для загружаемых пользователями медиа-файлов (локально)
 MEDIA_ROOT = BASE_DIR / "media"
