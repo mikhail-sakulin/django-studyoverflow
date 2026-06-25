@@ -33,10 +33,6 @@ urlpatterns = [
     path("posts/", include("posts.urls")),
     path("users/", include("users.urls")),
     path("notifications/", include("notifications.urls")),
-    path(
-        "favicon.ico",
-        RedirectView.as_view(url=settings.STATIC_URL + "img/favicon.ico"),
-    ),
     path("social-auth/", include("users.urls_socialaccount")),
     path("api/v1/", include("studyoverflow.urls_api_v1")),
     path(
