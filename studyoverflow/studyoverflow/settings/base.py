@@ -34,16 +34,11 @@ DEBUG = env.bool("DEBUG", default=False)
 # Список разрешённых хостов, с которых Django разрешает принимать запросы
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost"])
 
-# IP-адреса для debug_toolbar (показывается панель, если IP клиента из INTERNAL_IPS)
-INTERNAL_IPS = [
-    "127.0.0.1",  # localhost
-    "172.18.0.1",  # IP хоста, видимый из Docker-контейнера
-]
-
-# # Django Debug Toolbar всегда показывается при Debug == True
-# DEBUG_TOOLBAR_CONFIG = {
-#     "SHOW_TOOLBAR_CALLBACK": lambda request: DEBUG,
-# }
+# # IP-адреса для debug_toolbar (показывается панель, если IP клиента из INTERNAL_IPS)
+# INTERNAL_IPS = [
+#     "127.0.0.1",  # localhost
+#     "172.18.0.1",  # IP хоста, видимый из Docker-контейнера
+# ]
 
 
 # ----------------------------------------
@@ -52,6 +47,7 @@ INTERNAL_IPS = [
 
 INSTALLED_APPS = [
     # Указывается первым, чтобы django runserver работал через ASGI
+    # Отключить, если нужно использовать профилирование через Django Debug Toolbar
     "daphne",
     # Django core
     "django.contrib.admin",
@@ -72,7 +68,6 @@ INSTALLED_APPS = [
     "storages",  # backend для S3 и других хранилищ
     "widget_tweaks",  # функционал для работы с формами в шаблонах
     "channels",  # WebSocket + async Django
-    "debug_toolbar",  # панель отладки
     "allauth",  # система аутентификации через OAuth2.0
     "allauth.account",
     "allauth.socialaccount",
@@ -89,14 +84,17 @@ INSTALLED_APPS = [
     "notifications.apps.NotificationsConfig",
 ]
 
+if DEBUG:
+    INSTALLED_APPS += [
+        "debug_toolbar",  # панель отладки
+    ]
+
 
 # ----------------------------------------
 # Middleware
 # ----------------------------------------
 
 MIDDLEWARE = [
-    # Профилирование через pyinstrument
-    # 'pyinstrument.middleware.ProfilerMiddleware',
     # Безопасность
     "django.middleware.security.SecurityMiddleware",
     # Статика через WhiteNoise при Debug=False
@@ -117,14 +115,31 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     # Защита от clickjacking
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    #  Debug toolbar
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
     # Кастомные middleware проекта
     "users.middleware.BlockedUserMiddleware",
     "users.middleware.OnlineStatusMiddleware",
     "navigation.middleware.UserActivityMiddleware",
     "navigation.middleware.RequestSourceMiddleware",
 ]
+
+if DEBUG:
+    security_middleware_index = MIDDLEWARE.index("django.middleware.security.SecurityMiddleware")
+
+    MIDDLEWARE[security_middleware_index + 1 : security_middleware_index + 1] = [
+        #  Debug toolbar
+        "debug_toolbar.middleware.DebugToolbarMiddleware",
+        # Профилирование через pyinstrument
+        "pyinstrument.middleware.ProfilerMiddleware",
+    ]
+
+    DEBUG_TOOLBAR_CONFIG = {
+        # DEBUG_TOOLBAR виден всегда, для любого IP клиента, если DEBUG == True
+        "SHOW_TOOLBAR_CALLBACK": lambda request: True,
+        # Во время тестирования отключается проверка DEBUG_TOOLBAR на наличие тестов,
+        # которая требует отключения DEBUG_TOOLBAR в тестах
+        "IS_RUNNING_TESTS": False,
+    }
+
 
 # ----------------------------------------
 # Роутинг (urls) + Templates
