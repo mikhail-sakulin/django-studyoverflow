@@ -5,6 +5,7 @@ import filetype
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files import File
+from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import RegexValidator
 from django.utils import timezone
 from django.utils.deconstruct import deconstructible
@@ -109,6 +110,14 @@ class AvatarFileValidator:
     MAX_ASPECT_RATION: Final = 4
 
     def __call__(self, file: File, *args, **kwargs):
+        # Файл валидируется, только если он заново загружен, иначе валидация не нужна.
+        # Без этой проверки, если файл не обновлен, будут лишний запрос в S3 хранилище и
+        # последующая лишняя валидация.
+        underlying_file = getattr(file, "_file", file)
+        # При загрузке файла пользователем underlying_file принимает тип UploadedFile
+        if not isinstance(underlying_file, UploadedFile):
+            return
+
         # Проверка размера файла
         if file.size > self.MAX_SIZE:
             max_size_mb = self.MAX_SIZE / (1024 * 1024)
