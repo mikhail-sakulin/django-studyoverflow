@@ -1,3 +1,13 @@
+# Базовый docker-compose файл.
+# Самостоятельно не используется.
+# Запускать только вместе с одним из других файлов конфигурации (dev или prod):
+#   docker-compose.dev.yml
+#   docker-compose.prod.yml
+#
+# Примеры:
+# docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file .env.dev up
+# docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -5,16 +15,10 @@ services:
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=${DATABASE_NAME}
-      - POSTGRES_USER=${DATABASE_USERNAME}
-      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
-    ports:
-      - "5434:5432"
     networks:
       - dbnet
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      test: [ "CMD-SHELL", "pg_isready" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -34,36 +38,11 @@ services:
       retries: 5
 
   studyoverflow-1:
-    build: ./studyoverflow
     image: studyoverflow
     container_name: studyoverflow-1
     restart: unless-stopped
-    command: daphne --proxy-headers -b 0.0.0.0 -p 8000 studyoverflow.asgi:application
-    env_file:
-      - .env.docker
     networks:
       - dbnet
-    volumes:
-      - ./studyoverflow:/app/studyoverflow
-    expose:
-      - "8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  studyoverflow-2:
-    image: studyoverflow
-    container_name: studyoverflow-2
-    restart: unless-stopped
-    command: daphne --proxy-headers -b 0.0.0.0 -p 8000 studyoverflow.asgi:application
-    env_file:
-      - .env.docker
-    networks:
-      - dbnet
-    volumes:
-      - ./studyoverflow:/app/studyoverflow
     expose:
       - "8000"
     depends_on:
@@ -75,11 +54,7 @@ services:
   celery-worker:
     image: studyoverflow
     restart: unless-stopped
-    env_file:
-      - .env.docker
     command: celery -A studyoverflow worker -l info
-    volumes:
-      - ./studyoverflow:/app/studyoverflow
     networks:
       - dbnet
     depends_on:
@@ -91,11 +66,8 @@ services:
   celery-beat:
     image: studyoverflow
     restart: unless-stopped
-    env_file:
-      - .env.docker
     command: celery -A studyoverflow beat -l info --schedule=/app/studyoverflow/celerybeat_data/celerybeat-schedule
     volumes:
-      - ./studyoverflow:/app/studyoverflow
       - celery_beat_data:/app/studyoverflow/celerybeat_data
     networks:
       - dbnet
@@ -105,45 +77,23 @@ services:
       redis:
         condition: service_healthy
 
-  nginx:
-    image: nginx:latest
-    container_name: nginx-server
-    restart: unless-stopped
-    networks:
-      - dbnet
-    ports:
-      - "80:80"
-    expose:
-      - 80
-    volumes:
-      - ./nginx:/etc/nginx/conf.d
-      - ./studyoverflow/staticfiles:/app/studyoverflow/staticfiles
-      - ./studyoverflow/logs:/app/studyoverflow/logs
-    depends_on:
-      - studyoverflow-1
-
   loki:
-    image: grafana/loki:2.9.4
+    build: ./monitoring/loki
     container_name: loki
     restart: unless-stopped
     volumes:
-      - ./monitoring/loki-config.yml:/etc/loki/config.yml
       - loki-data:/loki
-    command: -config.file=/etc/loki/config.yml
-    ports:
-      - "3100:3100"
+    command:
+      -config.file=/etc/loki/config.yml
     networks:
       - dbnet
 
   promtail:
-    image: grafana/promtail:2.9.4
+    build: ./monitoring/promtail
     container_name: promtail
     restart: unless-stopped
-    ports:
-      - "9080:9080"
     volumes:
       - promtail-data:/run/promtail
-      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     command: -config.file=/etc/promtail/config.yml
@@ -156,8 +106,8 @@ services:
     image: grafana/grafana:10.2.2
     container_name: grafana
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     volumes:
       - grafana-data:/var/lib/grafana
     networks:
@@ -172,6 +122,7 @@ networks:
 volumes:
   postgres-data:
   redis-data:
+  staticfiles:
   celery_beat_data:
   promtail-data:
   loki-data:

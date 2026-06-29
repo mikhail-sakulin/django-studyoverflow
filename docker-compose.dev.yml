@@ -1,0 +1,53 @@
+# Дополнительный docker-compose файл с dev конфигурацией.
+# Самостоятельно не используется.
+# Запускать только вместе с базовым docker-compose.yml.
+#
+# Пример:
+# docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file .env.dev up
+
+services:
+  postgres:
+    ports:
+      - "5434:5432"
+    env_file:
+      - .env.dev
+
+  studyoverflow-1:
+    build: ./studyoverflow
+    image: studyoverflow
+    command: python manage.py runserver 0.0.0.0:8000
+    env_file:
+      - .env.dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./studyoverflow:/app/studyoverflow
+    # Нужно для дебага python контейнера в PyCharm (в /etc/hosts контейнера
+    # прописывается, что host.docker.internal — это IP-адрес хоста, например 172.18.0.1 host.docker.internal,
+    # host-gateway заменяется на IP хоста в локальной сети Docker)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  celery-worker:
+    env_file:
+      - .env.dev
+    volumes:
+      - ./studyoverflow:/app/studyoverflow
+
+  celery-beat:
+    env_file:
+      - .env.dev
+    volumes:
+      - ./studyoverflow:/app/studyoverflow
+
+  loki:
+    ports:
+      - "3100:3100"
+
+  promtail:
+    ports:
+      - "9080:9080"
+
+  grafana:
+    ports:
+      - "3000:3000"
