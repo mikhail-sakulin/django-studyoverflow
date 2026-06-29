@@ -11,6 +11,8 @@ __pycache__/
 # Переменные окружения
 .env
 .env.docker
+.env.dev
+.env.prod
 
 # Фикстуры
 **/fixtures/
