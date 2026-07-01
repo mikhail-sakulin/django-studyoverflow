@@ -132,7 +132,7 @@ class AvatarFileValidator:
             kind = filetype.guess(file.read(1024))
             file.seek(0)
         except Exception:
-            # Если magic не смог прочитать файл
+            # Если filetype не смог прочитать файл
             raise ValidationError(gettext_lazy("Не удалось определить тип файла."))
 
         if not kind or kind.mime not in self.ALLOWED_MIME_TYPES:

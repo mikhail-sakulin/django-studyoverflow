@@ -38,7 +38,6 @@ services:
       retries: 5
 
   studyoverflow-1:
-    image: studyoverflow
     container_name: studyoverflow-1
     restart: unless-stopped
     networks:
@@ -52,7 +51,6 @@ services:
         condition: service_healthy
 
   celery-worker:
-    image: studyoverflow
     restart: unless-stopped
     command: celery -A studyoverflow worker -l info
     networks:
@@ -64,7 +62,6 @@ services:
         condition: service_healthy
 
   celery-beat:
-    image: studyoverflow
     restart: unless-stopped
     command: celery -A studyoverflow beat -l info --schedule=/app/studyoverflow/celerybeat_data/celerybeat-schedule
     volumes:
