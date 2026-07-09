@@ -3,6 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core import exceptions
 from django.utils.http import urlsafe_base64_decode
+from drf_spectacular.utils import extend_schema_field, inline_serializer
 from rest_framework import serializers
 from users.services import is_user_online, validate_email_unique
 
@@ -42,8 +43,22 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
             "is_blocked",
         ]
         read_only_fields = fields
+        extra_kwargs = {
+            "is_blocked": {"default": False},
+        }
 
-    def get_avatar_urls(self, user):
+    @extend_schema_field(
+        inline_serializer(
+            name="AvatarUrlsSerializer",
+            fields={
+                "avatar_original": serializers.URLField(),
+                "size1": serializers.URLField(),
+                "size2": serializers.URLField(),
+                "size3": serializers.URLField(),
+            },
+        )
+    )
+    def get_avatar_urls(self, user) -> dict[str, str]:
         """Возвращает словарь ссылок на оригинал и миниатюры аватара."""
         return {
             "avatar_original": user.avatar.url,
@@ -64,10 +79,14 @@ class UserMyProfileSerializer(UserPublicProfileSerializer):
     Расширяет публичный профиль приватными полями и возможностью загрузки аватара.
     """
 
+    # Поле avatar определяется отдельно для явного указания его как файла в Swagger
+    avatar = serializers.ImageField(write_only=True, required=False, allow_null=True)
+
     class Meta(UserPublicProfileSerializer.Meta):
         fields = UserPublicProfileSerializer.Meta.fields + ["is_social", "avatar"]
         extra_kwargs = {
-            "avatar": {"write_only": True},
+            "is_blocked": {"default": False},
+            "is_social": {"default": False},
         }
         read_only_fields = [
             "id",
@@ -81,6 +100,19 @@ class UserMyProfileSerializer(UserPublicProfileSerializer):
             "role",
             "is_blocked",
         ]
+
+    def validate_username(self, value):
+        """Проверка уникальности имени пользователя без учета регистра."""
+        queryset = User.objects.filter(username__iexact=value)
+
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+
+        if queryset.exists():
+            raise serializers.ValidationError(
+                "Пользователь с таким именем (в любом регистре) уже существует."
+            )
+        return value
 
     def validate_email(self, value):
         """Проверка уникальности email без учета регистра."""
@@ -270,6 +302,15 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         if not default_token_generator.check_token(self.user, attrs["token"]):
             raise serializers.ValidationError({"token": "Ссылка устарела или неверна."})
 
+        # Пользователи, зарегистрированные через социальные сети, не могут изменять пароль
+        if self.user.is_social:
+            raise serializers.ValidationError(
+                {
+                    "detail": "Пользователи, зарегистрированные через социальные сети, "
+                    "не могут изменять пароль."
+                }
+            )
+
         # Валидация пароля - проверка сложности
         try:
             validate_password(attrs["password_new"], self.user)
@@ -296,3 +337,22 @@ class UserBlockResponseSerializer(serializers.Serializer):
 
     message = serializers.CharField(read_only=True)
     is_blocked = serializers.BooleanField(read_only=True)
+
+
+class LoginSerializer(serializers.Serializer):
+    """Сериализатор для аутентификации пользователя. Используется username или email."""
+
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+
+class DetailSerializer(serializers.Serializer):
+    """Сериализатор для текстовых ответов с полем "detail", используемый в схемах OpenAPI."""
+
+    detail = serializers.CharField()
+
+
+class RefreshJWTBlacklistSerializer(serializers.Serializer):
+    """Сериализатор для отзыва (отправка в Blacklist) refresh JWT токена."""
+
+    refresh = serializers.CharField()
