@@ -29,7 +29,23 @@ class PostSerializer(serializers.ModelSerializer):
 
     author = AuthorSerializer(read_only=True)
     time_update = serializers.SerializerMethodField()
-    content = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    title = serializers.CharField(
+        max_length=Post.MAX_TITLE_SLUG_LENGTH_POST,
+        required=True,
+        error_messages={
+            "max_length": f"Длина заголовка не должна превышать "
+            f"{Post.MAX_TITLE_SLUG_LENGTH_POST} символов."
+        },
+    )
+    content = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        max_length=Post.MAX_CONTENT_LENGTH,
+        error_messages={
+            "max_length": f"Длина контента не должна превышать {Post.MAX_CONTENT_LENGTH} символов."
+        },
+    )
     tags = TagListSerializerField()
 
     # Аннотированные поля, должны добавляться в queryset
@@ -79,7 +95,7 @@ class PostSerializer(serializers.ModelSerializer):
             return localtime(post.time_update).isoformat()
         return None
 
-    def get_can_edit_or_delete(self, post):
+    def get_can_edit_or_delete(self, post) -> bool:
         user = self.context["request"].user
         if not user.is_authenticated:
             return False
@@ -117,8 +133,15 @@ class CommentSerializer(serializers.ModelSerializer):
 
     author = AuthorSerializer(read_only=True)
     time_update = serializers.SerializerMethodField()
-    content = serializers.CharField(write_only=True, required=True)
-
+    content = serializers.CharField(
+        write_only=True,
+        required=True,
+        max_length=Comment.MAX_CONTENT_LENGTH,
+        error_messages={
+            "max_length": f"Длина комментария не должна превышать "
+            f"{Comment.MAX_CONTENT_LENGTH} символов."
+        },
+    )
     # Аннотированные поля, должны добавляться в queryset
     likes_count = serializers.IntegerField(read_only=True, default=0)
     user_has_liked = serializers.BooleanField(read_only=True, default=False)
@@ -257,3 +280,9 @@ class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = LowercaseTag
         fields = ["id", "name"]
+
+
+class DetailSerializer(serializers.Serializer):
+    """Сериализатор для текстовых ответов с полем "detail", используемый в схемах OpenAPI."""
+
+    detail = serializers.CharField()
