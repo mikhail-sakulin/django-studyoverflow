@@ -212,3 +212,16 @@ class UserSetPasswordForm(BootstrapFormMixin, SetPasswordForm):
         # Добавление "is-invalid" к new_password1, если new_password2 "is-invalid"
         if "new_password2" in self.errors and "new_password1" not in self.errors:
             self.fields["new_password1"].widget.attrs["class"] += " is-invalid"
+
+    def clean(self):
+        """
+        Пользователь, зарегистрированный через соцсеть, не может задать пароль.
+        """
+        cleaned_data = super().clean()
+
+        if self.user and getattr(self.user, "is_social", False):
+            raise ValidationError(
+                "Пользователи, зарегистрированные через социальные сети, не могут изменять пароль."
+            )
+
+        return cleaned_data
