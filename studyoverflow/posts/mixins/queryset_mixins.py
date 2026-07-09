@@ -22,7 +22,7 @@ class LikeAnnotationsMixin:
 
     def annotate_queryset(self, queryset):
         """
-        Добавляет к выборке счетчик лайков и флаг 'user_has_liked'.
+        Добавляет к выборке флаг 'user_has_liked'.
         """
         user = getattr(self.request, "user", None)
 
