@@ -8,15 +8,10 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "navigation.api.pagination.CustomPageNumberPagination",
     # Поддерживаемые способы аутентификации
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "users.api.authentication.CustomTokenAuthentication",
+        "users.api.authentication.CustomJWTAuthentication",
+        "users.api.authentication.CustomSessionAuthentication",
     ],
-    # "DEFAULT_AUTHENTICATION_CLASSES": [
-    #     "users.api.authentication.CustomTokenAuthentication",
-    #     "users.api.authentication.CustomJWTAuthentication",
-    #     "users.api.authentication.CustomSessionAuthentication",
-    # ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
