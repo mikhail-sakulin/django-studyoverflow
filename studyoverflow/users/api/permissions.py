@@ -8,3 +8,14 @@ class CanBlockUserPermission(permissions.BasePermission):
 
     def has_permission(self, request, view):
         return request.user.has_perm("users.block_user")
+
+
+class UserPasswordNotSocialPermission(permissions.BasePermission):
+    """
+    Проверяет, что пользователь зарегистрировался не через соцсеть.
+    """
+
+    message = "Пользователи, зарегистрированные через социальные сети, не могут изменять пароль."
+
+    def has_permission(self, request, view):
+        return not getattr(request.user, "is_social", False)
