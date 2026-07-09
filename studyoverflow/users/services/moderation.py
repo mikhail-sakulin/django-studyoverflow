@@ -53,11 +53,12 @@ def _set_user_block_state(
     target_user.blocked_by = moderator if is_blocked else None
     target_user.save(update_fields=["is_blocked", "blocked_at", "blocked_by"])
 
-    action = "заблокировал" if is_blocked else "разблокировал"
+    action_for_log = "заблокировал" if is_blocked else "разблокировал"
+    action_for_message = "заблокирован" if is_blocked else "разблокирован"
 
     # Логирование
     logger.info(
-        f"Модератор {moderator.username} {action} пользователя {target_user.username}.",
+        f"Модератор {moderator.username} {action_for_log} пользователя {target_user.username}.",
         extra={
             "moderator_id": moderator.pk,
             "target_user_id": target_user.pk,
@@ -66,4 +67,4 @@ def _set_user_block_state(
         },
     )
 
-    return True, f"Пользователь {target_user.username} успешно {action}."
+    return True, f"Пользователь {target_user.username} успешно {action_for_message}."
