@@ -64,14 +64,14 @@ INSTALLED_APPS = [
     "rest_framework",  # DRF
     "rest_framework.authtoken",  # DRF token
     "rest_framework_simplejwt.token_blacklist",  # отзыв refresh-токенов
-    "django_extensions",  # management-команды, shell_plus и т.д.
     "storages",  # backend для S3 и других хранилищ
     "widget_tweaks",  # функционал для работы с формами в шаблонах
     "channels",  # WebSocket + async Django
     "allauth",  # система аутентификации через OAuth2.0
     "allauth.account",
     "allauth.socialaccount",
-    "dj_rest_auth",  # интеграция allauth (OAuth2.0) с simplejwt (JWT) для DRF
+    "dj_rest_auth",  # интеграция django-allauth (OAuth2.0) с simplejwt (JWT) для DRF
+    "drf_spectacular",  # генерация спецификации OpenAPI (schema/) и UI документации (swagger/ и redoc/)
     # Социальные провайдеры
     "allauth.socialaccount.providers.github",
     "allauth.socialaccount.providers.google",
@@ -87,6 +87,7 @@ INSTALLED_APPS = [
 if DEBUG:
     INSTALLED_APPS += [
         "debug_toolbar",  # панель отладки
+        "django_extensions",  # manage.py команды, например shell_plus и т.д.
     ]
 
 
@@ -97,7 +98,7 @@ if DEBUG:
 MIDDLEWARE = [
     # Безопасность
     "django.middleware.security.SecurityMiddleware",
-    # Статика через WhiteNoise при Debug=False
+    # Статика через WhiteNoise при Debug=False, отключить при наличии веб-сервера
     # "whitenoise.middleware.WhiteNoiseMiddleware",
     # Сессии
     "django.contrib.sessions.middleware.SessionMiddleware",
