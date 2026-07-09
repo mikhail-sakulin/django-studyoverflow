@@ -1,7 +1,29 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Count
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
+from posts.api.openapi_responses import (
+    CommentFieldErrorValidationOpenApiResponse,
+    PaginationErrorOpenApiResponse,
+    PermissionDeniedOpenApiResponse,
+    PostFieldErrorValidationOpenApiResponse,
+    create_new_not_found_response,
+)
+from posts.api.pagination import PostCommentsPagination
 from posts.api.permissions import IsAuthorOrModeratorPermission
-from posts.api.serializers import AuthorSerializer, CommentSerializer, PostSerializer, TagSerializer
+from posts.api.serializers import (
+    AuthorSerializer,
+    CommentSerializer,
+    DetailSerializer,
+    PostSerializer,
+    TagSerializer,
+)
 from posts.mixins import (
     CommentSortMixin,
     CommentTreeQuerysetMixin,
@@ -11,12 +33,14 @@ from posts.mixins import (
 )
 from posts.models import Comment, LowercaseTag, Post
 from posts.services import log_comment_event, log_post_event, perform_toggle_like
+from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from users.api.openapi_responses_examples import OpenApiUnauthenticated401Response
 
 
 User = get_user_model()
@@ -37,7 +61,27 @@ class LikeMixin:
     Возвращает список пользователей, поставивших лайк объекту.
     """
 
-    @action(detail=True, methods=["post"], url_path="toggle-like")
+    @extend_schema(
+        summary="Переключение лайка (поставить или убрать) на объекте.",
+        request=None,
+        responses={
+            200: OpenApiResponse(
+                description="Статус лайка успешно изменен.",
+                response=inline_serializer(
+                    name="LikeToggleSerializer",
+                    fields={
+                        "liked_now": serializers.BooleanField(),
+                        "likes_count_on_object": serializers.IntegerField(),
+                    },
+                ),
+            ),
+            401: OpenApiUnauthenticated401Response,
+            404: create_new_not_found_response('"Object"'),
+        },
+    )
+    @action(
+        detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="toggle-like"
+    )
     def like(self, request, *args, **kwargs):
         """
         Кастомное действие, которое инвертирует лайк от пользователя к объекту:
@@ -50,6 +94,17 @@ class LikeMixin:
 
         return Response({"liked_now": liked_now, "likes_count_on_object": likes_count})
 
+    @extend_schema(
+        summary="Список пользователей, лайкнувших объект.",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="Список пользователей успешно получен.",
+                response=AuthorSerializer(many=True),
+            ),
+            404: create_new_not_found_response('"Object"'),
+        },
+    )
     @action(detail=True, methods=["get"], url_path="likers-list")
     def likes(self, request, *args, **kwargs):
         """
@@ -68,6 +123,126 @@ class LikeMixin:
         return Response(serializer.data)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="Список постов.",
+        description=(
+            "Возвращает список постов с аннотацией `user_has_liked`.\n\n"
+            "**Фильтрация (GET):**\n"
+            "- `q`: Поиск по тексту в названии, контенте или именах тегов.\n"
+            "- `tags`: Теги через запятую.\n"
+            "- `tag_match`: Логика совпадения тегов (`any` / `all`).\n"
+            "- `author`: Имя автора (не зависит от регистра).\n"
+            "- `has_comments`: Наличие комментариев (`yes` / `no` / `any`).\n\n"
+            "**Сортировка (GET):**\n"
+            "- `sort`: Поле сортировки (`created`, `likes`, `comments`).\n"
+            "- `order`: Направление (`asc`, `desc`)."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="q",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Поиск по тексту в названии, контенте или именах тегов.",
+            ),
+            OpenApiParameter(
+                name="tags",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Теги через запятую (например: python,django).",
+            ),
+            OpenApiParameter(
+                name="tag_match",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Логика совпадения тегов.",
+                enum=["any", "all"],
+                default="any",
+            ),
+            OpenApiParameter(
+                name="author",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Имя автора (не зависит от регистра).",
+            ),
+            OpenApiParameter(
+                name="has_comments",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Фильтр по наличию комментариев.",
+                enum=["yes", "no", "any"],
+                default="any",
+            ),
+            OpenApiParameter(
+                name="sort",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Поле для сортировки.",
+                enum=["created", "likes", "comments"],
+                default="created",
+            ),
+            OpenApiParameter(
+                name="order",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Направление сортировки.",
+                enum=["asc", "desc"],
+                default="desc",
+            ),
+        ],
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="Список постов успешно получен.", response=PostSerializer(many=True)
+            ),
+            404: PaginationErrorOpenApiResponse,
+        },
+    ),
+    retrieve=extend_schema(
+        summary="Просмотр конкретного поста.",
+        description="Возвращает детальную информацию о посте.",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="Данные поста успешно получены.", response=PostSerializer
+            ),
+            404: create_new_not_found_response("Post"),
+        },
+    ),
+    create=extend_schema(
+        summary="Создание нового поста.",
+        description="Создает новый пост с текущим пользователем в качестве автора.",
+        responses={
+            201: OpenApiResponse(description="Пост успешно создан.", response=PostSerializer),
+            400: PostFieldErrorValidationOpenApiResponse,
+            401: OpenApiUnauthenticated401Response,
+        },
+    ),
+    partial_update=extend_schema(
+        summary="Частичное обновление поста.",
+        description="Изменяет переданные поля поста. Доступно автору или модератору.",
+        responses={
+            200: OpenApiResponse(description="Пост успешно обновлен.", response=PostSerializer),
+            400: PostFieldErrorValidationOpenApiResponse,
+            401: OpenApiUnauthenticated401Response,
+            403: PermissionDeniedOpenApiResponse,
+            404: create_new_not_found_response("Post"),
+        },
+    ),
+    destroy=extend_schema(
+        summary="Удаление поста.",
+        description="Удаляет пост. Доступно автору или модератору.",
+        responses={
+            204: OpenApiResponse(
+                description="Пост успешно удален.",
+                response=DetailSerializer,
+            ),
+            401: OpenApiUnauthenticated401Response,
+            403: PermissionDeniedOpenApiResponse,
+            404: create_new_not_found_response("Post"),
+        },
+    ),
+)
 class PostViewSet(
     PostAnnotateQuerysetMixin,
     PostFilterSortMixin,
@@ -84,6 +259,7 @@ class PostViewSet(
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     moderator_permission_name = "posts.moderate_post"
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def get_permissions(self):
         """
@@ -92,7 +268,7 @@ class PostViewSet(
         - Создание (create): Только авторизованным пользователям.
         - Изменение/Удаление (update, partial_update, destroy): Автору или Модератору.
         """
-        if self.action == "create":
+        if self.action in ["create", "like"]:
             return [IsAuthenticated()]
 
         if self.action in ["update", "partial_update", "destroy"]:
@@ -138,6 +314,93 @@ class PostViewSet(
         instance.delete()
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="Список комментариев к посту.",
+        description=(
+            "Возвращает дерево комментариев (родительские комментарии "
+            "с предзагруженными дочерними ответами) для конкретного поста.\n\n"
+            "**Сортировка (GET):**\n"
+            "- `comment_sort`: Поле сортировки (`date`, `likes`).\n"
+            "- `comment_order`: Направление (`asc`, `desc`)."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="comment_sort",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Поле для сортировки комментариев.",
+                enum=["date", "likes"],
+                default="date",
+            ),
+            OpenApiParameter(
+                name="comment_order",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Направление сортировки.",
+                enum=["asc", "desc"],
+                default="desc",
+            ),
+        ],
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="Дерево комментариев успешно получено.",
+                response=CommentSerializer(many=True),
+            ),
+            404: create_new_not_found_response("Post"),
+        },
+    ),
+    retrieve=extend_schema(
+        summary="Просмотр конкретного комментария.",
+        description="Возвращает детальную информацию о конкретном комментарии поста.",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="Данные комментария успешно получены.", response=CommentSerializer
+            ),
+            404: create_new_not_found_response('"Object"'),
+        },
+    ),
+    create=extend_schema(
+        summary="Создание нового комментария.",
+        description="Создает новый комментарий (или ответ на другой комментарий) "
+        "к указанному посту от имени текущего авторизованного пользователя.",
+        responses={
+            201: OpenApiResponse(
+                description="Комментарий успешно создан.", response=CommentSerializer
+            ),
+            400: CommentFieldErrorValidationOpenApiResponse,
+            401: OpenApiUnauthenticated401Response,
+            404: create_new_not_found_response('"Object"'),
+        },
+    ),
+    partial_update=extend_schema(
+        summary="Частичное обновление комментария.",
+        description="Изменяет текст комментария. Доступно автору или модератору.",
+        responses={
+            200: OpenApiResponse(
+                description="Комментарий успешно обновлен.", response=CommentSerializer
+            ),
+            400: CommentFieldErrorValidationOpenApiResponse,
+            401: OpenApiUnauthenticated401Response,
+            403: PermissionDeniedOpenApiResponse,
+            404: create_new_not_found_response('"Object"'),
+        },
+    ),
+    destroy=extend_schema(
+        summary="Удаление комментария.",
+        description="Удаляет комментарий. Доступно автору или модератору.",
+        responses={
+            204: OpenApiResponse(
+                description="Комментарий успешно удален.",
+            ),
+            401: OpenApiUnauthenticated401Response,
+            403: PermissionDeniedOpenApiResponse,
+            404: create_new_not_found_response('"Object"'),
+        },
+    ),
+)
 class CommentViewSet(
     LikeAnnotationsMixin,
     CommentSortMixin,
@@ -151,9 +414,11 @@ class CommentViewSet(
     Реализует логику вложенных комментариев (1 уровень вложенности).
     """
 
+    pagination_class = PostCommentsPagination
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     moderator_permission_name = "posts.moderate_comment"
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def get_permissions(self):
         """
@@ -162,7 +427,7 @@ class CommentViewSet(
         - Создание (create): Только авторизованным пользователям.
         - Изменение/Удаление (update, partial_update, destroy): Автору или Модератору.
         """
-        if self.action == "create":
+        if self.action in ["create", "like"]:
             return [IsAuthenticated()]
 
         if self.action in ["update", "partial_update", "destroy"]:
@@ -194,6 +459,16 @@ class CommentViewSet(
 
         return queryset
 
+    @extend_schema(
+        summary="Получение ветки комментариев (ответов) конкретного комментария.",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="Ветка комментариев успешно получена.", response=CommentSerializer
+            ),
+            404: create_new_not_found_response('"Object"'),
+        },
+    )
     @action(detail=True, methods=["get"])
     def thread(self, request, post_pk=None, pk=None):
         """
@@ -247,6 +522,44 @@ class CommentViewSet(
         instance.delete()
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="Список всех тегов.",
+        description=(
+            "Возвращает список всех тегов, отсортированных по имени.\n\n"
+            "**Поиск (GET):**\n"
+            "- Поддерживает поиск по совпадению подстроки в имени тега с "
+            "помощью параметра `?search=`."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="search",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Поиск тегов по названию (без учета регистра).",
+            ),
+        ],
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="Список тегов успешно получен.",
+                response=TagSerializer(many=True),
+            )
+        },
+    ),
+    retrieve=extend_schema(
+        summary="Просмотр конкретного тега.",
+        description="Возвращает информацию о теге по его ID.",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="Информация о теге успешно получена.",
+                response=TagSerializer,
+            ),
+            404: create_new_not_found_response('"LowercaseTag"'),
+        },
+    ),
+)
 class TagReadOnlyViewSet(ReadOnlyModelViewSet):
     """
     API endpoint для просмотра списка тегов.
