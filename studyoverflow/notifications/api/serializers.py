@@ -14,7 +14,7 @@ class ActorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "username", "avatar")
+        fields = ("id", "username", "avatar_small_size1")
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -67,3 +67,21 @@ class NotificationSerializer(serializers.ModelSerializer):
             return None
 
         return None
+
+    def validate_is_read(self, value):
+        """
+        Разрешает изменять статус прочтения только на True (прочитано),
+        изменять на False запрещено.
+        """
+        if value is False:
+            raise serializers.ValidationError(
+                "Уведомление можно только прочитать (задать True для поля is_read). "
+                "Вернуть is_read на False нельзя."
+            )
+        return value
+
+
+class DetailSerializer(serializers.Serializer):
+    """Сериализатор для текстовых ответов с полем "detail", используемый в схемах OpenAPI."""
+
+    detail = serializers.CharField()
