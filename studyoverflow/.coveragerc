@@ -1,0 +1,24 @@
+# Настройка покрытия кода тестами (для pytest-cov)
+[coverage:run]
+# Включение Branch Coverage
+branch = True
+# Папки и файлы, исключенные из расчета покрытия
+omit =
+    */__init__.py
+    */migrations/*
+    */tests/*
+    */apps.py
+    */admin.py
+    */manage.py
+    */media/*
+    */settings/*
+    */urls*.py
+    */wsgi.py
+    */asgi.py
+    */locustfile.py
+    */openapi_*.py
+    */swagger_*.py
+    */sitemaps.py
+    */routing.py
+    */jwt_admin.py
+    */templatetags/*
