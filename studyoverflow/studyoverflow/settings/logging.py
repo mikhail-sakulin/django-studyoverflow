@@ -9,13 +9,17 @@ LOGGING = {
     "formatters": {
         # Формат JSON для обычного логирования
         "json": {
-            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "()": "pythonjsonlogger.json.JsonFormatter",
             "format": "%(asctime)s %(levelname)s %(name)s %(message)s %(module)s %(funcName)s %(lineno)d",
+            # Параметр сериализации JSON (отключает кодирование текста в кодировку ASCII),
+            # например, отключает принудительное кодирование кириллицы в ASCII.
+            "json_ensure_ascii": False,
         },
         # Формат JSON для Celery
         "json_celery": {
-            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "()": "pythonjsonlogger.json.JsonFormatter",
             "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+            "json_ensure_ascii": False,
         },
     },
     "handlers": {
