@@ -10,7 +10,6 @@ __pycache__/
 
 # Переменные окружения
 .env
-.env.docker
 .env.dev
 .env.prod
 
@@ -33,3 +32,6 @@ cert.*
 
 # Временные файлы задач
 my_todo.*
+
+# Покрытие кода тестами
+**/.coverage
