@@ -90,12 +90,15 @@ jobs:
       # Запуск тестов через pytest, сервис с PostgreSQL автоматически поднимается через depends_on
       # у сервиса приложения.
       - name: Run tests
+        # -p no:cacheprovider - флаг отключает сохранение кеша pytest, поскольку при CI
+        # у пользователя, от имени которого выполняется процесс в контейнере, нет прав на запись
+        # внутри контейнера.
         run: |
           docker compose \
             -f docker-compose.test.yml \
             --env-file .env.test \
             run --rm studyoverflow-tests \
-            pytest --config-file pytest.ini
+            pytest -p no:cacheprovider -c pytest.ini
 
       # Остановка PostgreSQL
       - name: Cleanup
