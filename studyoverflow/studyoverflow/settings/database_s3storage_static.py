@@ -10,7 +10,13 @@ from .base import BASE_DIR, env
 # пул привязан к 1 процессу.
 DATABASES = {
     "default": {
-        **env.db("DATABASE_URL"),
+        # **env.db("DATABASE_URL"),
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": env("POSTGRES_HOST"),
+        "PORT": env("POSTGRES_PORT"),
         "OPTIONS": {
             "pool": {
                 "min_size": 4,

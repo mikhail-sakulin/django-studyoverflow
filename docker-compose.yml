@@ -18,7 +18,13 @@ services:
     networks:
       - dbnet
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready" ]
+      # ${POSTGRES_USER} - значение подставляется Docker Compose в момент чтения файла docker-compose.yml,
+      # до запуска контейнера, $POSTGRES_USER - то же самое, краткая форма, если после переменной пробел или спецсимвол.
+      #
+      # $$POSTGRES_USER - с двумя $$ Docker заменяет $$POSTGRES_USER на $POSTGRES_USER и не подставляет значение сам,
+      # контейнер запускается и Linux Shell внутри контейнера видит знак $ и сам подставляет значение
+      # переменной из оперативной памяти.
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
       interval: 5s
       timeout: 5s
       retries: 5

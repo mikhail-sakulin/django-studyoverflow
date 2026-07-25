@@ -15,9 +15,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env()
 
 # Путь к файлу .env
-env_file = BASE_DIR.parent / ".env"
+env_file = BASE_DIR.parent / ".env.test"
 
-# Загрузка переменных окружения
+# Загрузка переменных окружения из файла .env.
+#
+# При локальном запуске приложения django-environ считывает переменные из
+# файла .env и добавляет их в os.environ.
+#
+# При запуске приложения в Docker-контейнере Docker сам загрузит переменные окружения в
+# память процесса и они будут доступны в os.environ. Перезаписывать их параметрами из файла .env
+# приложение не будет, так как самого файла .env в Docker-контейнере не будет.
 environ.Env.read_env(env_file)
 
 
