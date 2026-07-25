@@ -4,6 +4,9 @@ from users.api import views
 from users.api.views import CustomTokenObtainPairView, CustomTokenRefreshView, CustomTokenVerifyView
 
 
+app_name = "users"
+
+
 router = SimpleRouter()
 router.register("users", views.UserViewSet, basename="users")
 router.register("auth", views.AuthViewSet, basename="auth")

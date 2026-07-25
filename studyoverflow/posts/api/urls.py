@@ -4,6 +4,9 @@ from rest_framework.routers import SimpleRouter
 from rest_framework_nested import routers
 
 
+app_name = "posts"
+
+
 router = SimpleRouter()
 router.register("posts", views.PostViewSet, basename="posts")
 router.register("tags", views.TagReadOnlyViewSet, basename="tags")

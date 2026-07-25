@@ -33,7 +33,7 @@ urlpatterns = [
     path("users/", include("users.urls")),
     path("notifications/", include("notifications.urls")),
     path("social-auth/", include("users.urls_socialaccount")),
-    path("api/v1/", include("studyoverflow.urls_api_v1")),
+    path("api/v1/", include("studyoverflow.urls_api_v1", namespace="api")),
     path(
         "sitemap.xml",
         cache_page(2)(sitemap),  # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
