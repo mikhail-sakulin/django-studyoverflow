@@ -7,6 +7,7 @@ from io import BytesIO
 from typing import TYPE_CHECKING, Type
 
 from botocore.exceptions import BotoCoreError
+from django.contrib.auth import get_user_model
 from django.core.files import File
 from django.core.files.base import ContentFile
 from django.core.files.storage import storages
@@ -20,7 +21,6 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
-
 
 storage_default = storages["default"]
 
@@ -75,8 +75,10 @@ def generate_avatar_small(user: User, size_type: int) -> bool | str:
     if not getattr(user, "avatar", None) or not user.avatar.name:
         return False
 
+    UserModel = get_user_model()
+
     # Если avatar - стандартный (пользователь не задал свой), то avatar_small не создается
-    if os.path.basename(user.avatar.name) == "default_avatar.jpg":
+    if os.path.basename(user.avatar.name) == os.path.basename(UserModel.DEFAULT_AVATAR_FILENAME):
         return False
 
     # Если передан некорректный size_type, то avatar_small не создается
@@ -181,7 +183,9 @@ def get_old_avatar_names(user: User) -> tuple[str | None, list[str]]:
     if not user.pk:
         return None, []
 
-    old_user = type(user).objects.get(pk=user.pk)
+    UserModel = get_user_model()
+
+    old_user = UserModel.objects.get(pk=user.pk)
     avatar_name_in_db = old_user.avatar.name
 
     avatar_names_for_delete = []
