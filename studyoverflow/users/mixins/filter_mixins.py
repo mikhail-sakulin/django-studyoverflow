@@ -124,6 +124,11 @@ class UserHTMXPaginationMixin:
                     "event_type": "htmx_pagination_invalid_params",
                 },
             )
+            # Дефолтные значения, чтобы во view не было ошибок
+            self.offset = 0
+            self.limit = self.paginate_htmx_by
+            self.remaining = False
+
             return queryset.none()
 
         self.offset = offset
