@@ -13,9 +13,9 @@ repos:
         entry: isort --settings-path studyoverflow/pyproject.toml
         exclude: |
           (?x)(
-              venv/|
+              \.venv/|
               __pycache__/|
-              .idea/|
+              \.idea/|
               manage.py|
               migrations/
           )
@@ -28,11 +28,10 @@ repos:
         entry: flake8 --config studyoverflow/.flake8
         exclude: |
           (?x)(
-              venv/|
+              \.venv/|
               __pycache__/|
-              .*pyc|
-              .idea/|
-              manage.py|
+              \.idea/|
+              manage\.py|
               migrations/|
               studyoverflow/studyoverflow/
           )
@@ -45,10 +44,10 @@ repos:
         entry: mypy --config-file studyoverflow/pyproject.toml
         exclude: |
           (?x)(
-              venv/|
+              \.venv/|
               __pycache__/|
-              .idea/|
-              manage.py|
+              \.idea/|
+              manage\.py|
               migrations/|
               studyoverflow/studyoverflow/
           )
@@ -58,7 +57,7 @@ repos:
 
       - id: django-tests
         name: Django tests
-        entry: pytest -n 0 --config-file studyoverflow/pytest.ini
+        entry: pytest -n 0 -c studyoverflow/pytest.ini
         language: system
         types: [python]
         pass_filenames: false
