@@ -95,10 +95,11 @@ def render_markdown_safe(markdown_text: str) -> str:
         strip=True,
     )
 
-    # Добавление nofollow и noopener к ссылкам
+    # rel="nofollow" - защита от спама и SEO-атрибут (сайт не ручается за ссылки от пользователей)
+    # target="_blank" - заставляет браузер открывать ссылку в новой вкладке
     safe_html = bleach.linkify(
         safe_html,
-        callbacks=[bleach.callbacks.nofollow, bleach.callbacks.target_blank],  # rel="noopener"
+        callbacks=[bleach.callbacks.nofollow, bleach.callbacks.target_blank],
     )
 
     return safe_html

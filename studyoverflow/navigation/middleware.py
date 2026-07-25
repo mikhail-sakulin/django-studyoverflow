@@ -30,17 +30,21 @@ class UserActivityMiddleware:
         if any(request.path.startswith(path) for path in skip_path_prefixes):
             return self.get_response(request)
 
+        logger_extra_data = {
+            "user_id": request.user.pk if request.user.is_authenticated else None,
+            "username": request.user.username if request.user.is_authenticated else None,
+            "method": request.method,
+            "path": request.path,
+            "event_type": "request",
+        }
+
         response = self.get_response(request)
 
         logger.info(
             "Отправлен запрос к ресурсу.",
             extra={
-                "user_id": request.user.pk if request.user.is_authenticated else None,
-                "username": request.user.username if request.user.is_authenticated else None,
-                "method": request.method,
-                "path": request.path,
+                **logger_extra_data,
                 "response_status_code": response.status_code,
-                "event_type": "request",
             },
         )
 
