@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    env_file:
+      - .env.test
+    restart: "no"
+    volumes:
+      - postgres-data-test:/var/lib/postgresql/data
+    networks:
+      - dbnet
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  studyoverflow-tests:
+    build:
+      context: ./studyoverflow
+      dockerfile: Dockerfile
+      target: dev-image
+    image: studyoverflow:dev
+    env_file:
+      - .env.test
+    command: pytest
+    environment:
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
+    networks:
+      - dbnet
+    expose:
+      - "8000"
+    volumes:
+      - ./studyoverflow:/app/studyoverflow
+    # Нужно для дебага python контейнера в PyCharm (в /etc/hosts контейнера
+    # прописывается, что host.docker.internal — это IP-адрес хоста, например 172.18.0.1 host.docker.internal,
+    # host-gateway заменяется на IP хоста в локальной сети Docker)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+networks:
+  dbnet:
+    driver: bridge
+
+volumes:
+  postgres-data-test:
