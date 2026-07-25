@@ -56,6 +56,16 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+        "daphne.access": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "daphne.server": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
         "celery": {
             "handlers": [
                 "celery_console",
