@@ -2,7 +2,7 @@
 line-length = 100
 force-exclude = '''
 (
-    venv/
+    .venv/
     | __pycache__/
     | .idea/
     | manage.py
@@ -16,11 +16,13 @@ include_trailing_comma = true
 line_length = 100
 lines_after_imports = 2
 skip = [
-    "venv/",
-    "__pycache__/",
+    ".venv/",
     ".idea/",
     "manage.py",
-    "migrations/"
+]
+skip_glob = [
+    "**/__pycache__/*",
+    "**/migrations/*",
 ]
 
 [tool.mypy]
@@ -28,7 +30,7 @@ ignore_missing_imports = true
 strict_optional = true
 check_untyped_defs = true
 exclude = [
-    "venv/",
+    ".venv/",
     "__pycache__/",
     ".idea/",
     "manage.py",

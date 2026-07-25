@@ -1,4 +1,5 @@
 import pytest
+
 from users.services import get_counts_map, get_reputation_map, update_user_counter_field
 
 
