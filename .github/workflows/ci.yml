@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  # pull_request:
+    # branches: [ main ]
+  # Запуск пайплайна вручную из вкладки Actions на GitHub
+  workflow_dispatch:
+
+jobs:
+  checks:
+    # GitHub создает виртуальную машину с указанной ОС
+    runs-on: ubuntu-24.04
+
+    steps:
+      # Стандартный шаг от GitHub для копирования кода из репозитория внутрь виртуальной машины
+      - name: Checkout repository
+        # Указывает GitHub Actions использовать плагин checkout v4 для скачивания кода:
+        # git clone и git checkout на ветку, которая запустила пайплайн.
+        uses: actions/checkout@v4
+
+      # Включение Docker Buildx - action от Dokcer, который активирует инструмент для сборки Docker-образов,
+      # нужен для кеширования слоев в образе приложения.
+      - name: Set up Docker Buildx
+        # Какой именно плагин нужно скачать и запустить на этом шаге:
+        # - docker - имя автора;
+        # - setup-buildx-action - название репозитория с кодом плагина;
+        # - @v3 - версия плагина.
+        uses: docker/setup-buildx-action@v3
+
+      # Сборка dev-образа с кешированием слоёв в GitHub Actions Cache
+      - name: Build dev image (cached)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./studyoverflow
+          file: ./studyoverflow/Dockerfile
+          target: dev-image
+          tags: studyoverflow:dev
+          load: true  # загрузка собранного образа в локальный Docker на VM
+          cache-from: type=gha  # чтение кеша из GitHub Cache
+          cache-to: type=gha,mode=max  # сохранение всех слоев в кеш (mode=max)
+
+      # Скачивание внешних готовых сервисов (PostgreSQL) из Docker Hub, шаг задан для ясности,
+      # шаг может быть удален, так как образы скачаются при первом запуске docker-compose.test.yml.
+      - name: Pull external images
+        run: |
+          docker compose \
+            -f docker-compose.test.yml \
+            --env-file .env.test \
+            pull postgres
+
+      # Запуск форматтера black
+      - name: Run black
+        run: |
+          docker compose \
+            -f docker-compose.test.yml \
+            --env-file .env.test \
+            run --rm studyoverflow-tests \
+            black --config pyproject.toml --check .
+      
+      # Запуск форматтера isort
+      - name: Run isort
+        run: |
+          docker compose \
+            -f docker-compose.test.yml \
+            --env-file .env.test \
+            run --rm studyoverflow-tests \
+            isort --settings-path pyproject.toml --check-only .
+
+      # Запуск линтера flake8
+      - name: Run flake8
+        run: |
+          docker compose \
+            -f docker-compose.test.yml \
+            --env-file .env.test \
+            run --rm studyoverflow-tests \
+            flake8 --config .flake8
+
+      # Запуск проверки статической типизации через mypy
+      - name: Run mypy
+        run: |
+          docker compose \
+            -f docker-compose.test.yml \
+            --env-file .env.test \
+            run --rm studyoverflow-tests \
+            mypy --config-file pyproject.toml .
+      
+      # Запуск тестов через pytest, сервис с PostgreSQL автоматически поднимается через depends_on
+      # у сервиса приложения.
+      - name: Run tests
+        run: |
+          docker compose \
+            -f docker-compose.test.yml \
+            --env-file .env.test \
+            run --rm studyoverflow-tests \
+            pytest --config-file pytest.ini
+
+      # Остановка PostgreSQL
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose \
+            -f docker-compose.test.yml \
+            --env-file .env.test \
+            down -v
