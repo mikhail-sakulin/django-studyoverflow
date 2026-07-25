@@ -8,6 +8,9 @@ from django.core.validators import MaxLengthValidator
 from django.db import models
 from django.urls import reverse
 from django.utils.text import Truncator
+from taggit.managers import TaggableManager
+from taggit.models import GenericTaggedItemBase, TagBase
+
 from notifications.models import Notification
 from posts.services import (
     PostTitleValidator,
@@ -15,9 +18,6 @@ from posts.services import (
     normalize_tag_name,
     render_markdown_safe,
 )
-from taggit.managers import TaggableManager
-from taggit.models import GenericTaggedItemBase, TagBase
-
 from studyoverflow import settings
 
 

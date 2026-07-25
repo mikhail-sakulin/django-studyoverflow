@@ -1,7 +1,8 @@
-from posts.api import views
-from posts.api.views import CommentViewSet
 from rest_framework.routers import SimpleRouter
 from rest_framework_nested import routers
+
+from posts.api import views
+from posts.api.views import CommentViewSet
 
 
 app_name = "posts"

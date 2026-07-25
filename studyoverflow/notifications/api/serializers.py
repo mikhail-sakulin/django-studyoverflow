@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
+from rest_framework import serializers
+
 from notifications.models import Notification
 from posts.models import Like
-from rest_framework import serializers
 
 
 User = get_user_model()

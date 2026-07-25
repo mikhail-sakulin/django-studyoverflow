@@ -1,5 +1,6 @@
-from navigation.api.pagination import CustomPageNumberPagination
 from rest_framework.response import Response
+
+from navigation.api.pagination import CustomPageNumberPagination
 
 
 class PostCommentsPagination(CustomPageNumberPagination):

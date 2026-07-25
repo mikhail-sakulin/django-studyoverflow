@@ -1,5 +1,6 @@
 import pytest
 from django.test import SimpleTestCase
+
 from posts.models import Post
 from posts.services import (
     generate_slug,

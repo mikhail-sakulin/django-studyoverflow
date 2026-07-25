@@ -1,4 +1,5 @@
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse
+
 from users.api.serializers import DetailSerializer
 
 

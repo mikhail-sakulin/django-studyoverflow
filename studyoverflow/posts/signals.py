@@ -2,6 +2,7 @@ from django.db.models import F
 from django.db.models.functions import Greatest
 from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
+
 from posts.models import Comment, Like, Post
 from users.services import update_user_counter_field
 

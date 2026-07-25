@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from django import template
+
 from notifications.models import Notification
 
 

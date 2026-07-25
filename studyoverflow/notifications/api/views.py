@@ -7,15 +7,16 @@ from drf_spectacular.utils import (
     extend_schema_view,
     inline_serializer,
 )
+from rest_framework import mixins, serializers, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
 from notifications.api.openapi_responses import NotificationNotFoundOpenApiResponse
 from notifications.api.serializers import DetailSerializer, NotificationSerializer
 from notifications.mixins import NotificationOptimizeMixin
 from notifications.models import Notification
 from notifications.tasks import send_channel_notify_event
-from rest_framework import mixins, serializers, status, viewsets
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from users.api.openapi_responses_examples import OpenApiUnauthenticated401Response
 
 

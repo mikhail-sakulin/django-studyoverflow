@@ -13,6 +13,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.utils.text import Truncator
+
 from notifications.models import Notification, NotificationType
 from notifications.tasks import create_notification, send_channel_notify_event
 from posts.models import Comment, Like, Post

@@ -1,9 +1,10 @@
 from django.contrib.auth import get_user_model
 from django.utils.timezone import localtime
-from posts.models import Comment, LowercaseTag, Post
-from posts.services import validate_and_normalize_tags, validate_comment
 from rest_framework import serializers
 from taggit.serializers import TagListSerializerField
+
+from posts.models import Comment, LowercaseTag, Post
+from posts.services import validate_and_normalize_tags, validate_comment
 from users.services import is_author_or_moderator
 
 

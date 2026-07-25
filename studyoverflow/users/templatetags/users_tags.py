@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from django import template
 from django.contrib.auth import get_user_model
+
 from users.services import can_moderate, is_user_online
 
 

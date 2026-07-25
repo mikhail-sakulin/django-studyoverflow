@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.prefetch import GenericPrefetch
+
 from posts.models import Comment, Like, Post
 
 

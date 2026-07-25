@@ -1,5 +1,6 @@
-from notifications.api import views
 from rest_framework.routers import SimpleRouter
+
+from notifications.api import views
 
 
 app_name = "notifications"

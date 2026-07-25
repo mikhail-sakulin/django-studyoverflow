@@ -1,7 +1,8 @@
 import pytest
 from django.urls import reverse
-from factories import UserFactory
 from rest_framework.test import APIClient
+
+from factories import UserFactory
 
 
 @pytest.fixture

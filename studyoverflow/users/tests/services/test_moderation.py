@@ -1,6 +1,7 @@
 import pytest
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
+
 from users.services import block_user_service, unblock_user_service
 
 

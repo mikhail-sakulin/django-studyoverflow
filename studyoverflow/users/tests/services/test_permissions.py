@@ -2,6 +2,7 @@
 from types import SimpleNamespace
 
 import pytest
+
 from users.models import User
 from users.services import can_moderate, is_author_or_moderator
 

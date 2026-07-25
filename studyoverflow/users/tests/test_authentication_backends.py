@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
+
 from users.authentication_backends import (
     CustomAllAuthAuthenticationBackend,
     CustomAuthenticationBackend,

@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework.exceptions import ValidationError
+
 from users.api.serializers import (
     PasswordResetConfirmSerializer,
     UserMyProfileSerializer,

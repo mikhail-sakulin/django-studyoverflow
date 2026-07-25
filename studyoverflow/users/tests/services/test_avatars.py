@@ -5,6 +5,7 @@ import pytest
 from botocore.exceptions import BotoCoreError
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
+
 from users.services import (
     avatar_upload_to,
     delete_old_avatar_names,

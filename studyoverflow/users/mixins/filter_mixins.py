@@ -1,6 +1,7 @@
 import logging
 
 from django.http import HttpRequest
+
 from users.services import get_cached_online_user_ids
 
 

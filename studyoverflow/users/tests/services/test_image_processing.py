@@ -2,6 +2,7 @@ import io
 
 import pytest
 from PIL import Image
+
 from users.services import (
     generate_gif,
     generate_image,

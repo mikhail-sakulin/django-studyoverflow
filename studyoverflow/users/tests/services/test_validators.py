@@ -7,6 +7,7 @@ from django.core.files import File
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from PIL import Image
+
 from users.services import (
     AvatarFileValidator,
     BirthDateValidator,

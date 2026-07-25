@@ -8,6 +8,7 @@ from django.db import models
 from django.db.models import Count
 from django.db.models.functions import Length
 from django.utils.text import Truncator
+
 from posts.models import Comment, Like, LowercaseTag, Post, TaggedPost
 
 

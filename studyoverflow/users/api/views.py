@@ -24,7 +24,6 @@ from drf_spectacular.utils import (
     extend_schema_view,
     inline_serializer,
 )
-from posts.api.openapi_responses import PaginationErrorOpenApiResponse
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
@@ -39,6 +38,8 @@ from rest_framework_simplejwt.serializers import (
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
+
+from posts.api.openapi_responses import PaginationErrorOpenApiResponse
 from users.api.openapi_responses_examples import (
     LOGIN_REQUEST_EXAMPLES,
     PASSWORD_NEW_ERRORS_EXAMPLES,

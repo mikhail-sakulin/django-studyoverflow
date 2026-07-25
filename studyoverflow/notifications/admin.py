@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.utils.text import Truncator
+
 from notifications.models import Notification
 from users.models import User
 

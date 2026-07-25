@@ -14,6 +14,8 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.management import call_command
 from django.utils import timezone
+
+from studyoverflow.celery import app
 from users.services import (
     delete_old_avatar_names,
     generate_avatar_small,
@@ -21,8 +23,6 @@ from users.services import (
     get_counts_map,
     get_reputation_map,
 )
-
-from studyoverflow.celery import app
 
 
 UserModel = get_user_model()

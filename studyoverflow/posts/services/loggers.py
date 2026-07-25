@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from django.db import models
+
     from posts.models import Comment, Post
     from users.models import User
 

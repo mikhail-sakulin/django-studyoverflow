@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 from django.utils import timezone
 from rest_framework.exceptions import AuthenticationFailed
+
 from users.api.authentication import (
     BlockedUserMixin,
     CustomJWTAuthentication,

@@ -5,6 +5,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse
 from django.test import RequestFactory
 from django.urls import reverse
+
 from users.middleware import BlockedUserMiddleware, OnlineStatusMiddleware
 
 

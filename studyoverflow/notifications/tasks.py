@@ -5,8 +5,8 @@ from celery_once import QueueOnce
 from channels.layers import get_channel_layer
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from notifications.models import Notification
 
+from notifications.models import Notification
 from studyoverflow.celery import app
 
 

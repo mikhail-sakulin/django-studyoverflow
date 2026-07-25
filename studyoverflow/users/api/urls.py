@@ -1,5 +1,6 @@
 from django.urls import path
 from rest_framework.routers import SimpleRouter
+
 from users.api import views
 from users.api.views import CustomTokenObtainPairView, CustomTokenRefreshView, CustomTokenVerifyView
 

@@ -4,6 +4,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+
 from users.tasks import (
     clear_expired_sessions,
     delete_files_from_storage_task,

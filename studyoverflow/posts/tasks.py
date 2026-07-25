@@ -6,6 +6,7 @@ from celery import shared_task
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, OuterRef, Subquery
 from django.db.models.functions import Coalesce
+
 from posts.models import Comment, Like, Post
 
 

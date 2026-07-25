@@ -1,9 +1,10 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from taggit.forms import TagWidget
+
 from posts.models import Comment, Post
 from posts.services import validate_and_normalize_tags, validate_comment
-from taggit.forms import TagWidget
 from users.services import CustomUsernameValidator
 
 

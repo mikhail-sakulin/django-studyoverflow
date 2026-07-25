@@ -8,6 +8,14 @@ from drf_spectacular.utils import (
     extend_schema_view,
     inline_serializer,
 )
+from rest_framework import serializers
+from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter
+from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+
 from posts.api.openapi_responses import (
     CommentFieldErrorValidationOpenApiResponse,
     PaginationErrorOpenApiResponse,
@@ -33,13 +41,6 @@ from posts.mixins import (
 )
 from posts.models import Comment, LowercaseTag, Post
 from posts.services import log_comment_event, log_post_event, perform_toggle_like
-from rest_framework import serializers
-from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter
-from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from users.api.openapi_responses_examples import OpenApiUnauthenticated401Response
 
 

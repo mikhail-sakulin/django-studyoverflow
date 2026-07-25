@@ -7,6 +7,7 @@ from typing import Any
 from django.core.cache import cache
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404, redirect
+
 from posts.models import LowercaseTag, Post
 
 

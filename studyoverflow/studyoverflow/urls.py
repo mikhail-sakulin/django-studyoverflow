@@ -4,6 +4,7 @@ from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 from django.views.decorators.cache import cache_page
 from django.views.generic import TemplateView
+
 from navigation.sitemaps import HomeSitemap, PostListSitemap, UserListSitemap
 from navigation.views import (
     bad_request,
@@ -12,9 +13,8 @@ from navigation.views import (
     server_error,
 )
 from posts.sitemaps import PostSitemap
-from users.sitemaps import UserSitemap
-
 from studyoverflow import settings
+from users.sitemaps import UserSitemap
 
 
 sitemaps = {

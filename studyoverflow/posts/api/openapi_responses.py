@@ -1,6 +1,7 @@
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, inline_serializer
-from posts.api.serializers import DetailSerializer
 from rest_framework import serializers
+
+from posts.api.serializers import DetailSerializer
 
 
 def create_new_not_found_response(model_name: str = '"Object"') -> OpenApiResponse:

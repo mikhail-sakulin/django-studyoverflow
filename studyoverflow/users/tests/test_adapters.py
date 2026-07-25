@@ -4,6 +4,7 @@ import pytest
 from allauth.core.exceptions import ImmediateHttpResponse
 from django.test import RequestFactory
 from rest_framework.exceptions import PermissionDenied
+
 from users.adapters import CustomSocialAccountAdapter
 
 

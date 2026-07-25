@@ -5,6 +5,7 @@ from django.core import exceptions
 from django.utils.http import urlsafe_base64_decode
 from drf_spectacular.utils import extend_schema_field, inline_serializer
 from rest_framework import serializers
+
 from users.services import is_user_online, validate_email_unique
 
 

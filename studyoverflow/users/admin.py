@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.utils.safestring import mark_safe
+
 from users.models import User
 
 

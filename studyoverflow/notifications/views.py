@@ -3,6 +3,7 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.views import View
 from django.views.generic import ListView, TemplateView
+
 from notifications.mixins import NotificationOptimizeMixin
 from notifications.models import Notification
 from notifications.tasks import send_channel_notify_event

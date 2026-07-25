@@ -1,4 +1,5 @@
 import pytest
+
 from users.services import (
     get_cached_online_user_ids,
     get_online_user_ids,

@@ -1,4 +1,5 @@
 from django import template
+
 from navigation.menu import MENU
 
 
