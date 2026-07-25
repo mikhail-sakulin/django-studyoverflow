@@ -2,7 +2,9 @@ import logging
 
 from allauth.account.signals import user_signed_up
 from django.contrib.auth import get_user_model, user_logged_in, user_logged_out, user_login_failed
+from django.contrib.auth.models import Group, Permission
 from django.db import transaction
+from django.db.models import Q
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from users.services import get_user_avatar_paths_list, remove_user_offline
@@ -12,6 +14,66 @@ from users.tasks import delete_files_from_storage_task
 UserModel = get_user_model()
 
 logger = logging.getLogger(__name__)
+
+
+# Пары (app_label, codename) прав, которые будет иметь группа "Moderators"
+MODERATOR_PERMISSIONS = [
+    # posts.Comment
+    ("posts", "add_comment"),
+    ("posts", "change_comment"),
+    ("posts", "delete_comment"),
+    ("posts", "moderate_comments"),
+    # posts.Post
+    ("posts", "add_post"),
+    ("posts", "change_post"),
+    ("posts", "delete_post"),
+    ("posts", "moderate_posts"),
+    # users.User
+    ("users", "block_user"),
+]
+
+# Пары (app_label, codename) прав, которые получит группа "StaffViewers"
+STAFF_PERMISSIONS = [
+    ("account", "view_emailaddress"),
+    ("account", "view_emailconfirmation"),
+    ("admin", "view_logentry"),
+    ("auth", "view_group"),
+    ("auth", "view_permission"),
+    ("contenttypes", "view_contenttype"),
+    ("notifications", "view_notification"),
+    ("posts", "view_comment"),
+    ("posts", "view_like"),
+    ("posts", "view_tag"),
+    ("posts", "view_post"),
+    ("posts", "view_posttag"),
+    ("sessions", "view_session"),
+    ("sites", "view_site"),
+    ("socialaccount", "view_socialaccount"),
+    ("socialaccount", "view_socialapp"),
+    ("socialaccount", "view_socialtoken"),
+    ("users", "view_user"),
+]
+
+
+def _perms_queryset(pairs):
+    """
+    Строит queryset Permission, точно соответствующих списку пар (app_label, codename).
+    """
+    q = Q()
+    for app_label, codename in pairs:
+        q |= Q(content_type__app_label=app_label, codename=codename)
+    return Permission.objects.filter(q)
+
+
+def sync_default_groups(sender, **kwargs):
+    """
+    Обработчик post_migrate: создаёт/обновляет группы Moderators и StaffViewers с нужными правами.
+    """
+    moderator_group, _ = Group.objects.get_or_create(name="Moderators")
+    staff_group, _ = Group.objects.get_or_create(name="StaffViewers")
+
+    moderator_group.permissions.set(_perms_queryset(MODERATOR_PERMISSIONS))
+    staff_group.permissions.set(_perms_queryset(STAFF_PERMISSIONS))
 
 
 @receiver(post_delete, sender=UserModel)
