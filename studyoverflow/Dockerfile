@@ -50,7 +50,21 @@ USER userdj
 
 FROM base-image AS prod-image
 
-COPY . .
+# Приложения
+COPY navigation/ ./navigation/
+COPY notifications/ ./notifications/
+COPY posts/ ./posts/
+COPY users/ ./users/
+
+# Настройки проекта
+COPY studyoverflow/ ./studyoverflow/
+
+# Шаблоны и статика
+COPY templates/ ./templates/
+COPY static/ ./static/
+
+# Точка входа Django
+COPY manage.py .
 
 # Создаются директории celerybeat_data и staticfiles
 RUN mkdir -p /app/studyoverflow/celerybeat_data /app/studyoverflow/staticfiles
