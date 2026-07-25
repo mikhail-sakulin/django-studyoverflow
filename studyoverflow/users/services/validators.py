@@ -28,7 +28,7 @@ class CustomUsernameValidator(RegexValidator):
         "Имя пользователя должно быть не менее 4 символов и "
         "состоять только из латинских букв, цифр, символов '_' и '-'."
     )
-    flags = 0
+    code = "invalid_username"
 
 
 @deconstructible
@@ -44,7 +44,6 @@ class PersonalNameValidator:
     """
 
     message = gettext_lazy("Имя и фамилия должны состоять только из букв, дефис разрешен.")
-    code = "invalid_name"
 
     def __call__(self, value: str):
         # Пустое значение разрешено
@@ -54,31 +53,33 @@ class PersonalNameValidator:
         # Проверка отсутствия пробелов (отдельная для сообщения)
         if " " in value:
             raise ValidationError(
-                gettext_lazy("Имя и фамилия не должны содержать пробелы."), code=self.code
+                gettext_lazy("Имя и фамилия не должны содержать пробелы."),
+                code="name_contains_spaces",
             )
 
         # Проверка, что все символы являются или буквами, или дефисами
         if not all(char.isalpha() or char == "-" for char in value):
-            raise ValidationError(self.message, code=self.code)
+            raise ValidationError(self.message, code="invalid_name_characters")
 
         # Все символы не могут быть только дефисами
         if all(char == "-" for char in value):
             raise ValidationError(
-                gettext_lazy("Имя и фамилия не могут состоять только из дефисов."), code=self.code
+                gettext_lazy("Имя и фамилия не могут состоять только из дефисов."),
+                code="name_only_hyphens",
             )
 
         # Строка не должна начинаться или заканчиваться на дефис
         if value[0] == "-" or value[-1] == "-":
             raise ValidationError(
                 gettext_lazy("Имя и фамилия не должны начинаться или заканчиваться на дефис."),
-                code=self.code,
+                code="name_edge_hyphen",
             )
 
         # Два дефиса не могут идти подряд
         if "--" in value:
             raise ValidationError(
                 gettext_lazy("Имя и фамилия не должны содержать подряд несколько дефисов."),
-                code=self.code,
+                code="name_double_hyphen",
             )
 
 
@@ -133,7 +134,9 @@ class AvatarFileValidator:
             file.seek(0)
         except Exception:
             # Если filetype не смог прочитать файл
-            raise ValidationError(gettext_lazy("Не удалось определить тип файла."))
+            raise ValidationError(
+                gettext_lazy("Не удалось определить тип файла."), code="could_not_read"
+            )
 
         if not kind or kind.mime not in self.ALLOWED_MIME_TYPES:
             raise ValidationError(
@@ -145,8 +148,8 @@ class AvatarFileValidator:
             )
 
         # Проверка размеров и соотношения сторон
-        img = Image.open(file)
-        width, height = img.size
+        with Image.open(file) as img:
+            width, height = img.size
 
         if width < self.MIN_WIDTH or height < self.MIN_HEIGHT:
             raise ValidationError(

@@ -234,7 +234,7 @@ def download_and_set_avatar(user_id: int, avatar_url: str):
         )
 
     except ValidationError as e:
-        logger.warning(
+        logger.info(
             f"Файл аватара для пользователя {user.username} не прошел валидацию.",
             extra={
                 "user_id": user.pk,

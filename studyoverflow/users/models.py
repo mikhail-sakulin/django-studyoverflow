@@ -93,6 +93,7 @@ class User(AbstractUser):
     }
     # Соответствие ролей пользователей и групп прав
     ROLE_GROUPS_MAP = {
+        # Role.ADMIN имеет все права, поскольку у него флаг is_superuser == True
         Role.MODERATOR: ["Moderators", "StaffViewers"],
         Role.STAFF_VIEWER: ["StaffViewers"],
     }
