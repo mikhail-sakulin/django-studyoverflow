@@ -1,0 +1,76 @@
+import pytest
+from django.urls import reverse
+from factories import UserFactory
+from rest_framework.test import APIClient
+
+
+@pytest.fixture
+def user_factory():
+    return UserFactory
+
+
+@pytest.fixture
+def api_client():
+    return APIClient()
+
+
+@pytest.fixture
+def assert_login_required(client, api_client):
+    """
+    Фикстура для проверки LoginRequired для эндпоинтов.
+
+    Поддерживает как обычные веб-страницы (Django Views с редиректом 302),
+    так и API-эндпоинты (DRF Views с кодом 401 Unauthorized).
+    """
+
+    def _assert(url_name, url_kwargs=None, method="get", is_api=False):
+        # Для текущей реализации тестирования без тела запроса можно было бы использовать
+        # только client и для web, и для api запросов.
+        test_client = api_client if is_api else client
+
+        url = reverse(url_name, kwargs=url_kwargs)
+
+        # Задается метод тестового клиента для будущего вызова (get, post, delete и т.д.)
+        client_method = getattr(test_client, method.lower())
+        response = client_method(url)
+
+        if is_api:
+            # Для API статус 401 (Unauthorized)
+            assert response.status_code == 401
+            # Проверка ответа в формате JSON
+            assert "application/json" in response.headers.get("Content-Type", "")
+        else:
+            # Для web поверка редиректа на страницу входа с get-параметром next
+            assert response.status_code == 302
+            assert reverse("users:login") in response.url
+            assert "next=" in response.url
+
+    return _assert
+
+
+@pytest.fixture
+def assert_not_found(client, api_client):
+    """
+    Фикстура для проверки ответа 404 (Not Found).
+
+    Поддерживает как обычные веб-страницы (Django Views),
+    так и API-эндпоинты (DRF Views).
+    """
+
+    def _assert(url_name, url_kwargs=None, method="get", is_api=False):
+        # Для текущей реализации тестирования без тела запроса можно было бы использовать
+        # только client и для web, и для api запросов.
+        test_client = api_client if is_api else client
+
+        url = reverse(url_name, kwargs=url_kwargs)
+
+        client_method = getattr(test_client, method.lower())
+        response = client_method(url)
+
+        assert response.status_code == 404
+
+        if is_api:
+            assert "application/json" in response.get("Content-Type", "")
+            assert "detail" in response.data
+
+    return _assert
