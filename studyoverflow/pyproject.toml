@@ -16,8 +16,8 @@ include_trailing_comma = true
 line_length = 100
 lines_after_imports = 2
 skip = [
-    ".venv/",
-    ".idea/",
+    ".venv",
+    ".idea",
     "manage.py",
 ]
 skip_glob = [
@@ -35,5 +35,4 @@ exclude = [
     ".idea/",
     "manage.py",
     "migrations/",
-    "studyoverflow/studyoverflow/"
 ]

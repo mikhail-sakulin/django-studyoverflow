@@ -10,7 +10,7 @@ from . import *
 # так как для формирования заголовка Message-ID при отправке письма вызывается socket.getfqdn(),
 # который (например, при активном VPN) может инициировать реальный DNS-запрос во внешнюю сеть
 # для поиска имени локальной машины.
-socket.getfqdn = lambda: "localhost"
+socket.getfqdn = lambda name="": "localhost"
 
 
 CACHES = {
