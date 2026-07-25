@@ -16,7 +16,7 @@ repos:
               \.venv/|
               __pycache__/|
               \.idea/|
-              manage.py|
+              manage\.py|
               migrations/
           )
         language: system
@@ -48,8 +48,7 @@ repos:
               __pycache__/|
               \.idea/|
               manage\.py|
-              migrations/|
-              studyoverflow/studyoverflow/
+              migrations/
           )
         language: system
         types: [python]
