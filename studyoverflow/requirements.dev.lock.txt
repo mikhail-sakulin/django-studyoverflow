@@ -250,9 +250,7 @@ jsonschema-specifications==2025.9.1
 kombu==5.6.2
     # via celery
 locust==2.42.5
-    # via
-    #   -r requirements.base.in
-    #   -r requirements.dev.in
+    # via -r requirements.dev.in
 locust-cloud==1.30.0
     # via locust
 markdown2==2.5.4
@@ -387,7 +385,7 @@ python-socketio[client]==5.16.3
     #   locust-cloud
 pywin32==312 ; sys_platform == "win32"
     # via
-    #   -r requirements.base.in
+    #   -r requirements.dev.in
     #   locust
 pyyaml==6.0.3
     # via
@@ -407,6 +405,7 @@ referencing==0.37.0
     #   jsonschema-specifications
 requests==2.32.4
     # via
+    #   -r requirements.base.in
     #   locust
     #   python-socketio
 rpds-py==2026.6.3
