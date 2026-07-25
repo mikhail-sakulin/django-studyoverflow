@@ -18,6 +18,7 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
+from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from users.forms import (
     UserLoginForm,
@@ -247,7 +248,8 @@ def avatar_preview(request, username):
 
     Используется для отображения аватара в модальном окне.
     """
-    author = get_object_or_404(User, username=username)
+    queryset = User.objects.only("username", "avatar")
+    author = get_object_or_404(queryset, username=username)
     return render(request, "users/_avatar_only_for_modal.html", {"author": author})
 
 
@@ -265,13 +267,11 @@ class UserDeleteView(LoginRequiredMixin, DeleteView):
         return self.request.user
 
     def form_valid(self, form):
-        messages.info(self.request, "Аккаунт удален.")
-        return super().form_valid(form)
+        logout(self.request)
 
-    def delete(self, request, *args, **kwargs):
-        response = super().delete(request, *args, **kwargs)
-        logout(request)
-        return response
+        messages.info(self.request, "Аккаунт удален.")
+
+        return super().form_valid(form)
 
 
 class UserPasswordChangeView(
@@ -360,6 +360,7 @@ class UserPasswordResetCompleteView(PasswordResetCompleteView):
 
 @login_required
 @permission_required("users.block_user", raise_exception=True)
+@require_POST
 def block_user(request, user_id):
     """
     Блокирует пользователя.
@@ -382,6 +383,7 @@ def block_user(request, user_id):
 
 @login_required
 @permission_required("users.block_user", raise_exception=True)
+@require_POST
 def unblock_user(request, user_id):
     """
     Разблокирует пользователя.
