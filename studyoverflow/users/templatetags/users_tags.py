@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from django import template
@@ -8,7 +10,7 @@ from users.services import can_moderate, is_user_online
 register = template.Library()
 
 if TYPE_CHECKING:
-    from django.contrib.auth.models import AbstractUser
+    from users.models import User
 
 UserModel = get_user_model()
 
@@ -24,9 +26,9 @@ def online_status_tag(user):
     """
     Simple_tag, возвращает статус активности пользователя.
 
+    Если пользователь не аутентифицирован, возвращает None.
     Если пользователь онлайн, возвращает True.
     Если пользователь не онлайн, возвращает дату последнего визита (last_seen).
-    Если пользователь не аутентифицирован, возвращает None.
     """
     if not user.is_authenticated:
         return None
@@ -57,7 +59,7 @@ def user_role_badge(user):
 
 
 @register.simple_tag
-def can_actor_moderate_target(actor: "AbstractUser", target: "AbstractUser") -> bool:
+def can_actor_moderate_target(actor: User, target: User) -> bool:
     """
     Проверяет, может ли один пользователь (actor) модерировать другого (target).
 
