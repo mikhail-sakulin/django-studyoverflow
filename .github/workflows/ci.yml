@@ -6,13 +6,13 @@ on:
   push:
     branches:
       - main
-  # Позволяет вызывать этот workflow из другого workflow как job
-  workflow_call:
+  # Позволяет вызывать этот workflow из другого workflow как job, сейчас не используется.
+  # workflow_call:
   # Запуск пайплайна вручную из вкладки Actions на GitHub
   workflow_dispatch:
 
 jobs:
-  ci-dev-checks:
+  dev-checks:
     # GitHub создает виртуальную машину с указанной ОС
     runs-on: ubuntu-24.04
 
