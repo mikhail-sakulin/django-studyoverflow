@@ -19,7 +19,7 @@ services:
       context: ./studyoverflow
       dockerfile: Dockerfile
       target: dev-image
-    image: studyoverflow:dev
+    image: studyoverflow-backend:dev
     env_file:
       - .env.test
     command: pytest

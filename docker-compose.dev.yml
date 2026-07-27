@@ -17,7 +17,7 @@ services:
       context: ./studyoverflow
       dockerfile: Dockerfile
       target: dev-image
-    image: studyoverflow:dev
+    image: studyoverflow-backend:dev
     command: python manage.py runserver 0.0.0.0:8000
     env_file:
       - .env.dev
@@ -32,14 +32,14 @@ services:
       - "host.docker.internal:host-gateway"
 
   celery-worker:
-    image: studyoverflow:dev
+    image: studyoverflow-backend:dev
     env_file:
       - .env.dev
     volumes:
       - ./studyoverflow:/app/studyoverflow
 
   celery-beat:
-    image: studyoverflow:dev
+    image: studyoverflow-backend:dev
     env_file:
       - .env.dev
     volumes:
