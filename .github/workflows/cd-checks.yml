@@ -1,0 +1,111 @@
+# Проверяет production-сборку и выполняет smoke и e2e тесты.
+
+name: CD Checks
+
+on:
+  pull_request:
+    branches:
+      - release
+  workflow_dispatch:
+
+jobs:
+  ci:
+    name: Run CI Checks
+    uses: ./.github/workflows/ci.yml
+
+  build-prod-and-test:
+    needs: ci
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build prod app image (cached)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./studyoverflow
+          file: ./studyoverflow/Dockerfile
+          target: prod-image
+          tags: studyoverflow-backend:prod
+          load: true
+          cache-from: type=gha,scope=prod-app
+          cache-to: type=gha,mode=max,scope=prod-app
+
+      - name: Build nginx image (cached)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./nginx
+          tags: studyoverflow-nginx
+          load: true
+          cache-from: type=gha,scope=prod-nginx
+          cache-to: type=gha,mode=max,scope=prod-nginx
+
+      - name: Build loki image (cached)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./monitoring/loki
+          tags: studyoverflow-loki
+          load: true
+          cache-from: type=gha,scope=prod-loki
+          cache-to: type=gha,mode=max,scope=prod-loki
+
+      - name: Build promtail image (cached)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./monitoring/promtail
+          tags: studyoverflow-promtail
+          load: true
+          cache-from: type=gha,scope=prod-promtail
+          cache-to: type=gha,mode=max,scope=prod-promtail
+
+      # Запуск prod сервисов и ожидание их полного запуска (присутствуют healthchecks)
+      - name: Start production stack
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.prod.yml \
+            -f docker-compose.cd.yml \
+            --env-file .env.test \
+            up -d --wait
+
+      - name: Smoke tests
+        run: |
+          curl -f http://localhost/health/
+          curl -f http://localhost/
+          curl -f http://localhost/posts/
+          curl -f http://localhost/admin/login/
+          curl -f http://localhost/static/admin/css/base.css
+
+      - name: Show container status
+        if: failure()
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.prod.yml \
+            -f docker-compose.cd.yml \
+            --env-file .env.test \
+            ps
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          docker compose \
+          -f docker-compose.yml \
+          -f docker-compose.prod.yml \
+          -f docker-compose.cd.yml \
+          --env-file .env.test \
+          logs
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.prod.yml \
+            -f docker-compose.cd.yml \
+            --env-file .env.test \
+            down -v
