@@ -1,5 +1,7 @@
-from django.http import JsonResponse
+from django.db import connection
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.views.decorators.cache import never_cache
 from django.views.generic import TemplateView
 
 
@@ -7,6 +9,16 @@ class IndexTemplateView(TemplateView):
     """Главная страница сайта."""
 
     template_name = "navigation/index.html"
+
+
+# Декоратор, чтобы прокси-серверы не кешировали ответ,
+# заголовки Cache-Control: max-age=0, no-cache, no-store
+@never_cache
+def health(request):
+    # Легкий запрос к БД
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT 1;")
+    return HttpResponse("OK", content_type="text/plain")
 
 
 def page_not_found(request, exception):
