@@ -5,7 +5,7 @@ name: CD Release
 on:
   push:
     branches:
-      - release
+      - release/cd
   workflow_dispatch:
 
 # Запрещает одновременно запускать на выполнение несколько раз текущий пайплайн,

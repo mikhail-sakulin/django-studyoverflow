@@ -5,7 +5,7 @@ name: CD Checks
 on:
   pull_request:
     branches:
-      - release
+      - release/cd
   workflow_dispatch:
 
 jobs:
