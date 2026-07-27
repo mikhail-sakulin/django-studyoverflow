@@ -1,0 +1,106 @@
+# Дополнительный docker-compose файл с конфигурацией для CD для проверки prod конфигурации.
+# Самостоятельно не используется.
+# Запускать только вместе с двумя другими файлами конфигурации, например (для CD):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.cd.yml --env-file .env.test up -d --wait
+
+services:
+  postgres:
+    # Тег !override не объединяет списки при слиянии нескольких docker-compose (несколько -f),
+    # а записывает указанные данные вместо предыдущих, не сохраняя предыдущие.
+    env_file: !override
+      - .env.test
+    volumes:
+      - postgres-cd-data:/var/lib/postgresql/data
+
+  redis:
+    volumes:
+      - redis-cd-data:/data
+
+  studyoverflow-init:
+    env_file: !override
+      - .env.test
+    volumes:
+      - staticfiles-cd:/app/studyoverflow/staticfiles
+
+  studyoverflow-1:
+    env_file: !override
+      - .env.test
+    healthcheck:
+      # Проверка порта 8000 внутри контейнера с помощью встроенного Python
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/', timeout=2)"
+        ]
+      interval: 4s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+    volumes:
+      - staticfiles-cd:/app/studyoverflow/staticfiles
+
+  studyoverflow-2:
+    env_file: !override
+      - .env.test
+    healthcheck:
+      # Проверка порта 8000 внутри контейнера с помощью встроенного Python
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/', timeout=2)"
+        ]
+      interval: 4s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+    volumes:
+      - staticfiles-cd:/app/studyoverflow/staticfiles
+
+  celery-worker:
+    env_file: !override
+      - .env.test
+
+  celery-beat:
+    env_file: !override
+      - .env.test
+    volumes:
+      - celery_beat-cd_data:/app/studyoverflow/celerybeat_data
+
+  promtail:
+    volumes:
+      - promtail-cd-data:/run/promtail
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+
+  loki:
+    volumes:
+      - loki-cd-data:/loki
+
+  grafana:
+    env_file: !override
+      - .env.test
+    volumes:
+      - grafana-cd-data:/var/lib/grafana
+
+  nginx:
+    volumes:
+      # :ro - read-only
+      - staticfiles-cd:/app/studyoverflow/staticfiles:ro
+    depends_on:
+      studyoverflow-1:
+        condition: service_healthy
+      studyoverflow-2:
+        condition: service_healthy
+
+volumes:
+  postgres-cd-data:
+  redis-cd-data:
+  staticfiles-cd:
+  celery_beat-cd_data:
+  promtail-cd-data:
+  loki-cd-data:
+  grafana-cd-data:

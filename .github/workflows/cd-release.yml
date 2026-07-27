@@ -1,0 +1,106 @@
+# Публикует production-образы и выполняет деплой.
+
+name: CD Release
+
+on:
+  push:
+    branches:
+      - release/cd
+  workflow_dispatch:
+
+# Запрещает одновременно запускать на выполнение несколько раз текущий пайплайн,
+# чтобы не было гонки Docker-образов в хранилище образов.
+concurrency:
+  # Имя для очереди (группы), нельзя параллельно запускать несколько пайплайнов в одной группе
+  group: cd-release
+  # Флаг, чтобы не отменять текущий пайплайн, если запущен второй, а оставлять его ждать
+  cancel-in-progress: false
+
+# Права доступа для временного токена ${{ secrets.GITHUB_TOKEN }}, который выдается CI/CD боту
+permissions:
+  # Разрешает боту читать содержимое репозитория
+  contents: read
+  # Разрешает боту публиковать и обновлять пакеты в хранилище GHCR
+  packages: write
+
+jobs:
+  publish-images:
+    runs-on: ubuntu-24.04
+
+    env:
+      REGISTRY: ghcr.io
+      # Системная переменная, задает имя владельца репозитория
+      IMAGE_OWNER: ${{ github.repository_owner }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Авторизация CI/CD бота в реестр Docker-образов GitHub GHCR
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          # Адрес хранилища образов
+          registry: ghcr.io
+          # Имя человека, запустившего пайплайн (триггерное действие)
+          # (кто предложил pull request (on: pull_request), кто подтвердил pull request (on: push),
+          # кто сделал сразу коммит (on: push), кто вручную запустил workflow (on: workflow_dispatch) и так далее).
+          username: ${{ github.actor }}
+          # В переменную передается токен CI/CD бота, сервер GitHub выдает токен виртуальной машине, чтобы она
+          # от имени сервиса GitHub могла зайти в хранилище образов GHCR,
+          # после завершения пайплайна токен становится неактивным.
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Сборка Docker-образа python приложения (prod версия) и отправка его в реестр образов GHCR
+      - name: Build and push application
+        uses: docker/build-push-action@v6
+        with:
+          context: ./studyoverflow
+          file: ./studyoverflow/Dockerfile
+          target: prod-image
+          # Отправка образа в хранилище после успешной сборки
+          push: true
+          # Образу задается два тега - latest и по ${{ github.sha }} - по хешу коммита
+          # [АДРЕС_РЕЕСТРА] / [ВЛАДЕЛЕЦ] / [ИМЯ_ОБРАЗА] : [ТЕГ]
+          tags: |
+            ghcr.io/${{ env.IMAGE_OWNER }}/studyoverflow-backend:latest
+            ghcr.io/${{ env.IMAGE_OWNER }}/studyoverflow-backend:${{ github.sha }}
+          # чтение кеша из GitHub Cache, scope - где именно искать кеш
+          cache-from: type=gha,scope=prod-app
+          cache-to: type=gha,mode=max,scope=prod-app
+
+      - name: Build and push nginx
+        uses: docker/build-push-action@v6
+        with:
+          context: ./nginx
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_OWNER }}/studyoverflow-nginx:latest
+            ghcr.io/${{ env.IMAGE_OWNER }}/studyoverflow-nginx:${{ github.sha }}
+          cache-from: type=gha,scope=prod-nginx
+          cache-to: type=gha,mode=max,scope=prod-nginx
+
+      - name: Build and push Loki
+        uses: docker/build-push-action@v6
+        with:
+          context: ./monitoring/loki
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_OWNER }}/studyoverflow-loki:latest
+            ghcr.io/${{ env.IMAGE_OWNER }}/studyoverflow-loki:${{ github.sha }}
+          cache-from: type=gha,scope=prod-loki
+          cache-to: type=gha,mode=max,scope=prod-loki
+
+      - name: Build and push Promtail
+        uses: docker/build-push-action@v6
+        with:
+          context: ./monitoring/promtail
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_OWNER }}/studyoverflow-promtail:latest
+            ghcr.io/${{ env.IMAGE_OWNER }}/studyoverflow-promtail:${{ github.sha }}
+          cache-from: type=gha,scope=prod-promtail
+          cache-to: type=gha,mode=max,scope=prod-promtail

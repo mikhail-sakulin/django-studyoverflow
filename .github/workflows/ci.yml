@@ -3,12 +3,9 @@
 name: CI
 
 on:
-  #push:
-  #  branches:
-  #    - main
-  #pull_request:
-  #  branches:
-  #    - release
+  push:
+    branches:
+      - main
   # Позволяет вызывать этот workflow из другого workflow как job
   workflow_call:
   # Запуск пайплайна вручную из вкладки Actions на GitHub
