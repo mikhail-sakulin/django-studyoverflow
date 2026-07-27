@@ -1,16 +1,21 @@
+# Проверяет код dev-образа — запуск форматтеров, линтеров, статической проверки типов и тестов.
+
 name: CI
 
 on:
-  push:
-    branches:
-      - main
-  # pull_request:
-    # branches: [ main ]
+  #push:
+  #  branches:
+  #    - main
+  #pull_request:
+  #  branches:
+  #    - release
+  # Позволяет вызывать этот workflow из другого workflow как job
+  workflow_call:
   # Запуск пайплайна вручную из вкладки Actions на GitHub
   workflow_dispatch:
 
 jobs:
-  checks:
+  ci-dev-checks:
     # GitHub создает виртуальную машину с указанной ОС
     runs-on: ubuntu-24.04
 
@@ -37,10 +42,13 @@ jobs:
           context: ./studyoverflow
           file: ./studyoverflow/Dockerfile
           target: dev-image
-          tags: studyoverflow:dev
-          load: true  # загрузка собранного образа в локальный Docker на VM
-          cache-from: type=gha  # чтение кеша из GitHub Cache
-          cache-to: type=gha,mode=max  # сохранение всех слоев в кеш (mode=max)
+          tags: studyoverflow-backend:dev
+          # загрузка собранного образа в локальный Docker на VM
+          load: true
+          # чтение кеша из GitHub Cache, scope - где именно искать кеш
+          cache-from: type=gha,scope=dev-app
+          # сохранение всех слоев в кеш (mode=max)
+          cache-to: type=gha,mode=max,scope=dev-app
 
       # Скачивание внешних готовых сервисов (PostgreSQL) из Docker Hub, шаг задан для ясности,
       # шаг может быть удален, так как образы скачаются при первом запуске docker-compose.test.yml.
