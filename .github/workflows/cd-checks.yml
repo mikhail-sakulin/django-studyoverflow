@@ -41,7 +41,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./nginx
-          tags: studyoverflow-nginx
+          tags: studyoverflow-nginx:prod
           load: true
           cache-from: type=gha,scope=prod-nginx
           cache-to: type=gha,mode=max,scope=prod-nginx
@@ -50,7 +50,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./monitoring/loki
-          tags: studyoverflow-loki
+          tags: studyoverflow-loki:prod
           load: true
           cache-from: type=gha,scope=prod-loki
           cache-to: type=gha,mode=max,scope=prod-loki
@@ -59,7 +59,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./monitoring/promtail
-          tags: studyoverflow-promtail
+          tags: studyoverflow-promtail:prod
           load: true
           cache-from: type=gha,scope=prod-promtail
           cache-to: type=gha,mode=max,scope=prod-promtail
