@@ -1,3 +1,13 @@
+# Используется для запуска тестов локально при разработке и для CI проверок.
+#
+# Команды запуска, например:
+#   - запуск тестов:
+#       docker compose -f docker-compose.test.yml --env-file .env.test run --rm studyoverflow-tests
+#   - запуск проверки black, для isort, flake8 и mypy аналогично (команды есть в ci.yml):
+#       docker compose -f docker-compose.test.yml --env-file .env.test run --rm studyoverflow-tests black --config pyproject.toml --check .
+#   - остановка и удаление контейнеров (например postgres, который остается незавершенным):
+#       - docker compose -f docker-compose.test.yml --env-file .env.test down
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -19,7 +29,7 @@ services:
       context: ./studyoverflow
       dockerfile: Dockerfile
       target: dev-image
-    image: studyoverflow-backend:dev
+    image: ${STUDYOVERFLOW_IMAGE_NAME}:${STUDYOVERFLOW_IMAGE_TAG_CI:-dev}
     env_file:
       - .env.test
     command: pytest
