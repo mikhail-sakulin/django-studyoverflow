@@ -40,7 +40,7 @@ LOGGING = {
                 "console",
             ],
             "level": "INFO",
-            "propagate": True,
+            "propagate": False,
         },
         "django.request": {
             "handlers": [
