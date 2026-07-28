@@ -82,7 +82,7 @@ services:
 
   loki:
     build: ./monitoring/loki
-    image: studyoverflow-loki
+    image: ${LOKI_IMAGE}:${IMAGE_TAG}
     container_name: loki
     restart: unless-stopped
     volumes:
@@ -94,7 +94,7 @@ services:
 
   promtail:
     build: ./monitoring/promtail
-    image: studyoverflow-promtail
+    image: ${PROMTAIL_IMAGE}:${IMAGE_TAG}
     container_name: promtail
     restart: unless-stopped
     volumes:

@@ -29,7 +29,7 @@ services:
       context: ./studyoverflow
       dockerfile: Dockerfile
       target: dev-image
-    image: ${STUDYOVERFLOW_IMAGE_NAME}:${STUDYOVERFLOW_IMAGE_TAG_CI:-dev}
+    image: ${STUDYOVERFLOW_IMAGE}:${IMAGE_TAG_CI:-dev}
     env_file:
       - .env.test
     command: pytest
