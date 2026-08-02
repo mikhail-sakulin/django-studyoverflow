@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 @app.task
 def create_notification(user_id, actor_id, message, notification_type, content_type_id, object_id):
     """
-    Асинхронная Celery задача для создания уведомления Notification.
+    Celery задача для создания уведомления Notification.
     """
     with transaction.atomic():
         try:
@@ -53,12 +53,17 @@ def create_notification(user_id, actor_id, message, notification_type, content_t
 @app.task(base=QueueOnce, once={"keys": ["user_id"], "graceful": True})
 def send_channel_notify_event(user_id, update_list=True):
     """
-    Асинхронная Celery задача для отправки обновления счетчика непрочитанных уведомлений
+    Celery задача для отправки обновления счетчика непрочитанных уведомлений
     через Channels WebSocket пользователю.
     """
     unread_notifications_count = Notification.objects.filter(user_id=user_id, is_read=False).count()
 
     channel_layer = get_channel_layer()
+
+    # Внутри async def можно было бы написать await channel_layer.group_send(...) - для await
+    # возвращается корутина.
+    #
+    # Внутри синхронной def нужно оборачивать корутину в async_to_sync.
     async_to_sync(channel_layer.group_send)(
         f"user_{user_id}",
         {

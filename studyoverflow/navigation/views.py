@@ -32,10 +32,7 @@ def page_not_found(request, exception):
 
 
 def permission_denied(request, exception):
-    """Страница ошибки 403 (Доступ запрещен)."""
-    if request.path.startswith("/api/"):
-        return JsonResponse({"detail": "У вас нет прав для выполнения этого действия."}, status=403)
-
+    """Страница ошибки 403 (Доступ запрещен). Для api генерируется всегда DRF."""
     return render(request, "http_statuses/403.html", status=403)
 
 
@@ -67,13 +64,10 @@ def unauthorized(request, exception):
     """
     Страница ошибки 401 (Неавторизованный доступ).
 
-    В текущей версии проекта не используется.
-    """
-    if request.path.startswith("/api/"):
-        return JsonResponse(
-            {"detail": "Учетные данные не предоставлены или недействительны."}, status=401
-        )
+    В текущей версии проекта не используется, так как в Django отсутствует глобальный handler401.
 
+    Для api генерируется всегда DRF.
+    """
     return render(request, "http_statuses/401.html", status=401)
 
 
@@ -81,11 +75,8 @@ def method_not_allowed(request, exception):
     """
     Страница ошибки 405 (Метод не разрешен).
 
-    В текущей версии проекта не используется.
-    """
-    if request.path.startswith("/api/"):
-        return JsonResponse(
-            {"detail": f"Метод {request.method} не разрешен для этого эндпоинта."}, status=405
-        )
+    В текущей версии проекта не используется, так как в Django отсутствует глобальный handler405.
 
+    Для api генерируется всегда DRF.
+    """
     return render(request, "http_statuses/405.html", status=405)

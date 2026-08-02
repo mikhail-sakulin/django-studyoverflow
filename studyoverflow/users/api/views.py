@@ -62,7 +62,7 @@ from users.api.serializers import (
     UserRegisterSerializer,
 )
 from users.mixins import UserOnlineFilterMixin, UserSortMixin
-from users.services import block_user_service, unblock_user_service
+from users.services import block_user_service, get_cached_user_profile, unblock_user_service
 from users.tasks import send_password_reset_email_task
 
 
@@ -896,6 +896,23 @@ class UserViewSet(
                 return UserMyProfileSerializer
 
         return serializers.get(self.action, self.serializer_class)
+
+    def get_object(self):
+        """
+        Переопределяется для использования кеша профиля пользователя из сервиса.
+        """
+        # Если в URL передан username (retrieve, avatar_full, block, unblock)
+        if self.lookup_field in self.kwargs:
+            username = self.kwargs[self.lookup_field]
+
+            # Пользователь из кеша
+            obj = get_cached_user_profile(username)
+
+            # Проверка прав (permissions) DRF
+            self.check_object_permissions(self.request, obj)
+            return obj
+
+        return super().get_object()
 
     @extend_schema(
         summary="Список пользователей.",

@@ -1,8 +1,29 @@
+import fakeredis
 import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from factories import UserFactory
+from factories import CommentFactory, NotificationPostCreateFactory, PostFactory, UserFactory
+
+
+@pytest.fixture(autouse=True)
+def fake_redis(mocker):
+    """
+    Подменяет подключение к Redis через fakeredis для OnlineStatusMiddleware.
+
+    В OnlineStatusMiddleware, если пользователь аутентифицирован,
+    есть обращение к сервисной функции set_user_online, в которой есть прямое обращение к Redis.
+
+    Имитация сервера Redis в оперативной памяти для тестов,
+    мок используется для подмены Redis при прямом обращении к Redis.
+
+    Это Fake подмена (полноценная рабочая реализация) через Python-объект.
+    """
+    redis = fakeredis.FakeStrictRedis()
+    mocker.patch(
+        "users.services.online.get_redis_connection",
+        return_value=redis,
+    )
 
 
 @pytest.fixture
@@ -11,8 +32,23 @@ def user_factory():
 
 
 @pytest.fixture
+def post_factory():
+    return PostFactory
+
+
+@pytest.fixture
+def comment_factory():
+    return CommentFactory
+
+
+@pytest.fixture
 def api_client():
     return APIClient()
+
+
+@pytest.fixture
+def notification_post_factory():
+    return NotificationPostCreateFactory
 
 
 @pytest.fixture

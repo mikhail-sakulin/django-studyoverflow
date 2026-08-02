@@ -38,6 +38,7 @@ from users.mixins import (
 from users.services import (
     block_user_service,
     get_cached_online_user_ids,
+    get_cached_user_profile,
     unblock_user_service,
 )
 
@@ -206,16 +207,7 @@ class AuthorProfileView(DetailView):
 
     def get_object(self, queryset=None):
         username = self.kwargs.get("username")
-        cache_key = f"user_profile_{username}"
-
-        author = cache.get(cache_key)
-
-        if not author:
-            author = get_object_or_404(User, username=username)
-            # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
-            cache.set(cache_key, author, timeout=2)
-
-        return author
+        return get_cached_user_profile(username)
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()

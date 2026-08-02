@@ -23,7 +23,7 @@ services:
     env_file:
       - .env.prod
     networks:
-      - dbnet
+      - studyoverflow_network
     volumes:
       - staticfiles:/app/studyoverflow/staticfiles
     # Контейнер запускается от root, нужно для выполнения chown (смены прав каталога)
@@ -76,7 +76,7 @@ services:
       POSTGRES_HOST: "postgres"
       POSTGRES_PORT: "5432"
     networks:
-      - dbnet
+      - studyoverflow_network
     expose:
       - "8000"
     depends_on:
@@ -91,6 +91,9 @@ services:
     image: ${STUDYOVERFLOW_IMAGE}:${IMAGE_TAG:-prod}
     env_file:
       - .env.prod
+    environment:
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
     depends_on:
       postgres:
         condition: service_healthy
@@ -103,6 +106,9 @@ services:
     image: ${STUDYOVERFLOW_IMAGE}:${IMAGE_TAG:-prod}
     env_file:
       - .env.prod
+    environment:
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
     depends_on:
       postgres:
         condition: service_healthy
@@ -128,7 +134,7 @@ services:
     container_name: nginx-server
     restart: unless-stopped
     networks:
-      - dbnet
+      - studyoverflow_network
     ports:
       - "80:80"
     expose:
