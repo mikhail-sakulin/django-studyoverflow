@@ -23,12 +23,12 @@ MODERATOR_PERMISSIONS = [
     ("posts", "add_comment"),
     ("posts", "change_comment"),
     ("posts", "delete_comment"),
-    ("posts", "moderate_comments"),
+    ("posts", "moderate_comment"),
     # posts.Post
     ("posts", "add_post"),
     ("posts", "change_post"),
     ("posts", "delete_post"),
-    ("posts", "moderate_posts"),
+    ("posts", "moderate_post"),
     # users.User
     ("users", "block_user"),
 ]
@@ -198,6 +198,8 @@ def log_user_deletion(sender, instance, **kwargs):
     )
 
 
+# Если authenticate(...) не может аутентифицировать пользователя и возвращает не пользователя,
+# а None, то срабатывает сигнал user_login_failed.
 @receiver(user_login_failed)
 def log_user_login_failed(sender, credentials, request, **kwargs):
     """
