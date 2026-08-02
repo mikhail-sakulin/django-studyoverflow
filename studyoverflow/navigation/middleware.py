@@ -26,7 +26,7 @@ class UserActivityMiddleware:
 
         Логирует данные о запросе и ответе, пропускает логирование запросов по исключённым путям.
         """
-        skip_path_prefixes = ["/favicon.ico"]
+        skip_path_prefixes = ["/health", "/ws/"]
         if any(request.path.startswith(path) for path in skip_path_prefixes):
             return self.get_response(request)
 
