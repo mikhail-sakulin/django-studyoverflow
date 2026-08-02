@@ -10,7 +10,7 @@ from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views import View
 
-from posts.mixins import HTMXMessageMixin, LoginRequiredHTMXMixin
+from posts.mixins import LoginRequiredHTMXMixin
 from posts.models import Comment, Post
 from posts.services import perform_toggle_like
 
@@ -18,11 +18,13 @@ from posts.services import perform_toggle_like
 logger = logging.getLogger(__name__)
 
 
-class ToggleLikeBaseView(LoginRequiredHTMXMixin, HTMXMessageMixin, View, ABC):
+class ToggleLikeBaseView(LoginRequiredHTMXMixin, View, ABC):
     """
     Абстрактное базовое представление для добавления/удаления лайков.
 
     Работает с HTMX и логирует действия с лайками.
+
+    LoginRequiredHTMXMixin содержит HTMXMessageMixin, добавляющий сообщение в ответ.
     """
 
     model: Type[models.Model]

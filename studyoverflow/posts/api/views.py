@@ -40,7 +40,13 @@ from posts.mixins import (
     PostFilterSortMixin,
 )
 from posts.models import Comment, LowercaseTag, Post
-from posts.services import log_comment_event, log_post_event, perform_toggle_like
+from posts.services import (
+    get_cached_post,
+    get_cached_tags,
+    log_comment_event,
+    log_post_event,
+    perform_toggle_like,
+)
 from users.api.openapi_responses_examples import OpenApiUnauthenticated401Response
 
 
@@ -280,6 +286,23 @@ class PostViewSet(
 
         return [AllowAny()]
 
+    def get_object(self):
+        """
+        Возвращает объект поста с кешированием и добавляет
+        пользовательский флаг user_has_liked.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+
+        post = get_cached_post(
+            post_id=self.kwargs[self.lookup_field],
+            queryset=queryset,
+        )
+
+        self.check_object_permissions(self.request, post)
+
+        # Добавляет объекту флаг лайка от пользователя
+        return self.set_user_has_liked(post)
+
     def get_queryset(self):
         """
         Использует:
@@ -290,14 +313,19 @@ class PostViewSet(
 
         queryset = super().get_queryset()
 
-        # Фильтрация по полям модели (через PostFilterSortMixin)
-        queryset = self.filter_by_model_fields(queryset, self.request)
+        if self.action == "list":
+            # Фильтрация по полям модели (через PostFilterSortMixin)
+            queryset = self.filter_by_model_fields(queryset, self.request)
 
-        # select_related, prefetch_related и аннотации (через PostAnnotateQuerysetMixin)
-        queryset = self.get_annotate_queryset(queryset)
+            # select_related, prefetch_related и аннотации (через PostAnnotateQuerysetMixin)
+            queryset = self.get_annotate_queryset(queryset)
 
-        # Фильтрация и сортировка по аннотированным полям (через PostFilterSortMixin)
-        queryset = self.filter_and_sort_by_annotations(queryset, self.request)
+            # Фильтрация и сортировка по денормализованным полям-счетчикам
+            # (через PostFilterSortMixin)
+            queryset = self.filter_and_sort_by_counters(queryset, self.request)
+        else:
+            # select_related и prefetch_related через PostAnnotateQuerysetMixin
+            queryset = self.prepare_post_queryset(queryset)
 
         return queryset
 
@@ -566,6 +594,13 @@ class TagReadOnlyViewSet(ReadOnlyModelViewSet):
     API endpoint для просмотра списка тегов.
 
     Поддерживает поиск по подстроке: ?search=python.
+
+    Для кеширования тегов вместо переопределения list и использования готового
+    сервиса get_cached_tags можно использовать:
+        @method_decorator(cache_page(2))
+        def dispatch(self, *args, **kwargs):
+            return super().dispatch(*args, **kwargs)
+    Но тогда кешироваться будут любые запросы, и с GET-параметром search тоже.
     """
 
     queryset = LowercaseTag.objects.all().order_by("name")
@@ -573,3 +608,19 @@ class TagReadOnlyViewSet(ReadOnlyModelViewSet):
     pagination_class = None
     filter_backends = [SearchFilter]
     search_fields = ["name"]
+
+    def list(self, request, *args, **kwargs):  # noqa: A003
+        """
+        Использует кешированный список тегов, если не задан GET-параметр search.
+        """
+        search_query = request.query_params.get("search", "").lower()
+
+        if search_query:
+            # Если задан GET-параметр search, то кеш, содержащий все теги, не используется
+            return super().list(request, *args, **kwargs)
+
+        # Если фильтрации нет, то используется кеш
+        tags = get_cached_tags()
+
+        serializer = self.get_serializer(tags, many=True)
+        return Response(serializer.data)

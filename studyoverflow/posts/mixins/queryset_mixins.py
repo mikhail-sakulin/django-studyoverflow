@@ -42,6 +42,27 @@ class LikeAnnotationsMixin:
 
         return queryset
 
+    def set_user_has_liked(self, obj):
+        """
+        Добавляет объекту флаг 'user_has_liked'.
+        """
+
+        user = getattr(self.request, "user", None)
+
+        if not user or not user.is_authenticated:
+            obj.user_has_liked = False
+            return obj
+
+        content_type = self._get_content_type(obj.__class__)
+
+        obj.user_has_liked = Like.objects.filter(
+            content_type=content_type,
+            object_id=obj.pk,
+            user=user,
+        ).exists()
+
+        return obj
+
 
 class PostAnnotateQuerysetMixin(LikeAnnotationsMixin):
     """
@@ -51,9 +72,12 @@ class PostAnnotateQuerysetMixin(LikeAnnotationsMixin):
     - флаг 'user_has_liked' через LikeAnnotationsMixin
     """
 
+    def prepare_post_queryset(self, queryset):
+        return queryset.select_related("author").prefetch_related("tags").defer("author__bio")
+
     def get_annotate_queryset(self, queryset):  # type: ignore
-        queryset = queryset.select_related("author").prefetch_related("tags").defer("author__bio")
-        queryset = super().annotate_queryset(queryset)
+        queryset = self.prepare_post_queryset(queryset)
+        queryset = self.annotate_queryset(queryset)
         return queryset
 
 
@@ -117,9 +141,9 @@ class PostFilterSortMixin:
 
         return queryset
 
-    def filter_and_sort_by_annotations(self, queryset, request):
+    def filter_and_sort_by_counters(self, queryset, request):
         """
-        Фильтрация и сортировка по полям модели или аннотированным полям.
+        Фильтрация и сортировка по денормализованным полям-счетчикам.
         """
         # Фильтр по наличию комментариев
         has_comments = request.GET.get("has_comments", "any")

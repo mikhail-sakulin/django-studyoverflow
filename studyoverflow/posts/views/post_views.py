@@ -3,21 +3,19 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
-from django.core.cache import cache
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from posts.forms import CommentCreateForm, PostCreateForm, PostFilterForm
 from posts.mixins import (
     ContextTagMixin,
-    LoginRequiredHTMXMixin,
     PostAnnotateQuerysetMixin,
     PostAuthorMixin,
     PostFilterSortMixin,
     SingleObjectCacheMixin,
 )
 from posts.models import Post
-from posts.services import log_post_event
+from posts.services import get_cached_post, log_post_event
 from users.mixins import IsAuthorOrModeratorMixin
 
 
@@ -49,8 +47,8 @@ class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMix
         # select_related, prefetch_related и аннотации (через PostAnnotateQuerysetMixin)
         queryset = self.get_annotate_queryset(queryset)
 
-        # Фильтрация и сортировка по аннотированным полям (через PostFilterSortMixin)
-        queryset = self.filter_and_sort_by_annotations(queryset, self.request)
+        # Фильтрация и сортировка по денормализованным полям-счетчикам (через PostFilterSortMixin)
+        queryset = self.filter_and_sort_by_counters(queryset, self.request)
 
         return queryset
 
@@ -73,7 +71,7 @@ class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMix
 
 
 class PostCreateView(
-    ContextTagMixin, PostAuthorMixin, LoginRequiredHTMXMixin, SuccessMessageMixin, CreateView
+    ContextTagMixin, PostAuthorMixin, LoginRequiredMixin, SuccessMessageMixin, CreateView
 ):
     """
     Страница создания нового поста.
@@ -106,22 +104,23 @@ class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
 
     def get_object(self, queryset=None):
         """Возвращает объект поста с кешированием."""
-        post_id = self.kwargs.get(self.pk_url_kwarg)
-        user_id = self.request.user.pk if self.request.user.is_authenticated else "anon"
-        cache_key = f"post_detail_{post_id}_u{user_id}"
+        queryset = queryset or self.get_queryset()
 
-        obj = cache.get(cache_key)
-        if not obj:
-            obj = super().get_object(queryset)
-            # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
-            cache.set(cache_key, obj, 2)
-        return obj
+        post_id = self.kwargs.get(self.pk_url_kwarg)
+
+        post = get_cached_post(
+            post_id=post_id,
+            queryset=queryset,
+        )
+
+        # Добавляет объекту флаг лайка от пользователя
+        return self.set_user_has_liked(post)
 
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        # select_related, prefetch_related и аннотации (через PostAnnotateQuerysetMixin)
-        return super().get_annotate_queryset(queryset)
+        # select_related и prefetch_related через PostAnnotateQuerysetMixin
+        return self.prepare_post_queryset(queryset)
 
     def get_context_data(self, **kwargs):
         """Добавляет пустую форму для создания комментария в контекст."""

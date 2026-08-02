@@ -208,11 +208,11 @@ class CommentChildCreateView(CommentRootCreateView):
 
 class CommentUpdateView(
     LoginRequiredHTMXMixin,
+    HTMXHandle404CommentMixin,
     HTMXMessageMixin,
     IsAuthorOrModeratorMixin,
     SingleObjectCacheMixin,
     LikeAnnotationsMixin,
-    HTMXHandle404CommentMixin,
     CommentGetMethodMixin,
     UpdateView,
 ):

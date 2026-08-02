@@ -4,11 +4,11 @@
 
 from typing import Any
 
-from django.core.cache import cache
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404, redirect
 
-from posts.models import LowercaseTag, Post
+from posts.models import Post
+from posts.services import get_cached_tags
 
 
 class ContextTagMixin:
@@ -19,15 +19,10 @@ class ContextTagMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)  # type: ignore
 
-        cache_key = "all_tags_list"
+        tags = get_cached_tags()
 
-        tags = cache.get(cache_key)
-        if tags is None:
-            tags = list(LowercaseTag.objects.all().order_by("name").values_list("name", flat=True))
-            # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
-            cache.set(cache_key, tags, 2)
+        context["all_tags"] = [tag.name for tag in tags]
 
-        context["all_tags"] = tags
         return context
 
 

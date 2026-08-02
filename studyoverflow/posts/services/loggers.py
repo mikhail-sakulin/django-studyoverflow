@@ -35,17 +35,10 @@ def log_post_event(event_type: str, post: Post, user: User, source: str = "web")
     # Основные данные лога
     extra_data = {
         "post_id": post.pk,
+        "user_id": user_id,
         "source": source,
         "event_type": event_type,
     }
-
-    # Роль пользователя в действии в зависимости от типа события
-    if event_type == "post_create":
-        extra_data["author_id"] = user_id
-    elif event_type == "post_update":
-        extra_data["editor_id"] = user_id
-    elif event_type == "post_delete":
-        extra_data["deleter_id"] = user_id
 
     logger.info(event_messages.get(event_type, "Событие поста"), extra=extra_data)
 
@@ -81,7 +74,7 @@ def log_comment_event(event_type: str, comment: Comment, user: User, source: str
     logger.info(event_messages.get(event_type, "Событие комментария"), extra=extra_data)
 
 
-def log_like_event(event_type: str, obj: models.Model, user: User, source: str) -> None:
+def log_like_event(event_type: str, obj: models.Model, user: User, source: str = "web") -> None:
     """
     Логирует события лайков (добавление / удаление). Указывает источник: 'web' или 'api'.
 
@@ -94,14 +87,16 @@ def log_like_event(event_type: str, obj: models.Model, user: User, source: str) 
     model_type = obj._meta.model_name
 
     event_messages = {
-        "like_add": f"Лайк добавлен к {model_name}у (id: {obj.pk}) пользователем {user.username}.",
-        "like_remove": f"Лайк удален у {model_name}а (id: {obj.pk}) пользователем {user.username}.",
+        "like_add": f"Лайк добавлен к {model_name} (id: {obj.pk}) пользователем {user.username}.",
+        "like_remove": f"Лайк удален у {model_name} (id: {obj.pk}) пользователем {user.username}.",
     }
+
+    user_id = user.pk if user and user.is_authenticated else None
 
     extra_data = {
         "object_id": obj.pk,
         "object_type": model_type,
-        "user_id": user.pk,
+        "user_id": user_id,
         "event_type": event_type,
         "source": source,
     }
