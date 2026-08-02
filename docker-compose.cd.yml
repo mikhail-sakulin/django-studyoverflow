@@ -9,12 +9,13 @@ services:
     # а записывает указанные данные вместо предыдущих, не сохраняя предыдущие.
     env_file: !override
       - .env.test
+    # Используется анонимный том, при каждом запуске создается новый
     volumes:
-      - postgres-cd-data:/var/lib/postgresql/data
+      - /var/lib/postgresql/data
 
   redis:
     volumes:
-      - redis-cd-data:/data
+      - /data
 
   studyoverflow-init:
     env_file: !override
@@ -68,23 +69,23 @@ services:
     env_file: !override
       - .env.test
     volumes:
-      - celery_beat-cd_data:/app/studyoverflow/celerybeat_data
+      - /app/studyoverflow/celerybeat_data
 
   promtail:
     volumes:
-      - promtail-cd-data:/run/promtail
+      - /run/promtail
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
 
   loki:
     volumes:
-      - loki-cd-data:/loki
+      - /loki
 
   grafana:
     env_file: !override
       - .env.test
     volumes:
-      - grafana-cd-data:/var/lib/grafana
+      - /var/lib/grafana
 
   nginx:
     volumes:
@@ -96,11 +97,11 @@ services:
       studyoverflow-2:
         condition: service_healthy
 
+networks:
+  studyoverflow_network:
+    # Фиксированное имя сети
+    name: studyoverflow_network
+    driver: bridge
+
 volumes:
-  postgres-cd-data:
-  redis-cd-data:
   staticfiles-cd:
-  celery_beat-cd_data:
-  promtail-cd-data:
-  loki-cd-data:
-  grafana-cd-data:
