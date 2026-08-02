@@ -1,9 +1,11 @@
 # from .base import DEBUG
+from .base import DEBUG
 
 
 REST_FRAMEWORK = {
-    # Кастомный обработчик исключений для DRF.
-    "EXCEPTION_HANDLER": "navigation.api.exceptions.custom_exception_handler",
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
     # Кастомная пагинация для api запросов.
     "DEFAULT_PAGINATION_CLASS": "navigation.api.pagination.CustomPageNumberPagination",
     # Поддерживаемые способы аутентификации
@@ -14,6 +16,12 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
+
+# Browsable API (веб-интерфейс DRF) только если DEBUG == True
+if DEBUG:
+    REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"].append(  # type: ignore
+        "rest_framework.renderers.BrowsableAPIRenderer"
+    )
 
 SPECTACULAR_SETTINGS = {
     # Базовая информация
