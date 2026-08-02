@@ -56,7 +56,10 @@ repos:
 
       - id: django-tests
         name: Django tests
-        entry: pytest -n 0 -c studyoverflow/pytest.ini
+        # Указывается e2e вместо studyoverflow/e2e, так как rootdir меняется на studyoverflow,
+        # где лежит pytest.ini
+        entry: pytest -n 0 -c studyoverflow/pytest.ini --ignore=e2e
         language: system
         types: [python]
+        files: ^studyoverflow/
         pass_filenames: false
