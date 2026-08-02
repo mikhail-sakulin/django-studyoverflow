@@ -3,6 +3,9 @@ import re
 import pytest
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.core.cache import cache
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 from rest_framework_simplejwt.exceptions import TokenError
@@ -22,6 +25,14 @@ def mock_redis_conn(mocker):
     """
     mock_conn = mocker.patch("users.services.online.get_redis_connection")
     return mock_conn
+
+
+@pytest.fixture()
+def clear_cache():
+    """Очищает кеш до и после теста."""
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.mark.django_db
@@ -615,6 +626,30 @@ class TestUserViewSetRetrieve:
         assert len(results) == 1
         assert results[0]["username"] == "offline_user"
 
+    def test_retrieve_user_uses_cache_and_avoids_db(self, clear_cache, api_client, user_factory):
+        """
+        Проверка сохранения профиля пользователя в кеш.
+        """
+        user = user_factory(username="cached_user")
+        cache_key = f"user_profile_{user.username}"
+        url = reverse("api:users:users-detail", kwargs={"username": user.username})
+
+        # Первый запрос - сохранение в кеше, запрос в БД
+        with CaptureQueriesContext(connection) as queries_1:
+            response_1 = api_client.get(url)
+
+        assert response_1.status_code == 200
+        assert cache.get(cache_key) is not None
+
+        # Второй запрос - данные из кеша
+        with CaptureQueriesContext(connection) as queries_2:
+            response_2 = api_client.get(url)
+
+        assert response_2.status_code == 200
+
+        assert any("users_user" in q["sql"].lower() for q in queries_1)
+        assert not any("users_user" in q["sql"].lower() for q in queries_2)
+
 
 @pytest.mark.django_db
 class TestUserViewSetMe:
@@ -622,7 +657,11 @@ class TestUserViewSetMe:
 
     def test_me_get_unauthenticated(self, api_client, assert_login_required):
         """Для просмотра собственного профиля требуется авторизация."""
-        assert_login_required("api:users:users-me", method="post", is_api=True)
+        assert_login_required("api:users:users-me", method="get", is_api=True)
+
+    def test_me_patch_unauthenticated(self, api_client, assert_login_required):
+        """Для изменения собственного профиля требуется авторизация."""
+        assert_login_required("api:users:users-me", method="patch", is_api=True)
 
     def test_me_get_success(self, api_client, user_factory):
         """Успешное получение своего профиля."""
