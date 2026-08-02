@@ -1,3 +1,7 @@
+from .cache import (
+    get_cached_post,
+    get_cached_tags,
+)
 from .like_handler import (
     perform_toggle_like,
 )
@@ -20,6 +24,9 @@ from .validators import (
 
 
 __all__ = [
+    # cache
+    "get_cached_post",
+    "get_cached_tags",
     # text_processing
     "generate_slug",
     "render_markdown_safe",

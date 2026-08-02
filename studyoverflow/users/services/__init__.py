@@ -11,6 +11,9 @@ from .avatars import (
     save_img_in_storage,
     user_avatar_upload_path,
 )
+from .cache import (
+    get_cached_user_profile,
+)
 from .image_processing import (
     generate_gif,
     generate_image,
@@ -46,6 +49,8 @@ from .validators import (
 
 
 __all__ = [
+    # cache
+    "get_cached_user_profile",
     # avatars
     "avatar_upload_to",
     "generate_new_filename_with_uuid",
