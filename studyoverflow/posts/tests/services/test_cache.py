@@ -5,7 +5,12 @@ from django.http import Http404
 from django.test.utils import CaptureQueriesContext
 
 from posts.models import LowercaseTag, Post
-from posts.services import get_cached_post, get_cached_tags
+from posts.services import (
+    delete_cache_post_detail,
+    get_cached_post,
+    get_cached_tags,
+    get_post_cache_key,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -14,6 +19,14 @@ def clear_cache():
     cache.clear()
     yield
     cache.clear()
+
+
+@pytest.mark.django_db
+class TestPostCacheKey:
+
+    def test_returns_expected_key(self):
+        """Возвращает корректный ключ кеша поста."""
+        assert get_post_cache_key(5) == "post_detail_5"
 
 
 @pytest.mark.django_db
@@ -65,6 +78,24 @@ class TestGetCachedPost:
 
         assert result2.title == "Original title"
         assert result1.title != result2.title
+
+
+@pytest.mark.django_db
+class TestDeleteCachePostDetail:
+
+    def test_deletes_cache(self, post_factory):
+        """Удаляет объект поста из кеша."""
+        post = post_factory()
+        queryset = Post.objects.all()
+
+        get_cached_post(post.id, queryset)
+
+        cache_key = get_post_cache_key(post.id)
+        assert cache.get(cache_key) is not None
+
+        delete_cache_post_detail(post.id)
+
+        assert cache.get(cache_key) is None
 
 
 @pytest.mark.django_db

@@ -6,6 +6,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from posts.models import Post
+from posts.services import get_post_cache_key
 
 
 User = get_user_model()
@@ -161,7 +162,9 @@ class TestPostDetailView:
 
         assert len(queries_second) < len(queries_first)
 
-        assert cache.get(f"post_detail_{post.pk}") is not None
+        cache_key = get_post_cache_key(post.pk)
+
+        assert cache.get(cache_key) is not None
 
 
 @pytest.mark.django_db
