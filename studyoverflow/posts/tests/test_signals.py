@@ -1,5 +1,7 @@
 import pytest
 
+from posts.models import LowercaseTag
+
 
 @pytest.mark.django_db
 class TestUserCountersSignals:
@@ -170,3 +172,28 @@ class TestPostCacheSignals:
         post_id = post.pk
         post.delete()
         mock_delete_cache.assert_called_once_with(post_id)
+
+
+@pytest.mark.django_db
+class TestTagCacheSignals:
+
+    def test_tags_cache_invalidation_on_create_update_and_delete(self, mocker):
+        """
+        При создании, изменении и удалении тега вызывается сервис удаления кеша списка тегов.
+        """
+        mock_delete_cache = mocker.patch("posts.signals.delete_cache_tags_list")
+
+        # 1) Создание тега — кеш сбрасывается
+        tag = LowercaseTag.objects.create(name="python")
+        mock_delete_cache.assert_called_once()
+
+        # 2) Обновление тега — кеш сбрасывается
+        mock_delete_cache.reset_mock()
+        tag.name = "django"
+        tag.save()
+        mock_delete_cache.assert_called_once()
+
+        # 3) Удаление тега — кеш сбрасывается
+        mock_delete_cache.reset_mock()
+        tag.delete()
+        mock_delete_cache.assert_called_once()

@@ -3,8 +3,8 @@ from django.db.models.functions import Greatest
 from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 
-from posts.models import Comment, Like, Post
-from posts.services import delete_cache_post_detail
+from posts.models import Comment, Like, LowercaseTag, Post
+from posts.services import delete_cache_post_detail, delete_cache_tags_list
 from users.services import update_user_counter_field
 
 
@@ -165,3 +165,11 @@ def invalidate_post_cache_on_save_or_delete(sender, instance, created=False, **k
         return
 
     delete_cache_post_detail(instance.pk)
+
+
+@receiver([post_save, post_delete], sender=LowercaseTag)
+def invalidate_tags_cache_on_save_or_delete(sender, **kwargs):
+    """
+    Удаляет кеш списка тегов при создании, изменении или удалении тега.
+    """
+    delete_cache_tags_list()
