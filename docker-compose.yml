@@ -11,7 +11,6 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: psgr
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -31,7 +30,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: redis
     restart: unless-stopped
     networks:
       - studyoverflow_network
@@ -44,7 +42,6 @@ services:
       retries: 5
 
   studyoverflow-1:
-    container_name: studyoverflow-1
     restart: unless-stopped
     networks:
       - studyoverflow_network
@@ -83,7 +80,6 @@ services:
   loki:
     build: ./monitoring/loki
     image: ${LOKI_IMAGE}:${IMAGE_TAG}
-    container_name: loki
     restart: unless-stopped
     volumes:
       - loki-data:/loki
@@ -95,7 +91,6 @@ services:
   promtail:
     build: ./monitoring/promtail
     image: ${PROMTAIL_IMAGE}:${IMAGE_TAG}
-    container_name: promtail
     restart: unless-stopped
     volumes:
       - promtail-data:/run/promtail
@@ -109,7 +104,6 @@ services:
 
   grafana:
     image: grafana/grafana:10.2.2
-    container_name: grafana
     restart: unless-stopped
     expose:
       - "3000"
