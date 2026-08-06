@@ -143,3 +143,30 @@ class TestObjectCountersSignals:
         like.delete()
         comment.refresh_from_db()
         assert comment.likes_count == 0
+
+
+@pytest.mark.django_db
+class TestPostCacheSignals:
+
+    def test_post_cache_invalidation_on_update_and_delete(self, post_factory, mocker):
+        """
+        При создании поста кэш не сбрасывается.
+
+        При обновлении и удалении поста вызывается сервис удаления кэша.
+        """
+        mock_delete_cache = mocker.patch("posts.signals.delete_cache_post_detail")
+
+        # 1) Создание поста (created=True) — кэш не сбрасывается
+        post = post_factory()
+        mock_delete_cache.assert_not_called()
+
+        # 2) Обновление поста (created=False) — кэш сбрасывается
+        post.title = "Обновленный заголовок"
+        post.save()
+        mock_delete_cache.assert_called_once_with(post.pk)
+
+        # 3) Удаление поста — кэш сбрасывается
+        mock_delete_cache.reset_mock()
+        post_id = post.pk
+        post.delete()
+        mock_delete_cache.assert_called_once_with(post_id)
