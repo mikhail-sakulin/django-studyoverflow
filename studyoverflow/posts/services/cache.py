@@ -12,6 +12,11 @@ if TYPE_CHECKING:
     from posts.models import Post
 
 
+def get_post_cache_key(post_id: int) -> str:
+    """Возвращает ключ для кеширования конкретного поста."""
+    return f"post_detail_{post_id}"
+
+
 def get_cached_post(post_id: int, queryset: QuerySet[Post]):
     """
     Возвращает кешированный объект поста.
@@ -22,7 +27,7 @@ def get_cached_post(post_id: int, queryset: QuerySet[Post]):
     например без флага о статусе лайка от пользователя.
     """
 
-    cache_key = f"post_detail_{post_id}"
+    cache_key = get_post_cache_key(post_id)
 
     post = cache.get(cache_key)
 
@@ -38,6 +43,12 @@ def get_cached_post(post_id: int, queryset: QuerySet[Post]):
     # объекты Python, объекты сериализуются через pickle, но copy используется для надежности и
     # наглядности.
     return copy.copy(post)
+
+
+def delete_cache_post_detail(post_id: int):
+    """Удаляет кеш поста."""
+    cache_key = get_post_cache_key(post_id)
+    cache.delete(cache_key)
 
 
 def get_cached_tags():
