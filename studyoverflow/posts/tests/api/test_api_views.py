@@ -6,7 +6,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from posts.models import Comment, LowercaseTag, Post
-from posts.services import get_post_cache_key
+from posts.services import get_post_cache_key, get_tags_cache_key
 
 
 User = get_user_model()
@@ -466,7 +466,9 @@ class TestTagReadOnlyViewSet:
         # Первый запрос - кеш пуст, происходит запрос к БД
         response_first = api_client.get(url)
         assert response_first.status_code == 200
-        assert cache.get("all_tags_list") is not None
+
+        cache_tags_key = get_tags_cache_key()
+        assert cache.get(cache_tags_key) is not None
 
         # Второй запрос - данные берутся из кеша
         with CaptureQueriesContext(connection) as queries:

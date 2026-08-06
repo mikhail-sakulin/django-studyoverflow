@@ -1,8 +1,10 @@
 from .cache import (
     delete_cache_post_detail,
+    delete_cache_tags_list,
     get_cached_post,
     get_cached_tags,
     get_post_cache_key,
+    get_tags_cache_key,
 )
 from .like_handler import (
     perform_toggle_like,
@@ -30,7 +32,9 @@ __all__ = [
     "get_post_cache_key",
     "get_cached_post",
     "delete_cache_post_detail",
+    "get_tags_cache_key",
     "get_cached_tags",
+    "delete_cache_tags_list",
     # text_processing
     "generate_slug",
     "render_markdown_safe",

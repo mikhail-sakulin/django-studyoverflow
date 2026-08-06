@@ -51,6 +51,11 @@ def delete_cache_post_detail(post_id: int):
     cache.delete(cache_key)
 
 
+def get_tags_cache_key() -> str:
+    """Возвращает ключ для кеширования списка тегов."""
+    return "all_tags_list"
+
+
 def get_cached_tags():
     """
     Возвращает кешированный список всех тегов.
@@ -60,7 +65,7 @@ def get_cached_tags():
     # Локальный импорт для избежания циклических импортов
     from posts.models import LowercaseTag
 
-    cache_key = "all_tags_list"
+    cache_key = get_tags_cache_key()
 
     tags = cache.get(cache_key)
 
@@ -70,3 +75,9 @@ def get_cached_tags():
         cache.set(cache_key, tags, timeout=2)
 
     return tags
+
+
+def delete_cache_tags_list():
+    """Удаляет кеш списка всех тегов."""
+    cache_key = get_tags_cache_key()
+    cache.delete(cache_key)
