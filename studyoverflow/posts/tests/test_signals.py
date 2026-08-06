@@ -1,7 +1,5 @@
 import pytest
 
-from posts.models import Like
-
 
 @pytest.mark.django_db
 class TestUserCountersSignals:
@@ -44,7 +42,7 @@ class TestUserCountersSignals:
         mock_update.assert_called_with(user.pk, "comments_count", -1)
 
     def test_post_like_create_and_delete_updates_author_reputation(
-        self, user_factory, post_factory, mocker
+        self, user_factory, post_factory, like_factory, mocker
     ):
         """При лайке поста у автора поста изменяется репутация."""
         mock_update = mocker.patch("posts.signals.update_user_counter_field")
@@ -55,14 +53,14 @@ class TestUserCountersSignals:
 
         # Очистка истории вызовов мока, чтобы затем проверить еще один его вызов
         mock_update.reset_mock()
-        like = Like.objects.create(user=user_liker, content_object=post)
+        like = like_factory(user=user_liker, content_object=post)
         mock_update.assert_called_with(author.pk, "reputation", 1)
 
         like.delete()
         mock_update.assert_called_with(author.pk, "reputation", -1)
 
     def test_comment_like_create_and_delete_updates_author_reputation(
-        self, user_factory, comment_factory, mocker
+        self, user_factory, comment_factory, like_factory, mocker
     ):
         """При лайке комментария у автора поста изменяется репутация."""
         mock_update = mocker.patch("posts.signals.update_user_counter_field")
@@ -73,7 +71,7 @@ class TestUserCountersSignals:
 
         # Очистка истории вызовов мока, чтобы затем проверить еще один его вызов
         mock_update.reset_mock()
-        like = Like.objects.create(user=user_liker, content_object=comment)
+        like = like_factory(user=user_liker, content_object=comment)
         mock_update.assert_called_with(author.pk, "reputation", 1)
 
         like.delete()
@@ -110,14 +108,16 @@ class TestObjectCountersSignals:
         post.refresh_from_db()
         assert post.comments_count == 0
 
-    def test_like_create_and_delete_updates_post_likes_count(self, post_factory, user_factory):
+    def test_like_create_and_delete_updates_post_likes_count(
+        self, post_factory, user_factory, like_factory
+    ):
         """Создание и удаление лайка обновляет likes_count поста."""
         post = post_factory()
         user = user_factory()
         assert post.likes_count == 0
 
         # Создание лайка
-        like = Like.objects.create(user=user, content_object=post)
+        like = like_factory(user=user, content_object=post)
         post.refresh_from_db()
         assert post.likes_count == 1
 
@@ -127,7 +127,7 @@ class TestObjectCountersSignals:
         assert post.likes_count == 0
 
     def test_like_create_and_delete_updates_comment_likes_count(
-        self, comment_factory, user_factory
+        self, comment_factory, user_factory, like_factory
     ):
         """Создание и удаление лайка обновляет likes_count комментария."""
         comment = comment_factory()
@@ -135,7 +135,7 @@ class TestObjectCountersSignals:
         assert comment.likes_count == 0
 
         # Создание лайка
-        like = Like.objects.create(user=user, content_object=comment)
+        like = like_factory(user=user, content_object=comment)
         comment.refresh_from_db()
         assert comment.likes_count == 1
 

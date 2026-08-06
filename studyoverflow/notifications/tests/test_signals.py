@@ -1,8 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
 
-from posts.models import Like
-
 
 User = get_user_model()
 
@@ -11,23 +9,25 @@ User = get_user_model()
 class TestLikeSignals:
     """Тестирование сигналов при создании лайков."""
 
-    def test_like_on_post_triggers_signal(self, user_factory, post_factory, mocker):
+    def test_like_on_post_triggers_signal(self, user_factory, post_factory, like_factory, mocker):
         """Создание лайка на пост вызывает свой handler."""
         mock_handler = mocker.patch("notifications.signals.handle_notification_post_like")
 
         user = user_factory()
         post = post_factory()
-        like = Like.objects.create(content_object=post, user=user)
+        like = like_factory(content_object=post, user=user)
 
         mock_handler.assert_called_once_with(like)
 
-    def test_like_on_comment_triggers_signal(self, user_factory, comment_factory, mocker):
+    def test_like_on_comment_triggers_signal(
+        self, user_factory, comment_factory, like_factory, mocker
+    ):
         """Создание лайка на комментарий вызывает нужный обработчик."""
         mock_handler = mocker.patch("notifications.signals.handle_notification_comment_like")
 
         user = user_factory()
         comment = comment_factory()
-        like = Like.objects.create(content_object=comment, user=user)
+        like = like_factory(content_object=comment, user=user)
 
         mock_handler.assert_called_once_with(like)
 
