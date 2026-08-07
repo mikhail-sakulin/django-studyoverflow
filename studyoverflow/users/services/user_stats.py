@@ -5,15 +5,19 @@ from django.db import models
 from django.db.models import Count, F
 from django.db.models.functions import Greatest
 
+from users.services import delete_cache_user
+
 
 def update_user_counter_field(author_id: int, counter_field: str, value_change: int) -> None:
     """
-    Обновляет числовое поле счетчика у пользователя (например, posts_count или comments_count).
+    Обновляет числовое поле счетчика у пользователя (например, posts_count или comments_count)
+    и удаляет кеш объекта пользователя.
 
     Логика:
     - Проверяет, существует ли указанное поле у модели User.
     - Выполняет атомарное обновление через F() выражение.
     - Значение поля не может стать меньше 0 (используется Greatest).
+    - Удаляет кеш объект пользователя.
     """
     user_model = get_user_model()
 
@@ -23,6 +27,10 @@ def update_user_counter_field(author_id: int, counter_field: str, value_change: 
     user_model.objects.filter(pk=author_id).update(
         **{counter_field: Greatest(F(counter_field) + value_change, 0)}
     )
+
+    username = user_model.objects.filter(pk=author_id).values_list("username", flat=True).first()
+
+    delete_cache_user(username)
 
 
 def get_counts_map(model: Type[models.Model], group_field: str) -> dict[Any, int]:

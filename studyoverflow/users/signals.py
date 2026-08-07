@@ -5,10 +5,10 @@ from django.contrib.auth import get_user_model, user_logged_in, user_logged_out,
 from django.contrib.auth.models import Group, Permission
 from django.db import transaction
 from django.db.models import Q
-from django.db.models.signals import post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from users.services import get_user_avatar_paths_list, remove_user_offline
+from users.services import delete_cache_user, get_user_avatar_paths_list, remove_user_offline
 from users.tasks import delete_files_from_storage_task
 
 
@@ -220,3 +220,25 @@ def log_user_login_failed(sender, credentials, request, **kwargs):
             "source": source,
         },
     )
+
+
+@receiver(post_save, sender=UserModel)
+def invalidate_user_object_cache_on_save(sender, instance, created, update_fields, **kwargs):
+    """
+    Удаляет кэш объекта пользователя при изменении данных пользователя, кроме пароля.
+    """
+    if created:
+        return
+
+    if update_fields and "password" in update_fields:
+        return
+
+    delete_cache_user(instance.username)
+
+
+@receiver(post_delete, sender=UserModel)
+def invalidate_user_object_cache_on_delete(sender, instance, **kwargs):
+    """
+    Удаляет кэш объекта пользователя при его удалении.
+    """
+    delete_cache_user(instance.username)
