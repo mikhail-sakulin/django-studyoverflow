@@ -26,7 +26,8 @@ if DEBUG:
 SPECTACULAR_SETTINGS = {
     # Базовая информация
     "TITLE": "StudyOverflow API",
-    "DESCRIPTION": "Документация эндпоинтов проекта StudyOverflow.",
+    "DESCRIPTION": "Документация API эндпоинтов проекта StudyOverflow, используется DRF. "
+    "Web версия реализована с помощью классического Django.",
     "VERSION": "1.0",
     # Права доступа к документации в зависимости от DEBUG
     "SERVE_PERMISSIONS": (
