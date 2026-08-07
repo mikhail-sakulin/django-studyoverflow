@@ -5,8 +5,8 @@
 #   docker-compose.prod.yml
 #
 # Примеры:
-# docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file .env.dev up
-# docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up
+# docker compose -p studyoverflow-dev -f docker-compose.yml -f docker-compose.dev.yml --env-file .env.dev up
+# docker compose -p studyoverflow-prod -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up
 
 services:
   postgres:

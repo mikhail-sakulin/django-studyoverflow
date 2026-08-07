@@ -18,6 +18,8 @@ jobs:
   build-prod-and-test:
     # needs: ci
     runs-on: ubuntu-24.04
+    # Защита от зависания джобы
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -68,6 +70,7 @@ jobs:
       - name: Start production stack
         run: |
           docker compose \
+            -p studyoverflow-cd \
             -f docker-compose.yml \
             -f docker-compose.prod.yml \
             -f docker-compose.cd.yml \
@@ -90,6 +93,7 @@ jobs:
         if: failure()
         run: |
           docker compose \
+            -p studyoverflow-cd \
             -f docker-compose.yml \
             -f docker-compose.prod.yml \
             -f docker-compose.cd.yml \
@@ -100,16 +104,18 @@ jobs:
         if: failure()
         run: |
           docker compose \
-          -f docker-compose.yml \
-          -f docker-compose.prod.yml \
-          -f docker-compose.cd.yml \
-          --env-file .env.test \
-          logs
+            -p studyoverflow-cd \
+            -f docker-compose.yml \
+            -f docker-compose.prod.yml \
+            -f docker-compose.cd.yml \
+            --env-file .env.test \
+            logs
 
       - name: Cleanup
         if: always()
         run: |
           docker compose \
+            -p studyoverflow-cd \
             -f docker-compose.yml \
             -f docker-compose.prod.yml \
             -f docker-compose.cd.yml \
