@@ -207,6 +207,8 @@ six==1.17.0
     # via python-dateutil
 sqlparse==0.5.5
     # via django
+tinycss2==1.5.1
+    # via -r requirements.base.in
 twisted[tls]==26.4.0
     # via daphne
 txaio==26.6.1
@@ -243,7 +245,9 @@ vine==5.1.0
 wcwidth==0.8.2
     # via prompt-toolkit
 webencodings==0.5.1
-    # via bleach
+    # via
+    #   bleach
+    #   tinycss2
 whitenoise==6.11.0
     # via -r requirements.base.in
 zope-interface==8.5
