@@ -6,7 +6,6 @@ import re
 
 import bleach
 import markdown2
-from bleach.css_sanitizer import CSSSanitizer
 from django.utils.text import slugify
 
 
@@ -29,23 +28,16 @@ def render_markdown_safe(markdown_text: str) -> str:
     Преобразует текст с Markdown в HTML с использованием
     библиотеки markdown2 и bleach для удаления неразрешенных HTML-тегов.
     """
-    # Если один из блоков с кодом не закрыт, то в конец добавляется закрытие ```
-    if markdown_text.count("```") % 2 != 0:
-        markdown_text += "\n```"
-
-    # Заменяет неразрывные пробелы на обычные
-    markdown_text = markdown_text.replace("\xa0", " ")
 
     # Преобразование текста Markdown -> HTML:
     #   - fenced-code-blocks: поддержка блоков кода с тройными кавычками ```
     #   - tables: поддержка Markdown-таблиц
     #   - strike: поддержка зачеркнутого текста
     #   - task_list: поддержка списков задач - [ ] / - [x]
-    #   - footnotes: поддержка сносок
     html = markdown2.markdown(
-        markdown_text, extras=["fenced-code-blocks", "tables", "strike", "task_list", "footnotes"]
+        markdown_text, extras=["fenced-code-blocks", "tables", "strike", "task_list"]
     )
-    print(html)
+
     # Множество безопасных HTML-тегов
     allowed_tags = {
         "p",
@@ -82,22 +74,16 @@ def render_markdown_safe(markdown_text: str) -> str:
         "u",
         "s",
         "input",
-        "div",
     }
-
-    # Разрешается свойство text-align в style для тегов "th" и "td"
-    css_sanitizer = CSSSanitizer(allowed_css_properties=["text-align"])
 
     # Множество безопасных атрибутов HTML-тегов
     allowed_attrs = {
         "*": ["class", "id"],
-        "a": ["href", "title", "rel", "target", "rev"],
+        "a": ["href", "title", "rel", "target"],
         "img": ["src", "alt", "title", "loading"],
         "code": ["class"],
         "details": ["open"],
         "input": ["class", "type", "checked", "disabled"],
-        "th": ["style"],
-        "td": ["style"],
     }
 
     # Очистка HTML от неразрешенных HTML-тегов и их атрибутов
@@ -105,7 +91,6 @@ def render_markdown_safe(markdown_text: str) -> str:
         html,
         tags=allowed_tags,
         attributes=allowed_attrs,
-        css_sanitizer=css_sanitizer,
         protocols=["http", "https", "mailto"],
         strip=True,
     )

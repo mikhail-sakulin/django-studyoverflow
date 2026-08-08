@@ -6,7 +6,6 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from posts.models import Post
-from posts.services import get_post_cache_key, get_tags_cache_key
 
 
 User = get_user_model()
@@ -40,9 +39,7 @@ class TestPostListView:
         url = reverse("posts:list")
         # Создается кеш
         client.get(url)
-
-        cache_tags_key = get_tags_cache_key()
-        assert cache.get(cache_tags_key) is not None
+        assert cache.get("all_tags_list") is not None
 
         # Получение списка SQL запросов при запросе client.get(url)
         with CaptureQueriesContext(connection) as queries:
@@ -164,9 +161,7 @@ class TestPostDetailView:
 
         assert len(queries_second) < len(queries_first)
 
-        cache_key = get_post_cache_key(post.pk)
-
-        assert cache.get(cache_key) is not None
+        assert cache.get(f"post_detail_{post.pk}") is not None
 
 
 @pytest.mark.django_db

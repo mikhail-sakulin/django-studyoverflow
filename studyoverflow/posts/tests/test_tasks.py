@@ -1,12 +1,12 @@
 import pytest
 
-from posts.models import Comment, Post
+from posts.models import Comment, Like, Post
 from posts.tasks import sync_comment_counters, sync_post_counters
 
 
 @pytest.mark.django_db
 class TestSyncCountersTasks:
-    def test_sync_post_counters(self, user_factory, post_factory, comment_factory, like_factory):
+    def test_sync_post_counters(self, user_factory, post_factory, comment_factory):
         """
         Celery задача корректно пересчитывает количество комментариев и лайков
         для всех постов через единый запрос к БД.
@@ -19,7 +19,7 @@ class TestSyncCountersTasks:
         # Пост с 2 комментариями и 1 лайком
         post_active = post_factory()
         comment_factory.create_batch(2, post=post_active)
-        like_factory(user=user1, content_object=post_active)
+        Like.objects.create(user=user1, content_object=post_active)
 
         # Задаются неверные счетчики через update, чтобы не сработали сигналы
         Post.objects.update(comments_count=999, likes_count=999)
@@ -37,7 +37,7 @@ class TestSyncCountersTasks:
         assert post_active.comments_count == 2
         assert post_active.likes_count == 1
 
-    def test_sync_comment_counters(self, user_factory, comment_factory, like_factory):
+    def test_sync_comment_counters(self, user_factory, comment_factory):
         """
         Celery задача корректно пересчитывает количество лайков
         для всех комментариев через единый запрос к БД.
@@ -50,8 +50,8 @@ class TestSyncCountersTasks:
 
         # Комментарий с 2 лайками
         comment_active = comment_factory()
-        like_factory(user=user1, content_object=comment_active)
-        like_factory(user=user2, content_object=comment_active)
+        Like.objects.create(user=user1, content_object=comment_active)
+        Like.objects.create(user=user2, content_object=comment_active)
 
         # Задается неверный счетчик через update, чтобы не сработали сигналы
         Comment.objects.update(likes_count=999)

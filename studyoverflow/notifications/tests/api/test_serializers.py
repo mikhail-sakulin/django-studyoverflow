@@ -4,6 +4,7 @@ import pytest
 from rest_framework.exceptions import ValidationError
 
 from notifications.api.serializers import NotificationSerializer
+from posts.models import Like
 
 
 class TestNotificationSerializer:
@@ -35,7 +36,7 @@ class TestNotificationSerializer:
         assert serializer.get_content_object_url(notification) == "https://example.com/target/123/"
 
     @pytest.mark.django_db
-    def test_get_content_object_url_for_like_object(self, post_factory, user_factory, like_factory):
+    def test_get_content_object_url_for_like_object(self, post_factory, user_factory):
         """
         Если целевой объект - это Like, то URL формируется для объекта,
         к которому этот Like относится (объект из content_object лайка).
@@ -44,7 +45,7 @@ class TestNotificationSerializer:
 
         user = user_factory()
 
-        like = like_factory(user=user, content_object=post_target)
+        like = Like.objects.create(user=user, content_object=post_target)
 
         notification = SimpleNamespace(content_object=like)
         serializer = NotificationSerializer()

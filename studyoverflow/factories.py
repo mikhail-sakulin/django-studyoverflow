@@ -4,10 +4,9 @@ from typing import TYPE_CHECKING
 
 import factory
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 
 from notifications.models import Notification, NotificationType
-from posts.models import Comment, Like, Post
+from posts.models import Comment, Post
 
 
 if TYPE_CHECKING:
@@ -112,54 +111,9 @@ class NotificationPostCreateFactory(factory.django.DjangoModelFactory):
         author=factory.SelfAttribute("..actor"),
     )
 
-    # @factory.lazy_attribute - поскольку атрибут content_type зависит от
-    # атрибута content_object, он вычисляется динамически как зависимый
-    # после атрибута content_object, отрабатывает до создания объекта, а
-    # @factory.post_generation - отрабатывает после создания объекта
-    @factory.lazy_attribute
-    def content_type(obj):
-        # obj - не экземпляр Notification, а внутренний класс FactoryBoy с атрибутами для будущего
-        # создания экземпляра Notification, поэтому пишется obj, а не self
-        return ContentType.objects.get_for_model(obj.content_object)
-
-    @factory.lazy_attribute
-    def object_id(obj):
-        return obj.content_object.pk  # type: ignore[attr-defined]
-
     notification_type = NotificationType.POST
 
     # Автоматически создается случайно предложение.
     message = factory.Faker("sentence")
 
     is_read = False
-
-
-class LikeFactory(factory.django.DjangoModelFactory):
-    """
-    Универсальная Factory для модели Like.
-
-    По умолчанию создаёт лайк для Post, но content_object можно
-    переопределить, например задать объект Comment.
-    """
-
-    class Meta:
-        model = Like
-        skip_postgeneration_save = True
-
-    user = factory.SubFactory(UserFactory)
-
-    content_object = factory.SubFactory(PostFactory)
-
-    # @factory.lazy_attribute - поскольку атрибут content_type зависит от
-    # атрибута content_object, он вычисляется динамически как зависимый
-    # после атрибута content_object, отрабатывает до создания объекта, а
-    # @factory.post_generation - отрабатывает после создания объекта
-    @factory.lazy_attribute
-    def content_type(obj):
-        # obj - не экземпляр Like, а внутренний класс FactoryBoy с атрибутами для будущего
-        # создания экземпляра Like, поэтому пишется obj, а не self
-        return ContentType.objects.get_for_model(obj.content_object)
-
-    @factory.lazy_attribute
-    def object_id(obj):
-        return obj.content_object.pk  # type: ignore[attr-defined]

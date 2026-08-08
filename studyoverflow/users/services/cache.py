@@ -5,20 +5,15 @@ from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 
 
-def get_user_cache_key(username: str) -> str:
-    """Возвращает ключ кэша для объекта пользователя."""
-    return f"user_profile_{username.lower()}"
-
-
-def get_cached_user(username: str):
+def get_cached_user_profile(username: str):
     """
-    Возвращает кешированный объект пользователя по username.
+    Возвращает кешированный объект профиля пользователя по username.
 
     Используется в Web и API представлениях.
     """
     user_model = get_user_model()
 
-    cache_key = get_user_cache_key(username)
+    cache_key = f"user_profile_{username}"
 
     user = cache.get(cache_key)
 
@@ -32,11 +27,5 @@ def get_cached_user(username: str):
     #
     # По умолчанию в "django.core.cache.backends.locmem.LocMemCache" объекты сериализуются
     # через pickle, поэтому сохраняются копии и изменение python-объектов не изменит
-    # захешированные объекты, но copy все равно используется для надежности и наглядности.
+    # захешируемые объекты, но copy все равно используется для надежности и наглядности.
     return copy.copy(user)
-
-
-def delete_cache_user(username: str) -> None:
-    """Удаляет кэш объекта пользователя по username."""
-    cache_key = get_user_cache_key(username)
-    cache.delete(cache_key)

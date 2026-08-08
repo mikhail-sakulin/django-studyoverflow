@@ -9,6 +9,6 @@
     filter: brightness(1.25);
 }
 
-.like-button i {
+#i-like {
     font-size: 1.2rem
 }

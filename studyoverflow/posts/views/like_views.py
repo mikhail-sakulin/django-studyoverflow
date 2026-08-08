@@ -29,7 +29,6 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, View, ABC):
 
     model: Type[models.Model]
     pk_url_kwarg: str = "pk"
-    obj_type: str
 
     @abstractmethod
     def _get_toggle_like_url(self, liked_object: models.Model) -> str:
@@ -70,7 +69,6 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, View, ABC):
             "liked_object": liked_object,
             "likes_count": liked_object.likes_count,
             "user_has_liked": user_has_liked,
-            "obj_type": self.obj_type,
         }
 
         response = render(request, "posts/likes/_like-button.html", context)
@@ -89,7 +87,6 @@ class ToggleLikePostView(ToggleLikeBaseView):
 
     model = Post
     pk_url_kwarg = "post_pk"
-    obj_type = "post"
 
     def _get_toggle_like_url(self, post):
         """Возвращает URL для кнопки лайка поста."""
@@ -105,7 +102,6 @@ class ToggleLikeCommentView(ToggleLikeBaseView):
 
     model = Comment
     pk_url_kwarg = "comment_pk"
-    obj_type = "comment"
 
     def _get_toggle_like_url(self, comment):
         """Возвращает URL для кнопки лайка комментария."""

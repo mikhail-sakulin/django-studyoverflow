@@ -150,6 +150,10 @@
   width: 100%;
 }
 
-#footer {
-    border-top: none;
+footer a.text-secondary:hover {
+    color: #a23e3e !important;
+}
+
+.text-white-muted {
+    color: #e0e0e0;
 }
