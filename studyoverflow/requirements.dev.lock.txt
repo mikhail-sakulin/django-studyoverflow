@@ -437,6 +437,8 @@ sqlparse==0.5.5
     #   django-debug-toolbar
 stack-data==0.6.3
     # via ipython
+tinycss2==1.5.1
+    # via -r requirements.base.in
 traitlets==5.15.1
     # via
     #   ipython
@@ -493,7 +495,9 @@ virtualenv==21.5.1
 wcwidth==0.8.2
     # via prompt-toolkit
 webencodings==0.5.1
-    # via bleach
+    # via
+    #   bleach
+    #   tinycss2
 websocket-client==1.9.0
     # via python-socketio
 werkzeug==3.1.8
