@@ -89,6 +89,39 @@ jobs:
           curl -f http://localhost/static/admin/css/base.css
           curl -f -L http://localhost/grafana/
 
+      # Сборка образа playwright на python с pytest для E2E тестирования с кешированием слоев
+      - name: Build E2E image (cached)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./e2e
+          file: ./e2e/Dockerfile
+          tags: studyoverflow-e2e:latest
+          load: true
+          cache-from: type=gha,scope=e2e-playwright
+          cache-to: type=gha,mode=max,scope=e2e-playwright
+
+      # Запуск E2E-тестов для запущенной production-сборки
+      #
+      # Playwright подключается к внешней сети studyoverflow_network,
+      # BASE_URL=http://nginx:80 позволяет обращаться к nginx production сборки.
+      - name: Run E2E tests
+        run: |
+          docker compose \
+            -p studyoverflow-e2e \
+            -f e2e/docker-compose.e2e.yml \
+            run --rm playwright
+
+      # Если E2E-тесты упали, сохраняется  Playwright trace в test-results как
+      # GitHub Actions artifact для просмотра логов упавших тестов.
+      - name: Upload E2E test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: e2e/test-results/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Show container status
         if: failure()
         run: |
