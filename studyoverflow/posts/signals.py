@@ -3,7 +3,8 @@ from django.db.models.functions import Greatest
 from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 
-from posts.models import Comment, Like, Post
+from posts.models import Comment, Like, LowercaseTag, Post
+from posts.services import delete_cache_post_detail, delete_cache_tags_list
 from users.services import update_user_counter_field
 
 
@@ -153,3 +154,22 @@ def decrease_post_comments_count(sender, instance, **kwargs):
     Post.objects.filter(pk=comment.post_id).update(
         comments_count=Greatest(F("comments_count") - 1, 0)
     )
+
+
+@receiver([post_save, post_delete], sender=Post)
+def invalidate_post_cache_on_save_or_delete(sender, instance, created=False, **kwargs):
+    """
+    Удаляет кеш поста при изменении или удалении поста.
+    """
+    if created:
+        return
+
+    delete_cache_post_detail(instance.pk)
+
+
+@receiver([post_save, post_delete], sender=LowercaseTag)
+def invalidate_tags_cache_on_save_or_delete(sender, **kwargs):
+    """
+    Удаляет кеш списка тегов при создании, изменении или удалении тега.
+    """
+    delete_cache_tags_list()

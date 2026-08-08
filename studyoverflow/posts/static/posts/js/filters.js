@@ -26,12 +26,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 form.classList.remove("filters-hidden");
                 form.classList.add("filters-visible");
                 text.textContent = "Скрыть фильтрацию и сортировку";
-                icon.textContent = "⮝";
+                icon.textContent = "▲";
             } else {
                 form.classList.remove("filters-visible");
                 form.classList.add("filters-hidden");
                 text.textContent = "Выбрать фильтрацию и сортировку";
-                icon.textContent = "⮟";
+                icon.textContent = "▼";
             }
         });
     }

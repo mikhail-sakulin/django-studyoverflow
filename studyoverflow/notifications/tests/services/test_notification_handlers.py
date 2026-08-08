@@ -60,7 +60,9 @@ class TestNotificationHandlers:
 
         mock_task.assert_called_once_with(kwargs={"user_id": user.pk})
 
-    def test_handle_notification_post_like_other_user(self, user_factory, post_factory, mocker):
+    def test_handle_notification_post_like_other_user(
+        self, user_factory, post_factory, like_factory, mocker
+    ):
         """
         Проверка создания celery-задачи для создания уведомления о
         лайке поста другим пользователем.
@@ -69,7 +71,7 @@ class TestNotificationHandlers:
         liker = user_factory(username="liker_user")
         post = post_factory(author=author, title="Python Django Backend")
 
-        like = Like.objects.create(content_object=post, user=liker)
+        like = like_factory(content_object=post, user=liker)
 
         mock_delay = mocker.patch(
             "notifications.services.notification_handlers.create_notification.delay"
@@ -86,13 +88,15 @@ class TestNotificationHandlers:
             object_id=like.pk,
         )
 
-    def test_handle_notification_post_like_self(self, user_factory, post_factory, mocker):
+    def test_handle_notification_post_like_self(
+        self, user_factory, post_factory, like_factory, mocker
+    ):
         """
         Проверка создания celery-задачи для создания уведомления о лайке собственного поста.
         """
         author = user_factory()
         post = post_factory(author=author, title="Self post test")
-        like = Like.objects.create(content_object=post, user=author)
+        like = like_factory(content_object=post, user=author)
 
         mock_delay = mocker.patch(
             "notifications.services.notification_handlers.create_notification.delay"
@@ -110,14 +114,14 @@ class TestNotificationHandlers:
         )
 
     def test_handle_notification_comment_like_other_user(
-        self, user_factory, post_factory, comment_factory, mocker
+        self, user_factory, post_factory, comment_factory, like_factory, mocker
     ):
         """Проверка создания celery-задачи для создания уведомления о лайке комментария."""
         author = user_factory(username="comment_author")
         liker = user_factory(username="comment_liker")
         post = post_factory()
         comment = comment_factory(post=post, author=author, content="Comment text")
-        like = Like.objects.create(content_object=comment, user=liker)
+        like = like_factory(content_object=comment, user=liker)
 
         mock_delay = mocker.patch(
             "notifications.services.notification_handlers.create_notification.delay"

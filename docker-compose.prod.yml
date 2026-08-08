@@ -3,7 +3,7 @@
 # Запускать только вместе с базовым docker-compose.yml.
 #
 # Пример:
-# docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up
+# docker compose -p studyoverflow-prod -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up
 
 services:
   postgres:
@@ -17,7 +17,6 @@ services:
       dockerfile: Dockerfile
       target: prod-image
     image: ${STUDYOVERFLOW_IMAGE}:${IMAGE_TAG:-prod}
-    container_name: studyoverflow-init
     # Контейнер останавливается после выполнения команд и не перезапускается
     restart: "no"
     env_file:
@@ -65,7 +64,6 @@ services:
 
   studyoverflow-2:
     image: ${STUDYOVERFLOW_IMAGE}:${IMAGE_TAG:-prod}
-    container_name: studyoverflow-2
     restart: unless-stopped
     command: daphne --proxy-headers -b 0.0.0.0 -p 8000 studyoverflow.asgi:application
     volumes:
@@ -131,7 +129,6 @@ services:
   nginx:
     build: ./nginx
     image: ${NGINX_IMAGE}:${IMAGE_TAG:-prod}
-    container_name: nginx-server
     restart: unless-stopped
     networks:
       - studyoverflow_network

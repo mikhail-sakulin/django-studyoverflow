@@ -15,6 +15,8 @@ jobs:
   dev-checks:
     # GitHub создает виртуальную машину с указанной ОС
     runs-on: ubuntu-24.04
+    # Защита от зависания джобы
+    timeout-minutes: 10
 
     steps:
       # Стандартный шаг от GitHub для копирования кода из репозитория внутрь виртуальной машины
@@ -52,6 +54,7 @@ jobs:
       - name: Pull external images
         run: |
           docker compose \
+            -p studyoverflow-test \
             -f docker-compose.test.yml \
             --env-file .env.test \
             pull postgres
@@ -60,6 +63,7 @@ jobs:
       - name: Run black
         run: |
           docker compose \
+            -p studyoverflow-test \
             -f docker-compose.test.yml \
             --env-file .env.test \
             run --rm studyoverflow-tests \
@@ -69,6 +73,7 @@ jobs:
       - name: Run isort
         run: |
           docker compose \
+            -p studyoverflow-test \
             -f docker-compose.test.yml \
             --env-file .env.test \
             run --rm studyoverflow-tests \
@@ -78,6 +83,7 @@ jobs:
       - name: Run flake8
         run: |
           docker compose \
+            -p studyoverflow-test \
             -f docker-compose.test.yml \
             --env-file .env.test \
             run --rm studyoverflow-tests \
@@ -87,6 +93,7 @@ jobs:
       - name: Run mypy
         run: |
           docker compose \
+            -p studyoverflow-test \
             -f docker-compose.test.yml \
             --env-file .env.test \
             run --rm studyoverflow-tests \
@@ -100,6 +107,7 @@ jobs:
         # внутри контейнера.
         run: |
           docker compose \
+            -p studyoverflow-test \
             -f docker-compose.test.yml \
             --env-file .env.test \
             run --rm studyoverflow-tests \
@@ -110,6 +118,7 @@ jobs:
         if: always()
         run: |
           docker compose \
+            -p studyoverflow-test \
             -f docker-compose.test.yml \
             --env-file .env.test \
             down -v

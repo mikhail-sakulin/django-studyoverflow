@@ -2,11 +2,13 @@
 #
 # Команды запуска, например:
 #   - запуск тестов:
-#       docker compose -f docker-compose.test.yml --env-file .env.test run --rm studyoverflow-tests
+#       docker compose -p studyoverflow-test -f docker-compose.test.yml --env-file .env.test run --rm studyoverflow-tests
+#
 #   - запуск проверки black, для isort, flake8 и mypy аналогично (команды есть в ci.yml):
-#       docker compose -f docker-compose.test.yml --env-file .env.test run --rm studyoverflow-tests black --config pyproject.toml --check .
+#       docker compose -p studyoverflow-test -f docker-compose.test.yml --env-file .env.test run --rm studyoverflow-tests black --config pyproject.toml --check .
+#
 #   - остановка и удаление контейнеров (например postgres, который остается незавершенным):
-#       - docker compose -f docker-compose.test.yml --env-file .env.test down
+#       docker compose -p studyoverflow-test -f docker-compose.test.yml --env-file .env.test down -v
 
 services:
   postgres:
@@ -14,8 +16,6 @@ services:
     env_file:
       - .env.test
     restart: "no"
-    volumes:
-      - postgres-data-test:/var/lib/postgresql/data
     networks:
       - studyoverflow_network
     healthcheck:
@@ -55,6 +55,3 @@ services:
 networks:
   studyoverflow_network:
     driver: bridge
-
-volumes:
-  postgres-data-test:

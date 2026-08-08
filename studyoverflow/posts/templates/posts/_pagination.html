@@ -14,9 +14,7 @@
           <a class="page-link" href="?{{ querystring }}&page={{ 1 }}">1</a>
         </li>
 
-        <li class="page-item">
-          <a class="page-link">...</a>
-        </li>
+        {% include 'posts/_pagination_jump.html' %}
       {% endif %}
 
       {% if page_obj.number|add:-2 > 0 %}
@@ -48,9 +46,7 @@
       {% endif %}
 
       {% if page_obj.number|add:3 <= page_obj.paginator.num_pages %}
-        <li class="page-item">
-          <a class="page-link">...</a>
-        </li>
+        {% include 'posts/_pagination_jump.html' %}
 
         <li class="page-item">
           <a class="page-link" href="?{{ querystring }}&page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a>
