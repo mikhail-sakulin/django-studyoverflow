@@ -1,15 +1,19 @@
 **/__pycache__/
 **/.mypy_cache/
+**/.pytest_cache/
+**/.idea/
+**/.vscode/
 
-celerybeat-schedule
-celerybeat.pid
-celerybeat-schedule.*
+**/htmlcov/
 
-cert.*
+**/celerybeat-schedule
+**/celerybeat.pid
+**/celerybeat-schedule.*
 
-*.json
-*.sql
-*.bak
+**/cert.*
 
-.idea/
-.vscode/
+**/staticfiles/
+
+**/*.json
+**/*.sql
+**/*.bak
