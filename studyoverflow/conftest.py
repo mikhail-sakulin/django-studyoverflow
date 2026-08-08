@@ -3,43 +3,7 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from factories import (
-    CommentFactory,
-    LikeFactory,
-    NotificationPostCreateFactory,
-    PostFactory,
-    UserFactory,
-)
-
-
-@pytest.fixture
-def user_factory():
-    return UserFactory
-
-
-@pytest.fixture
-def post_factory():
-    return PostFactory
-
-
-@pytest.fixture
-def comment_factory():
-    return CommentFactory
-
-
-@pytest.fixture
-def like_factory():
-    return LikeFactory
-
-
-@pytest.fixture
-def notification_post_factory():
-    return NotificationPostCreateFactory
-
-
-@pytest.fixture
-def api_client():
-    return APIClient()
+from factories import CommentFactory, NotificationPostCreateFactory, PostFactory, UserFactory
 
 
 @pytest.fixture(autouse=True)
@@ -60,6 +24,31 @@ def fake_redis(mocker):
         "users.services.online.get_redis_connection",
         return_value=redis,
     )
+
+
+@pytest.fixture
+def user_factory():
+    return UserFactory
+
+
+@pytest.fixture
+def post_factory():
+    return PostFactory
+
+
+@pytest.fixture
+def comment_factory():
+    return CommentFactory
+
+
+@pytest.fixture
+def api_client():
+    return APIClient()
+
+
+@pytest.fixture
+def notification_post_factory():
+    return NotificationPostCreateFactory
 
 
 @pytest.fixture

@@ -62,7 +62,7 @@ from users.api.serializers import (
     UserRegisterSerializer,
 )
 from users.mixins import UserOnlineFilterMixin, UserSortMixin
-from users.services import block_user_service, get_cached_user, unblock_user_service
+from users.services import block_user_service, get_cached_user_profile, unblock_user_service
 from users.tasks import send_password_reset_email_task
 
 
@@ -906,7 +906,7 @@ class UserViewSet(
             username = self.kwargs[self.lookup_field]
 
             # Пользователь из кеша
-            obj = get_cached_user(username)
+            obj = get_cached_user_profile(username)
 
             # Проверка прав (permissions) DRF
             self.check_object_permissions(self.request, obj)

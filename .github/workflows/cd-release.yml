@@ -26,8 +26,6 @@ permissions:
 jobs:
   publish-images:
     runs-on: ubuntu-24.04
-    # Защита от зависания джобы
-    timeout-minutes: 10
 
     env:
       REGISTRY: ghcr.io

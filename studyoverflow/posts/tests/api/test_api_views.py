@@ -5,8 +5,7 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
-from posts.models import Comment, LowercaseTag, Post
-from posts.services import get_post_cache_key, get_tags_cache_key
+from posts.models import Comment, Like, LowercaseTag, Post
 
 
 User = get_user_model()
@@ -128,10 +127,8 @@ class TestPostViewSet:
 
         assert len(queries_second) < len(queries_first)
 
-        cache_key = get_post_cache_key(post.pk)
-
         # Пост находится в кеше
-        assert cache.get(cache_key) is not None
+        assert cache.get(f"post_detail_{post.pk}") is not None
 
     def test_create_post_success(self, api_client, user_factory, mocker):
         """Авторизованный пользователь успешно создает пост, вызывается логгер."""
@@ -407,14 +404,14 @@ class TestLikeMixin:
 
         mock_perform.assert_called_once_with(user, post, source="api")
 
-    def test_likes_list_success(self, api_client, user_factory, post_factory, like_factory):
+    def test_likes_list_success(self, api_client, user_factory, post_factory, mocker):
         """Успешное получение списка лайкнувших пользователей (likers-list)."""
         user1 = user_factory(username="liker1")
         user2 = user_factory(username="liker2")
         post = post_factory()
 
-        like_factory(user=user1, content_object=post)
-        like_factory(user=user2, content_object=post)
+        Like.objects.create(user=user1, content_object=post)
+        Like.objects.create(user=user2, content_object=post)
 
         url = reverse("api:posts:posts-likes", kwargs={"pk": post.pk})
         response = api_client.get(url)
@@ -466,9 +463,7 @@ class TestTagReadOnlyViewSet:
         # Первый запрос - кеш пуст, происходит запрос к БД
         response_first = api_client.get(url)
         assert response_first.status_code == 200
-
-        cache_tags_key = get_tags_cache_key()
-        assert cache.get(cache_tags_key) is not None
+        assert cache.get("all_tags_list") is not None
 
         # Второй запрос - данные берутся из кеша
         with CaptureQueriesContext(connection) as queries:

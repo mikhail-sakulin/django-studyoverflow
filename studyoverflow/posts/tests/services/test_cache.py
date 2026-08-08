@@ -5,14 +5,7 @@ from django.http import Http404
 from django.test.utils import CaptureQueriesContext
 
 from posts.models import LowercaseTag, Post
-from posts.services import (
-    delete_cache_post_detail,
-    delete_cache_tags_list,
-    get_cached_post,
-    get_cached_tags,
-    get_post_cache_key,
-    get_tags_cache_key,
-)
+from posts.services import get_cached_post, get_cached_tags
 
 
 @pytest.fixture(autouse=True)
@@ -21,14 +14,6 @@ def clear_cache():
     cache.clear()
     yield
     cache.clear()
-
-
-@pytest.mark.django_db
-class TestPostCacheKey:
-
-    def test_returns_expected_key(self):
-        """Возвращает корректный ключ кеша поста."""
-        assert get_post_cache_key(5) == "post_detail_5"
 
 
 @pytest.mark.django_db
@@ -44,8 +29,7 @@ class TestGetCachedPost:
         """Функция возвращает пост и сохраняет его в кеш."""
         post = post_factory()
         queryset = Post.objects.all()
-
-        cache_key = get_post_cache_key(post.id)
+        cache_key = f"post_detail_{post.id}"
 
         result = get_cached_post(post.id, queryset)
 
@@ -84,32 +68,6 @@ class TestGetCachedPost:
 
 
 @pytest.mark.django_db
-class TestDeleteCachePostDetail:
-
-    def test_deletes_cache(self, post_factory):
-        """Удаляет объект поста из кеша."""
-        post = post_factory()
-        queryset = Post.objects.all()
-
-        get_cached_post(post.id, queryset)
-
-        cache_key = get_post_cache_key(post.id)
-        assert cache.get(cache_key) is not None
-
-        delete_cache_post_detail(post.id)
-
-        assert cache.get(cache_key) is None
-
-
-@pytest.mark.django_db
-class TestGetTagsCacheKey:
-
-    def test_returns_expected_key(self):
-        """Возвращает корректный ключ кеша списка тегов."""
-        assert get_tags_cache_key() == "all_tags_list"
-
-
-@pytest.mark.django_db
 class TestGetCachedTags:
 
     def test_returns_tags_and_populates_cache(self):
@@ -117,7 +75,7 @@ class TestGetCachedTags:
         LowercaseTag.objects.create(name="b_tag2")
         LowercaseTag.objects.create(name="a_tag1")
 
-        cache_key = get_tags_cache_key()
+        cache_key = "all_tags_list"
 
         result = get_cached_tags()
 
@@ -129,27 +87,14 @@ class TestGetCachedTags:
         assert cached_data is not None
         assert len(cached_data) == 2
 
-        with CaptureQueriesContext(connection) as queries:
-            cached_data = get_cached_tags()
+        new_tag = LowercaseTag.objects.create(name="test_tag")
 
-        assert cached_data[0].name == "a_tag1"
-        assert cached_data[1].name == "b_tag2"
+        with CaptureQueriesContext(connection) as queries:
+            cached_data_new = get_cached_tags()
+
+        assert cached_data_new[0].name == "a_tag1"
+        assert cached_data_new[1].name == "b_tag2"
+        assert new_tag not in cached_data_new
 
         # Повторный вызов списка тегов не делает SQL-запросов.
         assert len(queries) == 0
-
-
-@pytest.mark.django_db
-class TestDeleteCacheTagsList:
-
-    def test_deletes_cache(self):
-        """Удаляет кеш списка тегов из хранилища."""
-        LowercaseTag.objects.create(name="python")
-        get_cached_tags()
-
-        cache_key = get_tags_cache_key()
-        assert cache.get(cache_key) is not None
-
-        delete_cache_tags_list()
-
-        assert cache.get(cache_key) is None

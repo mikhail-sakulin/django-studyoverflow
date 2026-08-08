@@ -59,7 +59,7 @@
 
       {% url 'posts:toggle_like_post' post.pk post.slug as toggle_like_url %}
 
-      {% with obj_type='post' liked_object=post user_has_liked=post.user_has_liked likes_count=post.likes_count toggle_like_url=toggle_like_url %}
+      {% with liked_object=post user_has_liked=post.user_has_liked likes_count=post.likes_count toggle_like_url=toggle_like_url %}
         {% include 'posts/likes/_like-button.html' %}
       {% endwith %}
 

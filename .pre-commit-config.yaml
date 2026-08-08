@@ -1,11 +1,3 @@
-# Настройки pre-commit хуков.
-#
-# Линтеры, форматтеры и статический анализатор (mypy) проверяют весь проект: studyoverflow и e2e.
-#
-# Хук с тестами pytest (django-tests) запускается только для бекенда studyoverflow.
-# E2E-тесты из директории e2e игнорируются pytest (но другие хуки работают с e2e) и запускаются отдельно
-# в CI/CD пайплайне на этапе CD перед релизом новых docker-образов.
-
 repos:
   - repo: local
     hooks:
@@ -64,15 +56,10 @@ repos:
 
       - id: django-tests
         name: Django tests
+        # Указывается e2e вместо studyoverflow/e2e, так как rootdir меняется на studyoverflow,
+        # где лежит pytest.ini
         entry: pytest -n 0 -c studyoverflow/pytest.ini --ignore=e2e
         language: system
         types: [python]
-        # Указано регулярное выражение, хук запускается, только если в индекс (подготовленные к коммиту
-        # файлы) добавлены файлы (python, так как задан types: [python]), путь которых начинается со studyoverflow/
         files: ^studyoverflow/
-        # Измененные файлы в команду запуска pytest не передаются, pytest запускается для всех файлов
-        # в индексе, а также для всех неотслеживаемых файлов.
-        #
-        # Если test_*.py файл изменен, но не добавлен в индекс, то pytest запустится для его старой версии,
-        # но если test_*.py не отслеживается, то хук pytest его запустит.
         pass_filenames: false

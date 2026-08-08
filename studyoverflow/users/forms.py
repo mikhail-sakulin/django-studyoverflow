@@ -161,7 +161,7 @@ class UserProfileUpdateForm(BootstrapFormMixin, forms.ModelForm):
 
     class Meta:
         model = UserModel
-        fields = ["avatar", "username", "email", "first_name", "last_name", "date_birth", "bio"]
+        fields = ["avatar", "username", "email", "date_birth", "bio", "first_name", "last_name"]
         widgets = {
             "avatar": CustomClearableFileInput(),
             "bio": forms.Textarea(
