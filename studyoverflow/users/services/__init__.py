@@ -12,7 +12,9 @@ from .avatars import (
     user_avatar_upload_path,
 )
 from .cache import (
-    get_cached_user_profile,
+    delete_cache_user,
+    get_cached_user,
+    get_user_cache_key,
 )
 from .image_processing import (
     generate_gif,
@@ -50,7 +52,9 @@ from .validators import (
 
 __all__ = [
     # cache
-    "get_cached_user_profile",
+    "get_user_cache_key",
+    "get_cached_user",
+    "delete_cache_user",
     # avatars
     "avatar_upload_to",
     "generate_new_filename_with_uuid",

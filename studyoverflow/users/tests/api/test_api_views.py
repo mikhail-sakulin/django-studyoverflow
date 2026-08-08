@@ -11,6 +11,8 @@ from rest_framework.authtoken.models import Token
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from users.services import get_user_cache_key
+
 
 User = get_user_model()
 
@@ -631,7 +633,7 @@ class TestUserViewSetRetrieve:
         Проверка сохранения профиля пользователя в кеш.
         """
         user = user_factory(username="cached_user")
-        cache_key = f"user_profile_{user.username}"
+        cache_key = get_user_cache_key(user.username)
         url = reverse("api:users:users-detail", kwargs={"username": user.username})
 
         # Первый запрос - сохранение в кеше, запрос в БД

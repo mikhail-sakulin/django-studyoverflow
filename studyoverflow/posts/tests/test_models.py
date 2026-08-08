@@ -60,12 +60,12 @@ class TestCommentModelAndQuerySet:
 
 @pytest.mark.django_db
 class TestLikeManager:
-    def test_is_liked_helper(self, user_factory, post_factory):
+    def test_is_liked_helper(self, user_factory, post_factory, like_factory):
         """Проверка метода is_liked менеджера LikeManager."""
         user = user_factory()
         post = post_factory()
 
         assert Like.objects.is_liked(user, post) is False
 
-        Like.objects.create(user=user, content_object=post)
+        like_factory(user=user, content_object=post)
         assert Like.objects.is_liked(user, post) is True

@@ -9,6 +9,8 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
+from users.services import get_user_cache_key
+
 
 User = get_user_model()
 
@@ -328,7 +330,9 @@ class TestAuthorProfileView:
         assert response.status_code == 200
         assert response.context["author"] == other
 
-        cached_user = cache.get("user_profile_other_author")
+        cache_key = get_user_cache_key(other.username)
+
+        cached_user = cache.get(cache_key)
         assert cached_user is not None
         assert cached_user.username == "other_author"
 
