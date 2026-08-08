@@ -3,7 +3,7 @@
 # Запускать только вместе с базовым docker-compose.yml.
 #
 # Пример:
-# docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file .env.dev up
+# docker compose -p studyoverflow-dev -f docker-compose.yml -f docker-compose.dev.yml --env-file .env.dev up
 
 services:
   postgres:

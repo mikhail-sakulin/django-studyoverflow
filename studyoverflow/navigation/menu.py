@@ -1,6 +1,7 @@
 from typing import Final
 
 from posts.urls import app_name as posts_app_name
+from studyoverflow.urls_api_v1 import app_name as api_name
 from users.urls import app_name as users_app_name
 
 
@@ -9,4 +10,5 @@ MENU: Final = [
     {"name": "Все посты", "url": f"{posts_app_name}:list"},
     {"name": "Создать пост", "url": f"{posts_app_name}:create"},
     {"name": "Пользователи", "url": f"{users_app_name}:list"},
+    {"name": "Swagger", "url": f"{api_name}:swagger-ui"},
 ]

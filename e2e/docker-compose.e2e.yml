@@ -1,0 +1,30 @@
+# Используется для запуска e2e тестов, например:
+#   docker compose -p studyoverflow-e2e -f e2e/docker-compose.e2e.yml run --rm playwright
+#
+# Для e2e тестирования уже должна быть запущена production docker compose сборка для e2e тестирования,
+# например docker-compose.yml + docker-compose.prod.yml + docker-compose.cd.yml, с docker сетью под
+# именем "studyoverflow_network" для обращения текущего тестирующего playwright контейнера к
+# контейнеру с nginx production сборки.
+
+services:
+  playwright:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: e2e-playwright
+    environment:
+      # Переменная нужна для pytest-playwright, считывается os.environ["BASE_URL"] в хуке pytest_configure
+      - BASE_URL=http://nginx:80
+      # Сообщает интерпретатору Python, в каких дополнительных папках на диске нужно искать модули при импорте,
+      # путь добавляется в sys.path
+      - PYTHONPATH=/e2e
+    volumes:
+      - ./test-results:/e2e/test-results
+    networks:
+      - studyoverflow_network
+
+networks:
+  studyoverflow_network:
+    # Используется уже существующая внешняя сеть с заданным именем
+    external: true
+    name: studyoverflow_network

@@ -38,7 +38,7 @@ from users.mixins import (
 from users.services import (
     block_user_service,
     get_cached_online_user_ids,
-    get_cached_user_profile,
+    get_cached_user,
     unblock_user_service,
 )
 
@@ -207,7 +207,7 @@ class AuthorProfileView(DetailView):
 
     def get_object(self, queryset=None):
         username = self.kwargs.get("username")
-        return get_cached_user_profile(username)
+        return get_cached_user(username)
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()

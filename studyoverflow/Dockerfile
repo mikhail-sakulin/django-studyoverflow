@@ -41,6 +41,10 @@ COPY . .
 # -p - создает промежуточные папки, если их нет
 RUN mkdir -p /app/studyoverflow/celerybeat_data
 
+# Смена владельца созданных директорий с root на пользователя userdj
+# -R - рекурсивно (включая вложенные файлы)
+RUN chown -R userdj:groupdjango /app/studyoverflow/celerybeat_data
+
 # Переключение на пользователя userdj в целях безопасности
 USER userdj
 
