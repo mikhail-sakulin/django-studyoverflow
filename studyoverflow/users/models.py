@@ -402,6 +402,7 @@ class User(AbstractUser):
 
         if is_new_upload:
             # цепочка celery задач на создание миниатюр и удаление
+            # .si - immutable signature - результат первой задачи не передается во вторую
             tasks = chain(
                 generate_and_save_avatars_small.si(self.pk),
                 delete_old_avatars_from_s3_storage.si(self.pk, avatar_names_for_delete),

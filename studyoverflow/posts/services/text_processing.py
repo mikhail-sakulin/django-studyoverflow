@@ -2,11 +2,13 @@
 Утилиты для обработки текста и контента приложения posts.
 """
 
+import html
 import re
 
 import bleach
 import markdown2
 from bleach.css_sanitizer import CSSSanitizer
+from django.utils.html import strip_tags
 from django.utils.text import slugify
 
 
@@ -22,6 +24,22 @@ def generate_slug(title: str, max_length: int = 255) -> str:
     base_slug = slugify(translit_rus_to_eng(title))
     slug = base_slug[:max_length]
     return slug
+
+
+def strip_tags_and_whitespace_chars_from_html(html_text: str) -> str:
+    """
+    Очищает html текст от html тегов и заменяет все пробельные символы (пробел, табуляция,
+    перевод строки и так далее) одиночными пробелами.
+    """
+    # Добавляет пробел после закрывающей скоки тега, чтобы текст из соседних тегов не сливался
+    text_with_spaces = re.sub(r">", "> ", html_text)
+
+    clean_tags_text = strip_tags(text_with_spaces)
+
+    # Заменяет HTML-сущности на текстовые символы, коды символов заменяются символами
+    unescaped_text = html.unescape(clean_tags_text)
+
+    return re.sub(r"\s+", " ", unescaped_text).strip()
 
 
 def render_markdown_safe(markdown_text: str) -> str:
@@ -45,7 +63,7 @@ def render_markdown_safe(markdown_text: str) -> str:
     html = markdown2.markdown(
         markdown_text, extras=["fenced-code-blocks", "tables", "strike", "task_list", "footnotes"]
     )
-    print(html)
+
     # Множество безопасных HTML-тегов
     allowed_tags = {
         "p",

@@ -17,6 +17,7 @@ from posts.services import (
     generate_slug,
     normalize_tag_name,
     render_markdown_safe,
+    strip_tags_and_whitespace_chars_from_html,
 )
 from studyoverflow import settings
 
@@ -105,6 +106,8 @@ class Post(models.Model):
     - slug (SlugField): Человекочитаемый идентификатор для URL на основе заголовка.
     - content (TextField): Исходный текст в формате Markdown.
     - rendered_content (TextField): Сгенерированный HTML-код из Markdown (для кеширования).
+    - search_content (TextField): Нормализованный текст для поиска по контенту, очищенный от
+      HTML-тегов и лишних пробельных символов.
     - tags (TaggableManager): Менеджер тегов, работающий через TaggedPost.
     - likes (GenericRelation): Связь с моделью лайков (Like).
     - notifications (GenericRelation): Связь с моделью уведомлений (Notification).
@@ -140,7 +143,13 @@ class Post(models.Model):
     )
     rendered_content = models.TextField(
         blank=True,
+        editable=False,
         verbose_name="Отрендеренное содержимое (HTML из Markdown)",
+    )
+    search_content = models.TextField(
+        blank=True,
+        editable=False,
+        verbose_name="Текст для поиска по содержимому",
     )
 
     tags = TaggableManager(through=TaggedPost, verbose_name="Теги")
@@ -196,11 +205,11 @@ class Post(models.Model):
                 opclasses=["gin_trgm_ops"],
                 name="post_title_trgm",
             ),
-            # GIN + trigram индекс для поиска по содержимому поста
-            #    Post.objects.filter(content__ilike_icontains='django')  # кастомный лукап
-            #        WHERE content ILIKE '%django%'
+            # GIN + trigram индекс для поиска по очищенному содержимому поста
+            #    Post.objects.filter(search_content__ilike_icontains='django')  # кастомный лукап
+            #        WHERE search_content ILIKE '%django%'
             GinIndex(
-                fields=["content"],
+                fields=["search_content"],
                 opclasses=["gin_trgm_ops"],
                 name="post_content_trgm",
             ),
@@ -228,12 +237,15 @@ class Post(models.Model):
         Добавлена логика при сохранении объекта:
         - Автоматическая генерация slug на основе заголовка (только при создании).
         - Рендеринг Markdown в HTML только при создании или изменении контента.
+        - Генерация нормализованного текста контента для поиска (очистка от HTML-тегов и лишних
+          пробельных символов) только при создании или изменении контента.
         """
         if not self.slug:
             self.slug = generate_slug(self.title, self.MAX_TITLE_SLUG_LENGTH_POST)
 
         if not self.pk or self.content != self._original_content:
             self.rendered_content = render_markdown_safe(self.content)
+            self.search_content = strip_tags_and_whitespace_chars_from_html(self.rendered_content)
 
         super().save(*args, **kwargs)
 
