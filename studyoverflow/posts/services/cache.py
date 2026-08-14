@@ -33,8 +33,8 @@ def get_cached_post(post_id: int, queryset: QuerySet[Post]):
 
     if post is None:
         post = get_object_or_404(queryset, pk=post_id)
-        # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
-        cache.set(cache_key, post, timeout=2)
+        # Кеш 10 минут
+        cache.set(cache_key, post, timeout=10 * 60)
 
     # Поверхностная копия объекта, чтобы изменение флага лайка от пользователя
     # не затронула объект внутри кеша при тестировании в оперативной памяти.
@@ -71,8 +71,8 @@ def get_cached_tags():
 
     if tags is None:
         tags = list(LowercaseTag.objects.order_by("name"))
-        # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
-        cache.set(cache_key, tags, timeout=2)
+        # Кеш 30 минут
+        cache.set(cache_key, tags, timeout=30 * 60)
 
     return tags
 

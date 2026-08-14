@@ -24,8 +24,8 @@ def get_cached_user(username: str):
 
     if user is None:
         user = get_object_or_404(user_model, username=username)
-        # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
-        cache.set(cache_key, user, timeout=2)
+        # Кеш 10 минут
+        cache.set(cache_key, user, timeout=10 * 60)
 
     # Возвращается поверхностная копия, чтобы изменения объекта в коде
     # не изменили объект в кеше при тестах, когда кеш в оперативной памяти.

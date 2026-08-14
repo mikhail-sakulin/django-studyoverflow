@@ -115,7 +115,6 @@ def get_cached_online_user_ids() -> list[int]:
 
     if data is None:
         data = get_online_user_ids()
-        # кеш 2 сек, чтобы данные быстро обновлялись для наглядности
-        cache.set(cache_key, data, timeout=2)
+        cache.set(cache_key, data, timeout=5)
 
     return data
