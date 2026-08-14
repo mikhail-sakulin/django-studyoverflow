@@ -8,7 +8,9 @@ from .base import TIME_ZONE, env
 # URL брокера сообщений
 CELERY_BROKER_URL = env("CELERY_BROKER_URL")
 
-# Backend для хранения результатов задач Celery
+# Backend для хранения результатов задач Celery,
+# в данный момент для celery-задач в проекте не нужен, задан как пример.
+# Срок хранения результатов по умолчанию один день.
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND")
 
 # Часовой пояс Celery
