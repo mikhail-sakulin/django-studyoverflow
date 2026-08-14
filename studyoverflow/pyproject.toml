@@ -12,6 +12,8 @@ force-exclude = '''
 
 [tool.isort]
 profile = "black"
+# Запятая в конце списка импортов, чтобы не было конфликта с black, он по умолчанию ставит везде,
+# isort по уомлчанию не ставит запяту в конце при импортах
 include_trailing_comma = true
 line_length = 100
 lines_after_imports = 2
@@ -26,8 +28,13 @@ skip_glob = [
 ]
 
 [tool.mypy]
+# Игнорировать отсутствие аннотаций типов или заглушек (stubs) у сторонних библиотек
 ignore_missing_imports = true
+# Строгая проверка значения None, запрещает передавать None в аргументы или переменные,
+# не помеченные как Optional
 strict_optional = true
+# Включение проверки типов внутри тел функций, даже если у функции не указаны аннотации
+# аргументов или возвращаемого значения
 check_untyped_defs = true
 exclude = [
     ".venv/",
