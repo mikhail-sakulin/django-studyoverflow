@@ -46,6 +46,10 @@ services:
   studyoverflow-1:
     image: ${STUDYOVERFLOW_IMAGE}:${IMAGE_TAG:-prod}
     # --proxy-headers - Daphne доверяет заголовкам запроса, который присылает Nginx
+    # -b (--bind) 0.0.0.0 - IP-адрес, который слушает сервер, 0.0.0.0 указывает принимать соединения
+    #   на всех сетевых интерфейсах (открывает порт на всех IP-адресах)
+    # -p (--port) 8000 - номер порта, который слушает Daphne
+    # studyoverflow.asgi:application - точка входа ASGI-приложения
     command: daphne --proxy-headers -b 0.0.0.0 -p 8000 studyoverflow.asgi:application
     env_file:
       - .env.prod
