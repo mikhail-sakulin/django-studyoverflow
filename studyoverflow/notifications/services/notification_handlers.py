@@ -59,7 +59,7 @@ def handle_notification_post_like(like: Like) -> None:
             user_id=post.author_id,
             actor_id=like.user_id,
             message=message,
-            notification_type=NotificationType.LIKE_POST,
+            notification_type=NotificationType.LIKE_POST.value,  # type: ignore[attr-defined]
             content_type_id=ContentType.objects.get_for_model(Like).pk,
             object_id=like.pk,
         )
@@ -88,7 +88,7 @@ def handle_notification_comment_like(like: Like) -> None:
             user_id=comment.author_id,
             actor_id=like.user_id,
             message=message,
-            notification_type=NotificationType.LIKE_COMMENT,
+            notification_type=NotificationType.LIKE_COMMENT.value,  # type: ignore[attr-defined]
             content_type_id=ContentType.objects.get_for_model(Like).pk,
             object_id=like.pk,
         )
@@ -109,7 +109,7 @@ def handle_notification_post_created(post: Post) -> None:
             user_id=post.author_id,
             actor_id=post.author_id,
             message=message,
-            notification_type=NotificationType.POST,
+            notification_type=NotificationType.POST.value,  # type: ignore[attr-defined]
             content_type_id=ContentType.objects.get_for_model(Post).pk,
             object_id=post.pk,
         )
@@ -141,7 +141,7 @@ def handle_notification_comment_on_post_created(comment: Comment) -> None:
             user_id=comment.post.author_id,
             actor_id=comment.author_id,
             message=message,
-            notification_type=NotificationType.COMMENT,
+            notification_type=NotificationType.COMMENT.value,  # type: ignore[attr-defined]
             content_type_id=ContentType.objects.get_for_model(Comment).pk,
             object_id=comment.pk,
         )
@@ -173,7 +173,7 @@ def handle_notification_reply_to_comment_created(comment: Comment) -> None:
             user_id=comment.reply_to.author_id,
             actor_id=comment.author_id,
             message=message,
-            notification_type=NotificationType.REPLY,
+            notification_type=NotificationType.REPLY.value,  # type: ignore[attr-defined]
             content_type_id=ContentType.objects.get_for_model(Comment).pk,
             object_id=comment.pk,
         )
@@ -196,7 +196,7 @@ def handle_notification_user_created(user: User) -> None:
             user_id=user.pk,
             actor_id=user.pk,
             message=message,
-            notification_type=NotificationType.REGISTER,
+            notification_type=NotificationType.REGISTER.value,  # type: ignore[attr-defined]
             content_type_id=ContentType.objects.get_for_model(user_model).pk,
             object_id=user.pk,
         )
