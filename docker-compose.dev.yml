@@ -35,15 +35,11 @@ services:
     image: ${STUDYOVERFLOW_IMAGE}:${IMAGE_TAG:-dev}
     env_file:
       - .env.dev
-    volumes:
-      - ./studyoverflow:/app/studyoverflow
 
   celery-beat:
     image: ${STUDYOVERFLOW_IMAGE}:${IMAGE_TAG:-dev}
     env_file:
       - .env.dev
-    volumes:
-      - ./studyoverflow:/app/studyoverflow
 
   loki:
     ports:
