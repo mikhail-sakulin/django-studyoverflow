@@ -3,10 +3,12 @@ Celery-задачи для фоновой асинхронной обработ�
 """
 
 import logging
+import smtplib
 from typing import Optional
 
 import requests
 from celery import shared_task
+from celery.exceptions import SoftTimeLimitExceeded
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import PasswordResetForm
 from django.core.exceptions import ValidationError
@@ -15,7 +17,6 @@ from django.core.files.storage import default_storage
 from django.core.management import call_command
 from django.utils import timezone
 
-from studyoverflow.celery import app
 from users.services import (
     delete_old_avatar_names,
     generate_avatar_small,
@@ -30,8 +31,8 @@ UserModel = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-@app.task
-def generate_and_save_avatars_small(user_pk):
+@shared_task(ignore_result=True, acks_late=True, reject_on_worker_lost=True)
+def generate_and_save_avatars_small(user_pk: int) -> None:
     """
     Генерирует уменьшенные версии аватара пользователя.
 
@@ -64,8 +65,10 @@ def generate_and_save_avatars_small(user_pk):
     user.save(update_fields=update_fields_list)
 
 
-@app.task
-def delete_old_avatars_from_s3_storage(user_pk, avatar_names_for_delete: Optional[list] = None):
+@shared_task(ignore_result=True, acks_late=True, reject_on_worker_lost=True)
+def delete_old_avatars_from_s3_storage(
+    user_pk: int, avatar_names_for_delete: Optional[list] = None
+) -> None:
     """
     Удаляет устаревшие файлы аватаров пользователя из хранилища.
 
@@ -79,10 +82,10 @@ def delete_old_avatars_from_s3_storage(user_pk, avatar_names_for_delete: Optiona
         user = UserModel.objects.get(pk=user_pk)
     except UserModel.DoesNotExist:
         logger.warning(
-            f"Пользователь с pk={user_pk} не найден, avatar_small не будет сгенерирован.",
+            f"Пользователь с pk={user_pk} не найден, устаревшие файлы аватаров не будут удалены.",
             extra={
                 "user_pk": user_pk,
-                "event_type": "generate_avatar_small_user_not_found",
+                "event_type": "delete_old_avatars_from_s3_storage",
             },
         )
         return
@@ -115,8 +118,17 @@ def delete_old_avatars_from_s3_storage(user_pk, avatar_names_for_delete: Optiona
     delete_old_avatar_names(files_for_delete)
 
 
-@app.task
-def sync_online_users_to_db():
+# soft_time_limit - вызывается python исключение SoftTimeLimitExceeded
+# time_limit - падает воркер процесс, страховка, если задача не завершилась
+# после SoftTimeLimitExceeded
+@shared_task(
+    ignore_result=True,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    soft_time_limit=30,
+    time_limit=45,
+)
+def sync_online_users_to_db() -> None:
     """
     Записывает online-статус пользователей в БД (last_seen) из кеша.
 
@@ -134,8 +146,14 @@ def sync_online_users_to_db():
     UserModel.objects.bulk_update(users, ["last_seen"])
 
 
-@app.task
-def sync_user_activity_counters(batch_size: int = 1000):
+@shared_task(
+    ignore_result=True,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    soft_time_limit=180,
+    time_limit=200,
+)
+def sync_user_activity_counters(batch_size: int = 1000) -> None:
     """
     Пересчитывает и синхронизирует поля-счётчики пользователей.
 
@@ -184,8 +202,38 @@ def sync_user_activity_counters(batch_size: int = 1000):
         )
 
 
-@app.task
-def download_and_set_avatar(user_id: int, avatar_url: str):
+# 1) При вызове исключения из autoretry_for задача завершится
+# вызовом исключения, если ретраи еще есть, то задача сразу вернется (удалится и создастся заново)
+# в брокер с пометкой задержки по времени (по умолчанию задержка 0 сек), когда задачу снова можно
+# будет запустить (retry_jitter (от 0 до retry_backoff)). Celery будет игнорировать задачу,
+# если задержка еще не прошла.
+# 2) При вызове исключения не из autoretry_for задача удаляется из очереди, так как по умолчанию
+# acks_on_failure_or_timeout=True - при python исключениях задача не возвращается в очередь.
+# 3) Если процесс воркера упал во время выполнения, например по time_limit, поскольку задано
+# acks_late=True и reject_on_worker_lost=True - задача не подтвердится и не удалится из очереди
+# брокера, для Redis после visibility_timeout (по умолчанию час), для RabbitMQ сразу, задача
+# вернется обратно в очередь.
+#
+# На самом деле из очереди Redis задача удаляется в момент прочтения, но есть вспомогательная
+# очередь задач, из которой задачи удаляются в момент подтверждения их выполнения.
+@shared_task(
+    ignore_result=True,
+    # Подтверждение задачи после ее выполнения
+    acks_late=True,
+    # При True и acks_late=True при падении воркера задача возвращается обратно в очередь
+    reject_on_worker_lost=True,
+    # Ретрай только при сетевых ошибках или при
+    # истечении soft_time_limit и вызова SoftTimeLimitExceeded
+    autoretry_for=(requests.exceptions.RequestException, SoftTimeLimitExceeded),
+    # Экспоненциальная задержка (1, 2, 4 сек)
+    retry_backoff=True,
+    # Рандомизация задержки (от 0 до текущей max зедержки (retry_backoff))
+    retry_jitter=True,
+    max_retries=3,
+    soft_time_limit=20,
+    time_limit=30,
+)
+def download_and_set_avatar(user_id: int, avatar_url: str) -> None:
     """
     Загружает аватар пользователя по переданному URL и сохраняет его в хранилище.
 
@@ -200,10 +248,10 @@ def download_and_set_avatar(user_id: int, avatar_url: str):
         user = UserModel.objects.get(pk=user_id)
     except UserModel.DoesNotExist:
         logger.warning(
-            f"Пользователь с pk={user_id} не найден, avatar_small не будет сгенерирован.",
+            f"Пользователь с pk={user_id} не найден, автар пользователя не будет загружен.",
             extra={
                 "user_pk": user_id,
-                "event_type": "generate_avatar_small_user_not_found",
+                "event_type": "download_and_set_avatar",
             },
         )
         return
@@ -260,8 +308,8 @@ def download_and_set_avatar(user_id: int, avatar_url: str):
         raise
 
 
-@app.task
-def delete_files_from_storage_task(file_paths: list[str]):
+@shared_task(ignore_result=True, acks_late=True, reject_on_worker_lost=True)
+def delete_files_from_storage_task(file_paths: list[str]) -> None:
     """
     Универсальная задача для удаления списка файлов из хранилища.
 
@@ -272,7 +320,19 @@ def delete_files_from_storage_task(file_paths: list[str]):
         delete_old_avatar_names(file_paths)
 
 
-@shared_task(autoretry_for=(Exception,), retry_backoff=5, retry_kwargs={"max_retries": 3})
+@shared_task(
+    ignore_result=True,
+    # ConnectionError - базовая ошибка Python, возникает,
+    # когда не удается установить TCP-соединение.
+    # smtplib.SMTPException - базовый класс ошибок библиотеки smtplib.
+    # SoftTimeLimitExceeded - ошибка, вызываемая Celery, когда задача превысила soft_time_limit.
+    autoretry_for=(ConnectionError, smtplib.SMTPException, SoftTimeLimitExceeded),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=3,
+    soft_time_limit=15,
+    time_limit=25,
+)
 def send_password_reset_email_task(email: str, domain: str, use_https: bool) -> None:
     """
     Задача для отправки письма для сброса пароля пользователя.
@@ -294,11 +354,11 @@ def send_password_reset_email_task(email: str, domain: str, use_https: bool) -> 
         )
 
 
-@shared_task
-def clear_expired_sessions():
+@shared_task(ignore_result=True)
+def clear_expired_sessions() -> None:
     call_command("clearsessions")
 
 
-@shared_task
-def flush_expired_jwt_tokens():
+@shared_task(ignore_result=True)
+def flush_expired_jwt_tokens() -> None:
     call_command("flushexpiredtokens")
