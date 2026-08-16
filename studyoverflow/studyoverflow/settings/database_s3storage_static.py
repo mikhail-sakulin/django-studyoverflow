@@ -5,9 +5,10 @@ from .base import BASE_DIR, env
 # Database
 # ----------------------------------------
 
-# По умолчанию пул соединений к БД включен. Для процесса, где используется celery --pool=gevent
-# (зеленые потоки) (celery worker в prod-lite и cd-lite), пул отключается через переменную
-# окружения, так как psycopg-pool несовместим с gevent monkey-patching.
+# По умолчанию пул соединений к БД включен. Для процесса (celery worker в prod-lite и cd-lite),
+# где используется celery --pool=gevent (гринлеты) или --pool=threads, пул отключается через
+# переменную окружения, так как стандартный пул Django (psycopg-pool) не рассчитан на работу
+# внутри одного процесса с внутренней конкурентностью.
 DB_USE_POOL = env.bool("DB_USE_POOL", default=True)
 
 db_options = {}
