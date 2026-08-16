@@ -1,0 +1,72 @@
+# Дополнительный docker-compose файл с конфигурацией для CD для проверки облегчённой
+# production-lite-конфигурации для VPS с ограниченной RAM (1 Гб).
+#
+# Самостоятельно не используется.
+# Запускать только вместе с другими файлами конфигурации, например (для CD):
+#   docker compose -p studyoverflow-cd -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.prod-lite.yml -f docker-compose.cd-lite.yml --env-file .env.test up -d --wait
+
+services:
+  postgres:
+    # Тег !override не объединяет списки при слиянии нескольких docker-compose (несколько -f),
+    # а записывает указанные данные вместо предыдущих, не сохраняя предыдущие.
+    env_file: !override
+      - .env.test
+    # Используется анонимный том, при каждом запуске создается новый
+    volumes: !override
+      - /var/lib/postgresql/data
+
+  redis:
+    volumes: !override
+      - /data
+
+  studyoverflow-init:
+    env_file: !override
+      - .env.test
+    volumes: !override
+      - staticfiles-cd:/app/studyoverflow/staticfiles
+
+  studyoverflow-1:
+    env_file: !override
+      - .env.test
+    healthcheck:
+      # Проверка порта 8000 внутри контейнера с помощью встроенного Python
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/', timeout=2)"
+        ]
+      interval: 4s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+    volumes: !override
+      - staticfiles-cd:/app/studyoverflow/staticfiles
+
+  celery-worker:
+    env_file: !override
+      - .env.test
+
+  celery-beat:
+    env_file: !override
+      - .env.test
+    volumes: !override
+      - /app/studyoverflow/celerybeat_data
+
+  nginx:
+    volumes: !override
+      # :ro - read-only
+      - staticfiles-cd:/app/studyoverflow/staticfiles:ro
+    depends_on: !override
+      studyoverflow-1:
+        condition: service_healthy
+
+networks:
+  studyoverflow_network:
+    # Фиксированное имя сети
+    name: studyoverflow_network
+    driver: bridge
+
+volumes:
+  staticfiles-cd:

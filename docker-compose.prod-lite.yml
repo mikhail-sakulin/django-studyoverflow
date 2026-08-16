@@ -1,0 +1,52 @@
+# Облегчённая production-lite-конфигурация для VPS с ограниченной RAM (1 Гб).
+#
+# Самостоятельно не используется.
+# Запускать только вместе с docker-compose.yml и docker-compose.prod.yml.
+#
+# Пример:
+#   docker compose -p studyoverflow-prod -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.prod-lite.yml --env-file .env.prod up
+
+services:
+  # В lite-режиме при обычном запуске без указания --profile backend-2
+  # studyoverflow-2 не запустится.
+  studyoverflow-2:
+    profiles:
+      - backend-2
+
+  celery-worker:
+    # --pool=prefork - запускает главный celery процесс и дочерние процессы
+    # --pool=threads - запускает главный celery процесс и потоки в нем для выполнения задач,
+    #   но возникает конфликт с драйвером БД psycopg
+    #
+    # Поэтому используются зеленые потоки --pool=gevent, кооперативная многозадачность в рамках одного
+    # потока ОС (внутри которого несколько зеленых потоков), подходит, потому что большинство задач
+    # являются IO-bound задачами. При этом пул соединений к БД нужно отключать.
+    command: celery -A studyoverflow worker -l info --pool=gevent --concurrency=4
+    environment:
+      # psycopg-pool несовместим с gevent monkey-patching, поэтому пул отключается, вместо
+      # него задается CONN_MAX_AGE
+      DB_USE_POOL: "false"
+
+  # В lite-режиме при обычном запуске без указания --profile monitoring
+  # promtail, loki и grafana не запустятся.
+  loki:
+    profiles:
+      - monitoring
+
+  promtail:
+    profiles:
+      - monitoring
+
+  grafana:
+    profiles:
+      - monitoring
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile-lite
+    image: ${NGINX_IMAGE}-lite:${IMAGE_TAG:-prod}
+
+    # В lite-режиме Nginx зависит только от одного backend.
+    depends_on: !override
+      - studyoverflow-1
