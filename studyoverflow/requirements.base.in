@@ -81,6 +81,12 @@ celery_once==3.0.1
 # Драйвер для БД Redis и брокер сообщений для Celery
 redis==6.4.0
 
+# Асинхронный пул легковесных потоков greenlets для выполнения celery задач
+# (--pool=gevent), может использоваться в prod-lite сборке, но вместо него
+# в prod-lite сборке задано --pool=threads из-за конфликта gevent с asyncio
+# event loop внутри Django Channels.
+gevent==25.9.1
+
 # ==========================
 # PostgreSQL
 # ==========================

@@ -6,6 +6,7 @@ from posts.services import (
     generate_slug,
     normalize_tag_name,
     render_markdown_safe,
+    strip_tags_and_whitespace_chars_from_html,
     translit_rus_to_eng,
 )
 
@@ -24,6 +25,31 @@ class TestNormalizeTagName:
     )
     def test_normalize_tag_name(self, input_tag, expected):
         assert normalize_tag_name(input_tag) == expected
+
+
+@pytest.mark.parametrize(
+    ("html_text", "expected"),
+    [
+        (
+            "<p>Hello <strong>Django</strong></p>",
+            "Hello Django",
+        ),
+        (
+            "<h1>Django</h1><p>PostgreSQL</p>",
+            "Django PostgreSQL",
+        ),
+        (
+            "<p>Hello</p>  \n\n\t<p>Django</p>",
+            "Hello Django",
+        ),
+        (
+            "<p>  Hello    Django  </p>",
+            "Hello Django",
+        ),
+    ],
+)
+def test_strip_tags_and_whitespace_chars_from_html(html_text, expected):
+    assert strip_tags_and_whitespace_chars_from_html(html_text) == expected
 
 
 class TestRenderMarkdownSafe:

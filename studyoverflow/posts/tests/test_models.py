@@ -24,23 +24,47 @@ class TestPostModel:
         mock_gen_slug.assert_called_once()
         assert post.slug == "test-title"
 
-    def test_markdown_rendered_only_when_content_changes(self, post_factory, mocker):
-        """Markdown рендерится только при создании или изменении контента."""
-        mock_render = mocker.patch("posts.models.render_markdown_safe", return_value="<p>HTML</p>")
+    def test_markdown_rendered_and_search_content_generated_only_when_content_changes(
+        self, post_factory, mocker
+    ):
+        """
+        Markdown рендерится и генерируется очищенный текст контента для поиска только при
+        создании или изменении контента.
+        """
+        # Задаются возвращаемые значение - строки, чтобы они могли сохраниться в БД,
+        # если не задать "return_value", то тест упадет, так как в БД должны сохраниться
+        # именно строки.
+        # Работа сервисных функций тестируется отдельно, поэтому смысловая часть строк не
+        # проверяется, задать можно любую строку.
+        rendered_content = "<p>HTML</p>"
+        mock_render = mocker.patch(
+            "posts.models.render_markdown_safe", return_value=rendered_content
+        )
+        search_content = "HTML"
+        mock_clean = mocker.patch(
+            "posts.models.strip_tags_and_whitespace_chars_from_html", return_value=search_content
+        )
 
-        # Создание поста — вызывается рендер
+        # Создание поста — вызываются рендер и очистка
         post = post_factory(content="Initial content")
         assert mock_render.call_count == 1
+        assert mock_clean.call_count == 1
 
-        # Изменение не-content поля — рендер не вызывается повторно
+        # Изменение не-content поля — рендер и очистка не вызываются повторно
         post.title = "New Title Test"
         post.save()
         assert mock_render.call_count == 1
+        assert mock_clean.call_count == 1
 
-        # Изменение content — вызывается рендер
+        # Изменение content — вызываются рендер и очистка
         post.content = "New content"
         post.save()
         assert mock_render.call_count == 2
+        assert mock_clean.call_count == 2
+
+        post.refresh_from_db()
+        assert post.rendered_content == rendered_content
+        assert post.search_content == search_content
 
 
 @pytest.mark.django_db

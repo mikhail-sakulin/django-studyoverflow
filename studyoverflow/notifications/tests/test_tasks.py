@@ -19,7 +19,7 @@ class TestCreateNotificationTask:
             user_id=user.pk,
             actor_id=actor.pk,
             message="Тестовое сообщение",
-            notification_type=NotificationType.POST,
+            notification_type=NotificationType.POST.value,  # type: ignore[attr-defined]
             content_type_id=content_type.pk,
             object_id=post.pk,
         )
@@ -30,7 +30,10 @@ class TestCreateNotificationTask:
         assert notification.user_id == user.pk
         assert notification.actor_id == actor.pk
         assert notification.message == "Тестовое сообщение"
-        assert notification.notification_type == NotificationType.POST
+        assert (
+            notification.notification_type
+            == NotificationType.POST.value  # type: ignore[attr-defined]
+        )
         assert notification.content_type == content_type
         assert notification.object_id == post.pk
 
@@ -46,7 +49,7 @@ class TestCreateNotificationTask:
             user_id=user.pk,
             actor_id=user.pk,
             message="Тестовое сообщение",
-            notification_type=NotificationType.POST,
+            notification_type=NotificationType.POST.value,  # type: ignore[attr-defined]
             content_type_id=content_type.pk,
             object_id=non_existent_post_id,
         )
@@ -65,7 +68,7 @@ class TestCreateNotificationTask:
             user_id=user.pk,
             actor_id=user.pk,
             message="Тестовое сообщение",
-            notification_type=NotificationType.POST,
+            notification_type=NotificationType.POST.value,  # type: ignore[attr-defined]
             content_type_id=invalid_content_type_id,
             object_id=1,
         )
@@ -93,21 +96,21 @@ class TestSendChannelNotifyEventTask:
         Notification.objects.create(
             user=user,
             actor_id=user.pk,
-            notification_type=NotificationType.POST,
+            notification_type=NotificationType.POST.value,  # type: ignore[attr-defined]
             content_object=post_factory(),
             is_read=False,
         )
         Notification.objects.create(
             user=user,
             actor_id=user.pk,
-            notification_type=NotificationType.POST,
+            notification_type=NotificationType.POST.value,  # type: ignore[attr-defined]
             content_object=post_factory(),
             is_read=False,
         )
         Notification.objects.create(
             user=user,
             actor_id=user.pk,
-            notification_type=NotificationType.POST,
+            notification_type=NotificationType.POST.value,  # type: ignore[attr-defined]
             content_object=post_factory(),
             is_read=True,
         )

@@ -10,8 +10,14 @@ from django.db.models.functions import Coalesce
 from posts.models import Comment, Like, Post
 
 
-@shared_task
-def sync_post_counters():
+@shared_task(
+    ignore_result=True,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    soft_time_limit=180,
+    time_limit=200,
+)
+def sync_post_counters() -> None:
     """
     Пересчитывает и синхронизирует поля-счётчики для постов через единый SQL-запрос.
 
@@ -48,8 +54,14 @@ def sync_post_counters():
     )
 
 
-@shared_task
-def sync_comment_counters():
+@shared_task(
+    ignore_result=True,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    soft_time_limit=180,
+    time_limit=200,
+)
+def sync_comment_counters() -> None:
     """
     Пересчитывает поле-счетчик лайков для комментариев через единый SQL-запрос.
     """

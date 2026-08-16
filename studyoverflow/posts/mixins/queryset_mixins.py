@@ -114,10 +114,10 @@ class PostFilterSortMixin:
             # .values_list("id") -> [(1,), (5,), (12,)]
             # .values_list("id", flat=True) -> [1, 5, 12]
 
-            # Поиск постов, в title, content или tags__name которых есть текст q
+            # Поиск постов, в title, search_content или tags__name которых есть текст q
             queryset = queryset.filter(
                 Q(title__ilike_icontains=q)
-                | Q(content__ilike_icontains=q)
+                | Q(search_content__ilike_icontains=q)
                 | Q(id__in=post_ids_by_tags)
             )
 

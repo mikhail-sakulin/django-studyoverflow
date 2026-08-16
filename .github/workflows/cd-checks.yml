@@ -1,4 +1,7 @@
-# Проверяет production-сборку и выполняет smoke и e2e тесты.
+# Проверяет:
+#   - production-сборку и выполняет smoke и e2e тесты.
+#   - production-lite-сборку (один бекенд сервис, celery worker с --pool=gevent и нет promtail, loki и grafana)
+#     и выполняет smoke и e2e тесты, lite-сборка нужна для для VPS с ограниченной RAM (1 Гб).
 
 name: CD Checks
 
@@ -15,6 +18,7 @@ jobs:
     # name: Run CI Checks
     # uses: ./.github/workflows/ci.yml
 
+  # Сборка и тестирование full production сборки
   build-prod-and-test:
     # needs: ci
     runs-on: ubuntu-24.04
@@ -117,12 +121,12 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-test-results
+          name: e2e-test-results-prod
           path: e2e/test-results/
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Show container status
+      - name: Show full production container status on failure
         if: failure()
         run: |
           docker compose \
@@ -133,7 +137,7 @@ jobs:
             --env-file .env.test \
             ps
 
-      - name: Show logs on failure
+      - name: Show full production logs on failure
         if: failure()
         run: |
           docker compose \
@@ -144,7 +148,7 @@ jobs:
             --env-file .env.test \
             logs
 
-      - name: Cleanup
+      - name: Cleanup full production stack
         if: always()
         run: |
           docker compose \
@@ -152,5 +156,128 @@ jobs:
             -f docker-compose.yml \
             -f docker-compose.prod.yml \
             -f docker-compose.cd.yml \
+            --env-file .env.test \
+            down -v
+
+  # Сборка и тестирование production-lite сборки (один бекенд сервис и нет promtail, loki и grafana)
+  build-prod-lite-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build prod app image (cached)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./studyoverflow
+          file: ./studyoverflow/Dockerfile
+          target: prod-image
+          tags: studyoverflow-backend:prod
+          load: true
+          cache-from: type=gha,scope=prod-app
+          cache-to: type=gha,mode=max,scope=prod-app
+
+      - name: Build nginx-lite image (cached)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./nginx
+          file: ./nginx/Dockerfile-lite
+          tags: studyoverflow-nginx-lite:prod
+          load: true
+          cache-from: type=gha,scope=prod-nginx-lite
+          cache-to: type=gha,mode=max,scope=prod-nginx-lite
+
+      - name: Start production-lite stack
+        run: |
+          docker compose \
+            -p studyoverflow-cd-lite \
+            -f docker-compose.yml \
+            -f docker-compose.prod.yml \
+            -f docker-compose.prod-lite.yml \
+            -f docker-compose.cd-lite.yml \
+            --env-file .env.test \
+            up -d --wait
+
+      - name: Smoke tests for production-lite
+        # -f - возвращает ошибку, если HTTP-статус ответа 400 или 500
+        run: |
+          curl -f http://localhost/health/
+          curl -f http://localhost/
+          curl -f http://localhost/posts/
+          curl -f http://localhost/admin/login/
+          curl -f http://localhost/api/v1/posts/
+          curl -f http://localhost/static/admin/css/base.css
+
+      # Сборка образа playwright на python с pytest для E2E тестирования с кешированием слоев
+      - name: Build E2E image (cached) for production-lite
+        uses: docker/build-push-action@v6
+        with:
+          context: ./e2e
+          file: ./e2e/Dockerfile
+          tags: studyoverflow-e2e:latest
+          load: true
+          cache-from: type=gha,scope=e2e-playwright
+          cache-to: type=gha,mode=max,scope=e2e-playwright
+
+      # Запуск E2E-тестов для запущенной production-lite-сборки
+      #
+      # Playwright подключается к внешней сети studyoverflow_network,
+      # BASE_URL=http://nginx:80 позволяет обращаться к nginx production сборки.
+      - name: Run E2E tests for production-lite
+        run: |
+          docker compose \
+            -p studyoverflow-e2e \
+            -f e2e/docker-compose.e2e.yml \
+            run --rm playwright
+
+      # Если E2E-тесты упали, сохраняется  Playwright trace в test-results как
+      # GitHub Actions artifact для просмотра логов упавших тестов.
+      - name: Upload E2E test results for production-lite
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results-prod-lite
+          path: e2e/test-results/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Show production-lite container status on failure
+        if: failure()
+        run: |
+          docker compose \
+          -p studyoverflow-cd-lite \
+          -f docker-compose.yml \
+          -f docker-compose.prod.yml \
+          -f docker-compose.prod-lite.yml \
+          -f docker-compose.cd-lite.yml \
+          --env-file .env.test \
+          ps
+
+      - name: Show production-lite logs on failure
+        if: failure()
+        run: |
+          docker compose \
+            -p studyoverflow-cd-lite \
+            -f docker-compose.yml \
+            -f docker-compose.prod.yml \
+            -f docker-compose.prod-lite.yml \
+            -f docker-compose.cd-lite.yml \
+            --env-file .env.test \
+            logs
+
+      - name: Cleanup production-lite stack
+        if: always()
+        run: |
+          docker compose \
+            -p studyoverflow-cd-lite \
+            -f docker-compose.yml \
+            -f docker-compose.prod.yml \
+            -f docker-compose.prod-lite.yml \
+            -f docker-compose.cd-lite.yml \
             --env-file .env.test \
             down -v

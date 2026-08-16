@@ -18,6 +18,7 @@ from .text_processing import (
     generate_slug,
     normalize_tag_name,
     render_markdown_safe,
+    strip_tags_and_whitespace_chars_from_html,
     translit_rus_to_eng,
 )
 from .validators import (
@@ -40,6 +41,7 @@ __all__ = [
     "render_markdown_safe",
     "normalize_tag_name",
     "translit_rus_to_eng",
+    "strip_tags_and_whitespace_chars_from_html",
     # validators
     "PostTitleValidator",
     "validate_and_normalize_tags",

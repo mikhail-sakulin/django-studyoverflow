@@ -121,7 +121,7 @@ class TestGetCachedOnlineUserIds:
         assert result == [10, 15]
         mock_get_online.assert_called_once()
         mock_cache.get.assert_called_once_with("cached_online_users_set")
-        mock_cache.set.assert_called_once_with("cached_online_users_set", [10, 15], timeout=2)
+        mock_cache.set.assert_called_once_with("cached_online_users_set", [10, 15], timeout=5)
 
     def test_get_cached_online_user_ids_cache_hit(self, mocker):
         """Проверяет поведение при наличии множества пользователей онлайн в кеше."""
