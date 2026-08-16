@@ -1,0 +1,45 @@
+# Выполняет деплой production-lite-сборки на сервер, вызывается в cd-release.
+
+name: CD Deploy
+
+on:
+  # Позволяет вызывать этот workflow из другого workflow как job
+  workflow_call:
+  # Запуск пайплайна вручную из вкладки Actions на GitHub
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          password: ${{ secrets.PROD_SSH_PASSWORD }}
+          # set -e - немедленное завершение скрипта при ошибке
+          # Новые Docker образы скачиваются, контейнеры перезапускаются, старые образы удаляются
+          script: |
+            set -e
+            cd /app/studyoverflow
+            
+            docker compose \
+              -p studyoverflow-prod \
+              -f docker-compose.yml \
+              -f docker-compose.prod.yml \
+              -f docker-compose.prod-lite.yml \
+              --env-file .env.prod \
+              pull
+            
+            docker compose \
+              -p studyoverflow-prod \
+              -f docker-compose.yml \
+              -f docker-compose.prod.yml \
+              -f docker-compose.prod-lite.yml \
+              --env-file .env.prod \
+              up -d --wait
+            
+            docker image prune -f

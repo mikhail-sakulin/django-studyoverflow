@@ -85,6 +85,18 @@ jobs:
           cache-from: type=gha,scope=prod-nginx
           cache-to: type=gha,mode=max,scope=prod-nginx
 
+      - name: Build and push nginx-lite
+        uses: docker/build-push-action@v6
+        with:
+          context: ./nginx
+          file: ./nginx/Dockerfile-lite
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_OWNER }}/studyoverflow-nginx-lite:latest
+            ghcr.io/${{ env.IMAGE_OWNER }}/studyoverflow-nginx-lite:${{ github.sha }}
+          cache-from: type=gha,scope=prod-nginx-lite
+          cache-to: type=gha,mode=max,scope=prod-nginx-lite
+
       - name: Build and push Loki
         uses: docker/build-push-action@v6
         with:
@@ -106,3 +118,10 @@ jobs:
             ghcr.io/${{ env.IMAGE_OWNER }}/studyoverflow-promtail:${{ github.sha }}
           cache-from: type=gha,scope=prod-promtail
           cache-to: type=gha,mode=max,scope=prod-promtail
+
+  # Деплой prod-lite сборки на сервер
+  deploy-prod-lite:
+    needs: publish-images
+    uses: ./.github/workflows/cd-deploy.yml
+    # Передает секреты репозитория внутрь вызываемого workflow
+    secrets: inherit
