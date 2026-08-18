@@ -84,14 +84,32 @@ jobs:
       - name: Smoke tests
         # -f - возвращает ошибку, если HTTP-статус ответа 400 или 500
         # -L - curl следует редиректам, http://localhost/grafana/ редиректит на http://localhost/grafana/login/
+        # -u (--user) - curl передает учетные данные, используется HTTP Basic Authentication,
+        # строка с логином и паролем кодируется в base64, curl добавляет в запрос
+        # заголовок Authorization: Basic <строка в base64>
         run: |
+          # Считывается переменная $FLOWER_BASIC_AUTH из .env.test и экспортируется в текущий процесс командной оболочки bash.
+          # grep -v '^#' - игнорирует комментарии в .env файле
+          # xargs - убирает лишние пробелы (текст файла превращается в "var1=a var2=b)"
+          # export - передает переменную окружения в дочерние процессы (curl)
+          # set -a - включает режим bash allexport, передает все переменные окружения во все дочерние процессы
+          # source - выполняет (читает) файл, задавая считанные переменные окружения, при этом комментарии в файле очищаются (через grep)
+          # <(...) - помещает результат работы grep в канал (pipe) в ОП, создает виртуальный файл, из которого считывает данные source
+          # set +a - отключает режим bash allexport
+          if [ -f .env.test ]; then
+            set -a
+            source <(grep -v '^#' .env.test)
+            set +a
+          fi
+          
           curl -f http://localhost/health/
           curl -f http://localhost/
           curl -f http://localhost/posts/
           curl -f http://localhost/admin/login/
           curl -f http://localhost/api/v1/posts/
-          curl -f http://localhost/static/admin/css/base.css
           curl -f -L http://localhost/grafana/
+          curl -f -L http://localhost/adminer/
+          curl -f -L -u "$FLOWER_BASIC_AUTH" http://localhost/flower/
 
       # Сборка образа playwright на python с pytest для E2E тестирования с кешированием слоев
       - name: Build E2E image (cached)
@@ -204,14 +222,20 @@ jobs:
             up -d --wait
 
       - name: Smoke tests for production-lite
-        # -f - возвращает ошибку, если HTTP-статус ответа 400 или 500
         run: |
+          if [ -f .env.test ]; then
+            set -a
+            source <(grep -v '^#' .env.test)
+            set +a
+          fi
+
           curl -f http://localhost/health/
           curl -f http://localhost/
           curl -f http://localhost/posts/
           curl -f http://localhost/admin/login/
           curl -f http://localhost/api/v1/posts/
-          curl -f http://localhost/static/admin/css/base.css
+          curl -f -L http://localhost/adminer/
+          curl -f -L -u "$FLOWER_BASIC_AUTH" http://localhost/flower/
 
       # Сборка образа playwright на python с pytest для E2E тестирования с кешированием слоев
       - name: Build E2E image (cached) for production-lite

@@ -146,3 +146,11 @@ services:
     depends_on:
       - studyoverflow-1
       - studyoverflow-2
+
+  flower:
+    env_file:
+      - .env.prod
+    environment:
+      # FLOWER_BASIC_AUTH задается в .env.prod
+      # FLOWER_URL_PREFIX - указывает Flower, что он доступен не из корня сайта, а по url
+      - FLOWER_URL_PREFIX=/flower

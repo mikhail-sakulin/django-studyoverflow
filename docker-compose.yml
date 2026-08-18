@@ -122,7 +122,7 @@ services:
       - loki
 
   grafana:
-    image: grafana/grafana:10.2.2
+    image: grafana/grafana:13.1
     restart: unless-stopped
     expose:
       - "3000"
@@ -132,6 +132,39 @@ services:
       - studyoverflow_network
     depends_on:
       - loki
+
+  adminer:
+    image: adminer:5
+    restart: unless-stopped
+    environment:
+      # Автоматически подставляет адрес БД в поле "Сервер", указывается имя Docker-сервиса с БД
+      # postgres - домен для ip контейнера с постгресом в локальной Docker-сети
+      ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - studyoverflow_network
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  flower:
+    image: mher/flower:2.0
+    restart: unless-stopped
+    # --persistent=True - включает сохранение истории
+    # --state_save_interval=10000 - задает периодическое сохранение данных в БД на диск в мс, изначально 0,
+    #   то есть изначально отключено
+    # --db=/data/flower.db - задает путь для бд с историей, изначально данные хранятся только в ОП
+    command: celery --broker=${CELERY_BROKER_URL} flower --port=5555 --persistent=True --state_save_interval=10000 --db=/data/flower.db --max_tasks=10000
+    volumes:
+      - flower-data:/data
+    networks:
+      - studyoverflow_network
+    expose:
+      - "5555"
+    depends_on:
+      redis:
+        condition: service_healthy
 
 networks:
   studyoverflow_network:
@@ -145,3 +178,4 @@ volumes:
   promtail-data:
   loki-data:
   grafana-data:
+  flower-data:

@@ -97,11 +97,16 @@ services:
       studyoverflow-2:
         condition: service_healthy
 
+  flower:
+    env_file: !override
+      - .env.test
+    volumes: !override []
+
 networks:
   studyoverflow_network:
     # Фиксированное имя сети
     name: studyoverflow_network
     driver: bridge
 
-volumes:
+volumes: !override
   staticfiles-cd:
