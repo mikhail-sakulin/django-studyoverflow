@@ -23,7 +23,7 @@ services:
     env_file: !override
       - .env.test
     volumes: !override
-      - staticfiles-cd:/app/studyoverflow/staticfiles
+      - staticfiles:/app/studyoverflow/staticfiles
 
   studyoverflow-1:
     env_file: !override
@@ -42,7 +42,7 @@ services:
       retries: 3
       start_period: 5s
     volumes: !override
-      - staticfiles-cd:/app/studyoverflow/staticfiles
+      - staticfiles:/app/studyoverflow/staticfiles
 
   celery-worker:
     env_file: !override
@@ -57,7 +57,7 @@ services:
   nginx:
     volumes: !override
       # :ro - read-only
-      - staticfiles-cd:/app/studyoverflow/staticfiles:ro
+      - staticfiles:/app/studyoverflow/staticfiles:ro
     depends_on: !override
       studyoverflow-1:
         condition: service_healthy
@@ -72,6 +72,3 @@ networks:
     # Фиксированное имя сети
     name: studyoverflow_network
     driver: bridge
-
-volumes: !override
-  staticfiles-cd:
