@@ -53,7 +53,6 @@ services:
       context: ./nginx
       dockerfile: Dockerfile-lite
     image: ${NGINX_IMAGE}-lite:${IMAGE_TAG:-prod}
-
     # В lite-режиме Nginx зависит только от одного backend.
     depends_on: !override
       - studyoverflow-1

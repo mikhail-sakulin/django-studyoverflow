@@ -138,14 +138,37 @@ services:
       - studyoverflow_network
     ports:
       - "80:80"
-    expose:
-      - 80
+      - "443:443"
     volumes:
       # :ro - read-only
       - staticfiles:/app/studyoverflow/staticfiles:ro
+      - certbot-etc:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+    environment:
+      - NGINX_SSL_ENABLED=${NGINX_SSL_ENABLED:-false}
     depends_on:
       - studyoverflow-1
       - studyoverflow-2
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      # Certbot сохранит выпущенные SSL-сертификаты, чтобы Nginx смог прочитать их
+      - certbot-etc:/etc/letsencrypt
+      # Certbot создаст временный файл, чтобы доказать Let's Encrypt, что домен действительно указывает на
+      # запущенный сервер (IP-адрес).
+      # Let's Encrypt отправит запрос по адресу http://домен/.well-known/acme-challenge/секретный_файл,
+      # файл создает перед этим сам Certbot, заранее попросив у Let's Encrypt токен и сделав файл с ним.
+      - certbot-webroot:/var/www/certbot
+    # Контейнер должен быть запущенным, чтобы выполнялись команды.
+    # Контейнер запускает командную оболочку /bin/sh (-c - command), в которой выполняются команды:
+    # - trap exit TERM - заставляет контейнер останавливаться сразу при команде остановки, иначе сигнал
+    #   об остановке будет проигнорирован, а процесс принудительно завершен Docker через 10 секунд;
+    # - while :; do ... done; - создает бесконечный цикл, ":" - True, do ... done - тело цикла;
+    # - sleep 12h & wait $${!} - запускает таймер сна в фоновом режиме на 12 часов;
+    # - wait $${!} - заставляет скрипт остановиться и ждать окончания работы этого таймера сна,
+    #   символ "!" - ID последнего запущенного фонового процесса, то есть sleep.
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 12h & wait $${!}; done;'"
 
   flower:
     env_file:
@@ -154,3 +177,7 @@ services:
       # FLOWER_BASIC_AUTH задается в .env.prod
       # FLOWER_URL_PREFIX - указывает Flower, что он доступен не из корня сайта, а по url
       - FLOWER_URL_PREFIX=/flower
+
+volumes:
+  certbot-etc:
+  certbot-webroot:

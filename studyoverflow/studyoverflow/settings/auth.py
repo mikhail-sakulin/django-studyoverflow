@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from .base import SECRET_KEY, env
+from .base import NGINX_SSL_ENABLED, SECRET_KEY, env
 
 
 # ----------------------------------------
@@ -134,9 +134,9 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 
-# ----------------------------------------
+# --------------------------------------------------
 # Настройки JWT токенов (simplejwt и dj_rest_auth)
-# ----------------------------------------
+# -------------------------------------------------
 
 # Настройки JWT токенов simplejwt
 SIMPLE_JWT = {
@@ -165,10 +165,30 @@ SIMPLE_JWT = {
     "JTI_CLAIM": "jti",  # Уникальный идентификатор токена (есть и у access, и у refresh)
 }
 
-# Настройки dj_rest_auth
+# Настройки dj_rest_auth - интеграция django-allauth с simplejwt, влияют на ответы от всех
+# url (api эндпоинты) dj_rest_auth.
+# Поскольку django-allauth в проекте используется только для авторизации через соцсети, данные
+# настройки влияют только на ответ бекенда клиенту при авторизации через соцсети через API.
+# Настройки не влияют на api ответы, где используется только simplejwt, например обычный логин
+# для получения access и refresh JWT токенов.
 REST_AUTH = {
-    "USE_JWT": True,  # Выдача JWT вместо DRF токенов
-    "JWT_AUTH_COOKIE": "studyoverflow-access",  # Имя COOKIE для access-токена
-    "JWT_AUTH_REFRESH_COOKIE": "studyoverflow-refresh",  # Имя COOKIE для refresh-токена
-    "JWT_AUTH_HTTPONLY": False,  # False, если токен забирает фронтенд сам из JSON
+    # Выдача JWT вместо DRF токенов
+    "USE_JWT": True,
+    # Имя COOKIE для access-токена
+    "JWT_AUTH_COOKIE": "studyoverflow-access",
+    # Имя COOKIE для refresh-токена
+    "JWT_AUTH_REFRESH_COOKIE": "studyoverflow-refresh",
+    # Параметр управляет тем, будет ли refresh-токен скрыт от JavaScript-кода фронтенда.
+    # False, если токен забирает фронтенд сам из JSON-тела.
+    # True для передачи refresh-токена только в httponly куке, тогда js не имеет к ней доступа.
+    "JWT_AUTH_HTTPONLY": False,
 }
+
+# HTTPS конфигурация dj_rest_auth, если Nginx настроен на работу по SSL/HTTPS
+if NGINX_SSL_ENABLED:
+    REST_AUTH = {
+        **REST_AUTH,
+        # Устанавливает атрибут Secure для cookie, в которых хранятся JWT access и refresh токены.
+        # При Secure JWT токены могут быть отправлены только по протоколу https.
+        "JWT_AUTH_SECURE": True,
+    }

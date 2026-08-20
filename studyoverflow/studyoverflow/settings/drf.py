@@ -1,4 +1,3 @@
-# from .base import DEBUG
 from .base import DEBUG
 
 
@@ -42,3 +41,5 @@ SPECTACULAR_SETTINGS = {
     # Исключает эндпоинт схемы (schema/) из генерируемой API документации
     "SERVE_INCLUDE_SCHEMA": False,
 }
+
+# Настройки dj_rest_auth в модуле .auth
