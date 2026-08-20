@@ -35,11 +35,18 @@ services:
     image: ${STUDYOVERFLOW_IMAGE}:${IMAGE_TAG:-dev}
     env_file:
       - .env.dev
+    volumes:
+      # В dev монтируется код с хоста, чтобы код в контейнерах обновлялся вместе с обновлением на хосте,
+      # при этом Celery процесс загружает в ОП код при перезапуске контейнеров, таким образом
+      # при перезапуске контейнеров код обновится без пересборки образа бекенда.
+      - ./studyoverflow:/app/studyoverflow
 
   celery-beat:
     image: ${STUDYOVERFLOW_IMAGE}:${IMAGE_TAG:-dev}
     env_file:
       - .env.dev
+    volumes:
+      - ./studyoverflow:/app/studyoverflow
 
   loki:
     ports:
@@ -52,3 +59,13 @@ services:
   grafana:
     ports:
       - "3000:3000"
+
+  adminer:
+    ports:
+      - "127.0.0.1:8081:8080"
+
+  flower:
+    env_file:
+      - .env.dev
+    ports:
+      - "5555:5555"

@@ -1,3 +1,21 @@
 FROM nginx:latest
 
-COPY studyoverflow-lite.conf /etc/nginx/conf.d/default.conf
+# Создается папка для хранения исходных конфигов
+RUN mkdir -p /etc/nginx/source_configs
+
+# Копирование Nginx конфигураций для http и https
+COPY http-lite.conf /etc/nginx/source_configs/http-lite.conf
+COPY https-lite.conf /etc/nginx/source_configs/https-lite.conf
+# Копирование скрипта инициализации контейнера
+COPY entrypoint-lite.sh /entrypoint-lite.sh
+
+# Команда делает скрипт исполняемым,
+# chmod - изменяет права доступа,
+# +x - задает право на запуск файла как программы.
+RUN chmod +x /entrypoint-lite.sh
+
+# Очистка рабочей директории конфигов,
+# -r - рекурсивно удаляет подпапки и их содержимое.
+RUN rm -rf /etc/nginx/conf.d/*
+
+ENTRYPOINT ["/entrypoint-lite.sh"]

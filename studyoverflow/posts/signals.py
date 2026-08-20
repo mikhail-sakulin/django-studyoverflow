@@ -11,7 +11,7 @@ from users.services import update_user_counter_field
 @receiver(post_save, sender=Post)
 def increase_author_posts_count(sender, instance, created, raw, **kwargs):
     """
-    Сигнал, срабатывающий после сохранения поста.
+    Обработчик сигнала, срабатывающий после сохранения поста.
 
     Увеличивает счетчик постов автора на 1 при создании нового поста.
     Не выполняется для "raw" операций (например, при загрузке fixtures).
@@ -26,7 +26,7 @@ def increase_author_posts_count(sender, instance, created, raw, **kwargs):
 @receiver(post_delete, sender=Post)
 def decrease_author_posts_count(sender, instance, **kwargs):
     """
-    Сигнал, срабатывающий после удаления поста.
+    Обработчик сигнала, срабатывающий после удаления поста.
 
     Уменьшает счетчик постов автора на 1.
     """
@@ -36,7 +36,7 @@ def decrease_author_posts_count(sender, instance, **kwargs):
 @receiver(post_save, sender=Comment)
 def increase_author_comments_count(sender, instance, created, raw, **kwargs):
     """
-    Сигнал, срабатывающий после сохранения комментария.
+    Обработчик сигнала, срабатывающий после сохранения комментария.
 
     Увеличивает счетчик комментариев автора на 1 при создании нового комментария.
     Не выполняется для "raw" операций (например, при загрузке fixtures).
@@ -51,7 +51,7 @@ def increase_author_comments_count(sender, instance, created, raw, **kwargs):
 @receiver(post_delete, sender=Comment)
 def decrease_author_comments_count(sender, instance, **kwargs):
     """
-    Сигнал, срабатывающий после удаления комментария.
+    Обработчик сигнала, срабатывающий после удаления комментария.
 
     Уменьшает счетчик комментариев автора на 1.
     """
@@ -61,7 +61,7 @@ def decrease_author_comments_count(sender, instance, **kwargs):
 @receiver(post_save, sender=Like)
 def increase_author_likes_count(sender, instance, created, raw, **kwargs):
     """
-    Сигнал, срабатывающий после сохранения лайка.
+    Обработчик сигнала, срабатывающий после сохранения лайка.
 
     Увеличивает репутацию автора объекта (Post или Comment) на 1.
     Не выполняется для "raw" операций (например, при загрузке fixtures).
@@ -76,7 +76,7 @@ def increase_author_likes_count(sender, instance, created, raw, **kwargs):
 @receiver(pre_delete, sender=Like)
 def decrease_author_likes_count(sender, instance, **kwargs):
     """
-    Сигнал, срабатывающий перед удалением лайка.
+    Обработчик сигнала, срабатывающий перед удалением лайка.
 
     Уменьшает репутацию автора объекта (Post или Comment) на 1.
     """
@@ -87,7 +87,7 @@ def decrease_author_likes_count(sender, instance, **kwargs):
 @receiver(post_save, sender=Like)
 def increase_content_object_likes_count(sender, instance, created, raw, **kwargs):
     """
-    Сигнал, срабатывающий после создания лайка.
+    Обработчик сигнала, срабатывающий после создания лайка.
 
     Увеличивает счетчик лайков связанного объекта (Post или Comment) на 1.
     """
@@ -109,7 +109,7 @@ def increase_content_object_likes_count(sender, instance, created, raw, **kwargs
 @receiver(pre_delete, sender=Like)
 def decrease_content_object_likes_count(sender, instance, **kwargs):
     """
-    Сигнал, срабатывающий перед удалением лайка.
+    Обработчик сигнала, срабатывающий перед удалением лайка.
 
     Уменьшает счетчик лайков связанного объекта (Post или Comment) на 1.
     """
@@ -129,7 +129,7 @@ def decrease_content_object_likes_count(sender, instance, **kwargs):
 @receiver(post_save, sender=Comment)
 def increase_post_comments_count(sender, instance, created, raw, **kwargs):
     """
-    Сигнал, срабатывающий после создания комментария.
+    Обработчик сигнала, срабатывающий после создания комментария.
 
     Увеличивает счетчик комментариев связанного поста на 1.
     """
@@ -145,7 +145,7 @@ def increase_post_comments_count(sender, instance, created, raw, **kwargs):
 @receiver(pre_delete, sender=Comment)
 def decrease_post_comments_count(sender, instance, **kwargs):
     """
-    Сигнал, срабатывающий перед удалением комментария.
+    Обработчик сигнала, срабатывающий перед удалением комментария.
 
     Уменьшает счетчик комментариев связанного поста на 1.
     """

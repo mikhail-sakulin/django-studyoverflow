@@ -14,7 +14,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 env = environ.Env()
 
-# Путь к файлу .env
+# Путь к файлу .env, сейчас задан .env.test для использования установленного
+# PostgreSQL на хосте для локального тестирования без поднятия Docker-контейнера с БД.
 env_file = BASE_DIR.parent / ".env.test"
 
 # Загрузка переменных окружения из файла .env.
@@ -228,6 +229,9 @@ USE_TZ = True
 # ID сайта (для allauth и django.contrib.sites)
 SITE_ID = 1
 
+# Домен, на котором развернуто приложение
+SITE_DOMAIN = env("SITE_DOMAIN")
+
 # Тип primary key по умолчанию
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -240,3 +244,21 @@ MESSAGE_TAGS = {
     messages.INFO: "info",
     messages.ERROR: "danger",
 }
+
+
+# ----------------------------------------------------------------
+# HTTPS конфигурация, если Nginx настроен на работу по SSL/HTTPS
+# ----------------------------------------------------------------
+
+NGINX_SSL_ENABLED = env.bool("NGINX_SSL_ENABLED", default=False)
+
+if NGINX_SSL_ENABLED:
+    # Nginx принимает зашифрованный HTTPS-запрос, расшифровывает его с помощью сертификатов
+    # Certbot и передает дальше в контейнер с Django по HTTP.
+    # Эта настройка говорит Django верить заголовку HTTP_X_FORWARDED_PROTO в запросе, чтобы Django
+    # понимал, что клиент отправляет запросы по https.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # Добавляет флаг Secure к куке с сессией (sessionid), куку можно передать только по https.
+    SESSION_COOKIE_SECURE = True
+    # Добавляет флаг Secure к куке с CSRF-токеном (csrftoken), куку можно передать только по https.
+    CSRF_COOKIE_SECURE = True

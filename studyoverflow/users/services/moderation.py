@@ -68,3 +68,43 @@ def _set_user_block_state(
     )
 
     return True, f"Пользователь {target_user.username} успешно {action_for_message}."
+
+
+# Пары (app_label, codename) прав, которые будет иметь группа "Moderators"
+MODERATOR_PERMISSIONS = [
+    # posts.Comment
+    ("posts", "add_comment"),
+    ("posts", "change_comment"),
+    ("posts", "delete_comment"),
+    ("posts", "moderate_comment"),
+    # posts.Post
+    ("posts", "add_post"),
+    ("posts", "change_post"),
+    ("posts", "delete_post"),
+    ("posts", "moderate_post"),
+    # users.User
+    ("users", "block_user"),
+]
+
+
+# Пары (app_label, codename) прав, которые получит группа "StaffViewers"
+STAFF_PERMISSIONS = [
+    ("account", "view_emailaddress"),
+    ("account", "view_emailconfirmation"),
+    ("admin", "view_logentry"),
+    ("auth", "view_group"),
+    ("auth", "view_permission"),
+    ("contenttypes", "view_contenttype"),
+    ("notifications", "view_notification"),
+    ("posts", "view_comment"),
+    ("posts", "view_like"),
+    ("posts", "view_tag"),
+    ("posts", "view_post"),
+    ("posts", "view_posttag"),
+    ("sessions", "view_session"),
+    ("sites", "view_site"),
+    ("socialaccount", "view_socialaccount"),
+    ("socialaccount", "view_socialapp"),
+    ("socialaccount", "view_socialtoken"),
+    ("users", "view_user"),
+]
