@@ -29,10 +29,12 @@ services:
     user: root
     # 1) Передаются права на каталог пользователю userdj.
     # 2) Выполняются миграции БД.
-    # 3) Собираются статические файлы.
+    # 3) Создается суперпользователь через кастомную manage.py команду, используя переменные окружения.
+    # 4) Собираются статические файлы.
     command: >
       sh -c "chown -R userdj:groupdjango /app/studyoverflow/staticfiles &&
              python manage.py migrate --noinput &&
+             python manage.py create_superuser_from_env &&
              python manage.py collectstatic --noinput --clear"
     environment:
       POSTGRES_HOST: "postgres"
