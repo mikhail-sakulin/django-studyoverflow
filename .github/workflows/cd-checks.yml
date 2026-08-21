@@ -1,6 +1,6 @@
 # Проверяет:
 #   - production-сборку и выполняет smoke и e2e тесты.
-#   - production-lite-сборку (один бекенд сервис, celery worker с --pool=gevent и нет promtail, loki и grafana)
+#   - production-lite-сборку (один бекенд сервис, celery worker с --pool=gevent и нет promtail, loki, grafana и flower)
 #     и выполняет smoke и e2e тесты, lite-сборка нужна для для VPS с ограниченной RAM (1 Гб).
 
 name: CD Checks
@@ -177,7 +177,7 @@ jobs:
             --env-file .env.test \
             down -v
 
-  # Сборка и тестирование production-lite сборки (один бекенд сервис и нет promtail, loki и grafana)
+  # Сборка и тестирование production-lite сборки (один бекенд сервис и нет promtail, loki, grafana и flower)
   build-prod-lite-and-test:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -223,19 +223,12 @@ jobs:
 
       - name: Smoke tests for production-lite
         run: |
-          if [ -f .env.test ]; then
-            set -a
-            source <(grep -v '^#' .env.test)
-            set +a
-          fi
-
           curl -f http://localhost/health/
           curl -f http://localhost/
           curl -f http://localhost/posts/
           curl -f http://localhost/admin/login/
           curl -f http://localhost/api/v1/posts/
           curl -f -L http://localhost/adminer/
-          curl -f -L -u "$FLOWER_BASIC_AUTH" http://localhost/flower/
 
       # Сборка образа playwright на python с pytest для E2E тестирования с кешированием слоев
       - name: Build E2E image (cached) for production-lite

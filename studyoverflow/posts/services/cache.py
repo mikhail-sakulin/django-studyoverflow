@@ -45,6 +45,19 @@ def get_cached_post(post_id: int, queryset: QuerySet[Post]):
     return copy.copy(post)
 
 
+def delete_cached_posts_by_author(author_id: int):
+    """
+    Удаляет кеш всех постов, принадлежащих автору.
+    """
+    from posts.models import Post
+
+    post_ids = Post.objects.filter(author_id=author_id).values_list("id", flat=True)
+    cache_keys = [get_post_cache_key(post_id) for post_id in post_ids]
+
+    if cache_keys:
+        cache.delete_many(cache_keys)
+
+
 def delete_cache_post_detail(post_id: int):
     """Удаляет кеш поста."""
     cache_key = get_post_cache_key(post_id)

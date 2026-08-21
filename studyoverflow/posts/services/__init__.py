@@ -1,6 +1,7 @@
 from .cache import (
     delete_cache_post_detail,
     delete_cache_tags_list,
+    delete_cached_posts_by_author,
     get_cached_post,
     get_cached_tags,
     get_post_cache_key,
@@ -33,6 +34,7 @@ __all__ = [
     "get_post_cache_key",
     "get_cached_post",
     "delete_cache_post_detail",
+    "delete_cached_posts_by_author",
     "get_tags_cache_key",
     "get_cached_tags",
     "delete_cache_tags_list",

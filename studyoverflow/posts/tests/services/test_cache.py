@@ -8,6 +8,7 @@ from posts.models import LowercaseTag, Post
 from posts.services import (
     delete_cache_post_detail,
     delete_cache_tags_list,
+    delete_cached_posts_by_author,
     get_cached_post,
     get_cached_tags,
     get_post_cache_key,
@@ -81,6 +82,60 @@ class TestGetCachedPost:
 
         assert result2.title == "Original title"
         assert result1.title != result2.title
+
+
+@pytest.mark.django_db
+class TestDeleteCachedPostsByAuthor:
+
+    def test_deletes_cache_of_all_posts_for_author(self, user_factory, post_factory):
+        """Удаляет кеш всех постов указанного автора, оставляя кеш постов других авторов."""
+        author1 = user_factory()
+        author2 = user_factory()
+
+        post1_author1 = post_factory(author=author1)
+        post2_author1 = post_factory(author=author1)
+
+        post_author2 = post_factory(author=author2)
+
+        # Кеширование постов автора author1
+        queryset = Post.objects.all()
+        get_cached_post(post1_author1.id, queryset)
+        get_cached_post(post2_author1.id, queryset)
+        get_cached_post(post_author2.id, queryset)
+
+        # Проверка, что кеш существует
+        key1_post_author1 = get_post_cache_key(post1_author1.id)
+        key2_post_author2 = get_post_cache_key(post2_author1.id)
+        key_post_author2 = get_post_cache_key(post_author2.id)
+        assert cache.get(key1_post_author1) is not None
+        assert cache.get(key2_post_author2) is not None
+        assert cache.get(key_post_author2) is not None
+
+        # Удаление кеша постов author1
+        delete_cached_posts_by_author(author1.id)
+
+        # Кеш постов автора author1 должен быть пуст, а кеш постов author2 должен существовать
+        assert cache.get(key1_post_author1) is None
+        assert cache.get(key2_post_author2) is None
+        assert cache.get(key_post_author2) is not None
+
+    def test_does_nothing_for_author_without_posts(self, user_factory):
+        """Если у автора нет постов, сервис не вызывает исключений."""
+        author = user_factory()
+        delete_cached_posts_by_author(author.id)
+
+    def test_works_with_empty_cache(self, user_factory, post_factory):
+        """Если кеш постов уже пуст, сервис не вызывает исключений."""
+        author = user_factory()
+        post = post_factory(author=author)
+
+        delete_cached_posts_by_author(author.id)
+
+        key = get_post_cache_key(post.id)
+        assert cache.get(key) is None
+
+        # Вызов сервиса не вызывает исключений
+        delete_cached_posts_by_author(author.id)
 
 
 @pytest.mark.django_db
