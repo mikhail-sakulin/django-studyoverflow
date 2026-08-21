@@ -1,11 +1,19 @@
+from django.contrib.auth import get_user_model
 from django.db.models import F
 from django.db.models.functions import Greatest
 from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 
 from posts.models import Comment, Like, LowercaseTag, Post
-from posts.services import delete_cache_post_detail, delete_cache_tags_list
+from posts.services import (
+    delete_cache_post_detail,
+    delete_cache_tags_list,
+    delete_cached_posts_by_author,
+)
 from users.services import update_user_counter_field
+
+
+User = get_user_model()
 
 
 @receiver(post_save, sender=Post)
@@ -173,3 +181,16 @@ def invalidate_tags_cache_on_save_or_delete(sender, **kwargs):
     Удаляет кеш списка тегов при создании, изменении или удалении тега.
     """
     delete_cache_tags_list()
+
+
+@receiver(post_save, sender=User)
+def clear_post_cache_on_user_update(sender, instance, **kwargs):
+    """
+    Удаляет кеш постов при изменении данных автора поста, поскольку некоторые данные автора также
+    кешируются вместе с данными поста.
+
+    Сигнал post_save срабатывает только при вызове метода .save() модели, поэтому при изменении
+    полей-счетчиков автора через .filter(pk=author_id).update(...) данный обработчик сигнала
+    не сработает.
+    """
+    delete_cached_posts_by_author(instance.pk)
