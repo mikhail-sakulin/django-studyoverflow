@@ -1,6 +1,6 @@
 # Проверяет:
 #   - production-сборку и выполняет smoke и e2e тесты.
-#   - production-lite-сборку (один бекенд сервис, celery worker с --pool=gevent и нет promtail, loki и grafana)
+#   - production-lite-сборку (один бекенд сервис, celery worker с --pool=gevent и нет promtail, loki, grafana и flower)
 #     и выполняет smoke и e2e тесты, lite-сборка нужна для для VPS с ограниченной RAM (1 Гб).
 
 name: CD Checks
@@ -177,7 +177,7 @@ jobs:
             --env-file .env.test \
             down -v
 
-  # Сборка и тестирование production-lite сборки (один бекенд сервис и нет promtail, loki и grafana)
+  # Сборка и тестирование production-lite сборки (один бекенд сервис и нет promtail, loki, grafana и flower)
   build-prod-lite-and-test:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
