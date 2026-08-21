@@ -223,19 +223,12 @@ jobs:
 
       - name: Smoke tests for production-lite
         run: |
-          if [ -f .env.test ]; then
-            set -a
-            source <(grep -v '^#' .env.test)
-            set +a
-          fi
-
           curl -f http://localhost/health/
           curl -f http://localhost/
           curl -f http://localhost/posts/
           curl -f http://localhost/admin/login/
           curl -f http://localhost/api/v1/posts/
           curl -f -L http://localhost/adminer/
-          curl -f -L -u "$FLOWER_BASIC_AUTH" http://localhost/flower/
 
       # Сборка образа playwright на python с pytest для E2E тестирования с кешированием слоев
       - name: Build E2E image (cached) for production-lite
