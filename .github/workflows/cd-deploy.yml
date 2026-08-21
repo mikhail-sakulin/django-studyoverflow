@@ -14,6 +14,23 @@ jobs:
     timeout-minutes: 10
 
     steps:
+      # Скачивание кода репозитория на виртуальную машину
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Копирование файлов docker-compose на production сервер
+      - name: Copy docker-compose files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          password: ${{ secrets.PROD_SSH_PASSWORD }}
+          # Файлы, которые будут копироваться, пути указываются относительно корня git репозитория
+          source: "docker-compose.yml,docker-compose.prod.yml,docker-compose.prod-lite.yml"
+          # Путь, куда копируются файлы на сервере
+          target: "/app/studyoverflow"
+
+      # Подключение к production серверу по SSH, обновление образов и запуск контейнеров
       - name: Deploy to server via SSH
         uses: appleboy/ssh-action@v1
         with:
