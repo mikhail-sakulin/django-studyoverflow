@@ -19,9 +19,7 @@ class ContextTagMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)  # type: ignore
 
-        tags = get_cached_tags()
-
-        context["all_tags"] = [tag.name for tag in tags]
+        context["all_tags"] = get_cached_tags()
 
         return context
 
