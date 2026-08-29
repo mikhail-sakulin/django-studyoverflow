@@ -9,7 +9,7 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from users.services import delete_cache_user, get_user_avatar_paths_list, remove_user_offline
-from users.services.moderation import MODERATOR_PERMISSIONS, STAFF_PERMISSIONS
+from users.services.permissions import MODERATOR_PERMISSIONS, STAFF_PERMISSIONS
 from users.tasks import delete_files_from_storage_task
 
 
@@ -186,11 +186,11 @@ def log_user_login_failed(sender, credentials, request, **kwargs):
 
 
 @receiver(post_save, sender=UserModel)
-def invalidate_user_object_cache_on_save(sender, instance, created, update_fields, **kwargs):
+def invalidate_user_object_cache_on_save(sender, instance, created, raw, update_fields, **kwargs):
     """
     Удаляет кэш объекта пользователя при изменении данных пользователя, кроме пароля.
     """
-    if created:
+    if created or raw:
         return
 
     if update_fields and "password" in update_fields:
