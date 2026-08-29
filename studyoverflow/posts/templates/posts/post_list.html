@@ -11,7 +11,10 @@
 
 {% block extra_css %}
   {# Подключение CSS-темы для подсветки синтаксиса кода #}
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+
+  {# Подключение KaTeX CSS: стили для математических формул, latex-синтаксис, рендерятся через <span class="math-inline"> и <div class="math"> #}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_base.css' %}">
 
@@ -55,12 +58,23 @@
 
 {% block extra_js %}
   {# Подключение JS-скрипта highlight.js для подсветки синтаксиса кода #}
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/dockerfile.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/nginx.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/apache.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/makefile.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/http.min.js"></script>
+
+  <script src="https://unpkg.com/htmx.org@2.0.7"></script>
+
+  {# KaTeX JS: рендеринг математических формул (LaTeX) в элементы с классами math-inline и math #}
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 
   {# Запуск highlight.js #}
   <script src="{% static 'posts/js/highlight_run.js' %}"></script>
 
-  <script src="https://unpkg.com/htmx.org@2.0.7"></script>
+  {# JS-скрипт для рендеринга математических формул через KaTeX #}
+  <script src="{% static 'posts/js/katex_render.js' %}"></script>
 
   {# Подключение локального JS-скрипта для управления тегами и блоком готовых тегов #}
   <script src="{% static 'posts/js/create_post_tags.js' %}"></script>

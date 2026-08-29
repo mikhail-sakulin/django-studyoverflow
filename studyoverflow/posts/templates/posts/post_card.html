@@ -8,8 +8,7 @@
 
     {# Автор и время публикации #}
     <div class="d-flex align-items-center mb-2">
-
-    <img id="avatar"
+      <img id="avatar"
          src="{{ post.author.avatar_small_size1_url }}"
          alt="{{ post.author.username }}"
          class="rounded-circle"
@@ -24,10 +23,16 @@
 
       <div class="image-modal-wrapper"></div>
 
-      <div>
-        <a id="username" href="{% url 'users:profile' post.author.username %}" class="author-name d-inline-block mb-1">
-          {{ post.author.username }} {% user_role_badge post.author %}
-        </a>
+      <div class="flex-grow-1" style="min-width: 0;">
+        <div id="username-row" class="d-flex align-items-center gap-1 mb-1">
+          <a id="username" href="{% url 'users:profile' post.author.username %}" class="author-name text-truncate" style="min-width: 0;">
+            {{ post.author.username }}
+          </a>
+          {% user_role_badge post.author %}
+          {% if post.author.is_blocked %}
+            <span class="text-danger flex-shrink-0">(заблокирован)</span>
+          {% endif %}
+        </div>
 
         <div id="time_create-time_update" class="text-secondary">
           Опубликовано: {{ post.time_create|date:"d.m.Y г. H:i" }}
@@ -36,7 +41,6 @@
           {% endif %}
         </div>
       </div>
-
     </div>
 
     <hr class="mt-1 mb-2">

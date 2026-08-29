@@ -16,7 +16,7 @@
       <div class="col-12">
         <label class="form-label">Поиск в постах</label>
         <input type="text" name="q" class="form-control" value="{{ request.GET.q }}"
-               placeholder="Текст в заголовке или содержимом...">
+               placeholder="Текст в заголовке, содержимом или в именах тегов...">
       </div>
     </div>
 
@@ -38,7 +38,9 @@
 
           <div id="tags-container" class="form-control">
             {% for tag in all_tags %}
-              <div class="tag-item" data-tag="{{ tag }}">{{ tag }}</div>
+              <div class="tag-item" data-tag="{{ tag.name }}">
+                {{ tag.name }} <span class="tag-count">({{ tag.posts_count }})</span>
+              </div>
             {% endfor %}
           </div>
         </div>

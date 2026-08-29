@@ -280,7 +280,7 @@ class TagSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LowercaseTag
-        fields = ["id", "name"]
+        fields = ["id", "name", "posts_count"]
 
 
 class DetailSerializer(serializers.Serializer):

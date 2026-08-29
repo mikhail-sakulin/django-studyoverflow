@@ -76,6 +76,21 @@ class TestValidateAndNormalizeTags:
         with pytest.raises(ValidationError, match="Длина тега не может превышать 50 символов."):
             validate_and_normalize_tags(["some_tag"])
 
+    def test_non_latin_letters_raise_error(self):
+        """Буквы других алфавитов вызывают ошибку валидации."""
+        # Проверяем чисто нелатинские буквы и смесь латиницы с кириллицей,
+        # プログラミング - перевод "программирование".
+        for invalid_tag in ["программирование", "プログラミング"]:
+            with pytest.raises(ValidationError):
+                validate_and_normalize_tags([invalid_tag])
+
+    def test_it_special_characters_are_allowed(self):
+        """Спецсимволы и цифры в тегах разрешены, если буквы только латинские."""
+        it_tags = ["c++", "c#", ".net", "node-js", "python_3"]
+
+        result = validate_and_normalize_tags(it_tags)
+        assert result == it_tags
+
 
 class TestValidateComment:
     """Тесты validate_comment валидации иерархии комментариев."""

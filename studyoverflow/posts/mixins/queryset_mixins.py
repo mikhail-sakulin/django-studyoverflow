@@ -258,7 +258,7 @@ class CommentTreeQuerysetMixin:
                 # поля автора reply_to комментария
                 *[f"reply_to__author__{f}" for f in user_fields],
             )
-            .order_by("-time_create")
+            .order_by("time_create")
         )
 
         if root_id:

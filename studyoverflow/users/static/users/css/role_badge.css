@@ -6,6 +6,11 @@
     bottom: 0.07rem;
 }
 
+.role {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 .role-admin {
     color: #dc3545;
 }

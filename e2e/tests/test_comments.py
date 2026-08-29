@@ -78,8 +78,8 @@ def test_create_comment_tree(
 
         expected_comment_tree = [
             (comment_b_root_content, 0),
-            (reply_b_content, 1),
             (reply_a_content, 1),
+            (reply_b_content, 1),
         ]
         assert comments == expected_comment_tree
 

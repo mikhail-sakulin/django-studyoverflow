@@ -47,7 +47,6 @@
 
 .username-comment {
     margin-top: -0.25rem;
-    font-size: 1.1rem;
 }
 
 #time_create-time_update-comment {
@@ -76,4 +75,10 @@
 
 div::after {
     pointer-events: none;
+}
+
+.comment-name-block {
+    display: inline;
+    white-space: nowrap;
+    font-size: 1.1rem;
 }

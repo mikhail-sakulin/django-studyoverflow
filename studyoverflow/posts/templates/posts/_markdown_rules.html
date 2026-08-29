@@ -1,0 +1,198 @@
+{# Блок правил синтаксиса Markdown и Latex в проекте #}
+
+<div id="markdown-rules-wrapper" class="mb-3" style="display: none;">
+  <div class="markdown-rules-content p-3 rounded" style="background-color: #202023;">
+    <h4>Математические формулы через LaTeX</h4>
+    <p>Для отображения математических выражений используйте специальные HTML-теги. <code>Запись через $...$ и $$...$$
+      недоступна</code>. Введенный текст на сервере очищается от неразрешенных HTML-тегов и их атрибутов
+      через библиотеку bleach, обеспечивая безопасность.</p>
+
+    <p><strong>1) Формула внутри текста:</strong></p>
+    <pre><code class="language-markdown">&lt;span class="math-inline"&gt;\mu&lt;/span&gt;</code></pre>
+    <p><strong>Результат:</strong></p>
+    <div>
+      <span class="math-inline">\mu</span>
+    </div>
+
+    <br>
+
+    <p><strong>2) Отдельная формула по центру:</strong></p>
+    <pre><code class="language-markdown">&lt;div class="math"&gt;\sigma = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(x_i-\mu)^2}&lt;/div&gt;</code></pre>
+    <p><strong>Результат:</strong></p>
+    <div class="example-result">
+        <div class="math">\sigma = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(x_i-\mu)^2}</div>
+    </div>
+
+    <p>Внутри этих тегов используется синтаксис LaTeX,
+    например: <code>\alpha</code> → <span class="math-inline">\alpha</span>, <code>\beta</code> → <span class="math-inline">\beta</span>, <code>\sqrt{x}</code> → <span class="math-inline">\sqrt{x}</span>.</p>
+    <p>Обычный символ <code>$</code> писать можно — например, $100 не будет считаться формулой.</p>
+
+    {# Возможности Markdown #}
+    <hr>
+    <h4><strong>Возможности Markdown</strong></h4>
+    <p><strong>1) Заголовки (h1–h6)</strong></p>
+    <pre><code class="language-markdown"># Заголовок 1
+## Заголовок 2
+### Заголовок 3
+#### Заголовок 4
+##### Заголовок 5
+###### Заголовок 6</code></pre>
+    <p><strong>Результат:</strong></p>
+    <div class="example-result content">
+      <h1>Заголовок 1</h1>
+      <h2>Заголовок 2</h2>
+      <h3>Заголовок 3</h3>
+      <h4>Заголовок 4</h4>
+      <h5>Заголовок 5</h5>
+      <h6>Заголовок 6</h6>
+    </div>
+
+    <hr>
+
+    <p><strong>2) Текст: жирный, курсив, зачёркнутый, HTML-теги</strong></p>
+    <p><pre><code class="language-markdown">Это обычный текстовый абзац. В нём можно использовать **жирный**, *курсив* и ~~зачеркнутый~~ тексты.
+
+Явные HTML-теги тоже допускаются: &lt;u&gt;подчёркнутый&lt;/u&gt;, &lt;s&gt;зачёркнутый&lt;/s&gt; или &lt;del&gt;удалённый&lt;/del&gt;.</code></pre></p>
+    <p><strong>Результат:</strong></p>
+    <div class="example-result content">
+      <p>Это обычный текстовый абзац. В нём можно использовать <strong>жирный</strong> и <em>курсив</em>. Также работает <del>зачеркнутый</del>.</p>
+      <p>Явные HTML-теги тоже допускаются: <u>подчёркнутый</u>, <s>зачёркнутый</s> или <del>удалённый</del>.</p>
+    </div>
+
+    <hr>
+
+    <p><strong>3) Списки и задачи (ul, ol, вложенные списки, inline-код, ссылки)</strong></p>
+
+    <p>Между заголовком списка и пунктами, а также между вложенными списками должны быть пустые строки.</p>
+
+    <pre><code class="language-markdown">Список:
+
+1. Первый элемент
+2. Второй элемент
+
+   * Вложенный маркированный список
+   * Инлайн-вставка `кусочка кода`
+   * Обычная [ссылка](https://example.com "Подсказка ссылки")
+
+- [x] Первый отмеченный пункт
+- [x] Второй отмеченный пункт
+- [ ] Неотмеченный пункт</code></pre>
+
+    <p><strong>Результат:</strong></p>
+    <div class="example-result content">
+      <p>Список:</p>
+      <ol>
+        <li>Первый элемент</li>
+        <li>Второй элемент
+          <ul>
+            <li>Вложенный маркированный список</li>
+            <li>Инлайн-вставка <code>кусочка кода</code></li>
+            <li>Обычная <a href="#" title="Подсказка ссылки">ссылка</a></li>
+          </ul>
+        </li>
+      </ol>
+
+      <ul>
+        <li><input class="task-list-item-checkbox" type="checkbox" checked /> Первый отмеченный пункт</li>
+        <li><input class="task-list-item-checkbox" type="checkbox" checked /> Второй отмеченный пункт</li>
+        <li><input class="task-list-item-checkbox" type="checkbox" /> Неотмеченный пункт</li>
+      </ul>
+    </div>
+
+    <hr>
+
+    <p><strong>4) Таблицы (table)</strong></p>
+    <pre><code class="language-markdown">| Имя        | Роль      | Статус      |
+|:-----------|:---------:|------------:|
+| Админ      | `admin`   | **Активен** |
+| Модератор  | `staff`   | ~~Заблокирован~~ |
+| Пользователь | `user`  | *Ожидает* |</code></pre>
+
+    <p><strong>Результат:</strong></p>
+    <div class="example-result content">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Имя</th>
+            <th style="text-align:center">Роль</th>
+            <th style="text-align:right">Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="text-align:left">Админ</td>
+            <td style="text-align:center"><code>admin</code></td>
+            <td style="text-align:right"><strong>Активен</strong></td>
+          </tr>
+          <tr>
+            <td style="text-align:left">Модератор</td>
+            <td style="text-align:center"><code>staff</code></td>
+            <td style="text-align:right"><del>Заблокирован</del></td>
+          </tr>
+          <tr>
+            <td style="text-align:left">Пользователь</td>
+            <td style="text-align:center"><code>user</code></td>
+            <td style="text-align:right"><em>Ожидает</em></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr>
+
+    <p><strong>5) Цитаты</strong></p>
+    <pre><code class="language-markdown">&gt; Это пример блочной цитаты.
+&gt;
+&gt; Внутри цитат парсер обрабатывает переносы строк и базовое форматирование.</code></pre>
+
+    <p><strong>Результат:</strong></p>
+    <div class="example-result content">
+      <blockquote>
+        <p>Это пример блочной цитаты.</p>
+        <p>Внутри цитат парсер обрабатывает переносы строк и базовое форматирование.</p>
+      </blockquote>
+    </div>
+
+    <hr>
+
+    <p><strong>6) Изображения (img)</strong></p>
+    <pre><code class="language-markdown">![Логотип Django](https://static.djangoproject.com/img/logos/django-logo-negative.png "Всплывающий Title")</code></pre>
+
+    <p><strong>Результат:</strong></p>
+    <div class="example-result content">
+      <img src="https://static.djangoproject.com/img/logos/django-logo-negative.png" alt="Логотип Django" title="Всплывающий Title" style="max-width:220px;">
+    </div>
+
+    <hr>
+
+    <p><strong>7) Блоки кода</strong></p>
+    <pre><code class="language-markdown">```python
+@login_required
+def create_post(request):
+    """
+    Пример функции для тестирования подсветки синтаксиса.
+    """
+    return HttpResponse("Всё работает!")
+```</code></pre>
+
+    <p><strong>Результат:</strong></p>
+    <div class="codehilite">
+<pre><span></span><code><span class="nd">@login_required</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_post</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Пример функции для тестирования подсветки синтаксиса.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="s2">&quot;Всё работает!&quot;</span><span class="p">)</span>
+</code></pre>
+</div>
+
+    <hr>
+
+    <p><strong>8) Inline-код и символы, которые не трактуются как LaTeX</strong></p>
+    <pre><code class="language-markdown">Инлайн-код: `print("hello")`</code></pre>
+
+    <p><strong>Результат:</strong></p>
+    <p>Инлайн-код: <code>print("hello")</code></p>
+
+  </div>
+</div>

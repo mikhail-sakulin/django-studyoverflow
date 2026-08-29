@@ -197,3 +197,55 @@ class TestTagCacheSignals:
         mock_delete_cache.reset_mock()
         tag.delete()
         mock_delete_cache.assert_called_once()
+
+
+@pytest.mark.django_db
+class TestTagPostsCountSignals:
+
+    def test_tag_posts_count_increases_and_cache_invalidated_on_post_creation(
+        self, post_factory, mocker
+    ):
+        """
+        При создании поста с тегами у каждого тега увеличивается posts_count
+        и сбрасывается кеш списка тегов.
+        """
+        mock_delete_cache = mocker.patch("posts.signals.delete_cache_tags_list")
+
+        # Теги создаются заранее, чтобы можно было сделать reset mock_delete_cache.reset_mock()
+        # после создания тегов. Тогда можно будет проверить, что мок mock_delete_cache вызывался
+        # именно при назначении тегов посту.
+        LowercaseTag.objects.create(name="python")
+        LowercaseTag.objects.create(name="django")
+
+        mock_delete_cache.reset_mock()
+
+        post_factory(tags=["python", "django"])
+
+        tag_python = LowercaseTag.objects.get(name="python")
+        tag_django = LowercaseTag.objects.get(name="django")
+        assert tag_python.posts_count == 1
+        assert tag_django.posts_count == 1
+        assert mock_delete_cache.call_count == 2
+
+    def test_tag_posts_count_increases_for_multiple_posts_with_same_tag(self, post_factory):
+        """При создании нескольких постов с одинаковым тегом posts_count суммируется."""
+        post_factory(tags=["python"])
+        post_factory(tags=["python"])
+
+        tag = LowercaseTag.objects.get(name="python")
+        assert tag.posts_count == 2
+
+    def test_tag_posts_count_decreases_and_cache_invalidated_on_post_delete(
+        self, post_factory, mocker
+    ):
+        """При удалении поста posts_count связанного тега уменьшается и сбрасывается кеш."""
+        post = post_factory(tags=["python"])
+        tag = LowercaseTag.objects.get(name="python")
+        assert tag.posts_count == 1
+
+        mock_delete_cache = mocker.patch("posts.signals.delete_cache_tags_list")
+        post.delete()
+
+        tag.refresh_from_db()
+        assert tag.posts_count == 0
+        mock_delete_cache.assert_called_once()

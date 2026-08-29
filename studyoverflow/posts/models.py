@@ -28,6 +28,8 @@ class LowercaseTag(TagBase):
 
     Поля (без учета наследования):
     - name (CharField): Имя тега.
+    - posts_count (PositiveIntegerField): денормализованный счетчик количества постов
+      с конкретным тегом.
     """
 
     MAX_NAME_LENGTH_TAG: Final = 50  # максимальная длина имени тега
@@ -38,6 +40,16 @@ class LowercaseTag(TagBase):
         unique=True,
         verbose_name="Тег",
     )
+
+    # Денормализованный счетчик количества постов с конкретным тегом.
+    # Обновляется через сигналы post_save/post_delete модели TaggedPost.
+    #
+    # Библиотека django-taggit предполагает, что модель тегов, в частности LowercaseTag, может
+    # использоваться с разными моделями, не только с Post, через различные модели-посредники
+    # для m2m связей по типу TaggedPost. Поэтому добавлять конкретные счетчики в posts_count
+    # может быть нелогично, но, поскольку в проекте теги используются только с Post,
+    # денормализованный счетчик добавляется.
+    posts_count = models.PositiveIntegerField(default=0, verbose_name="Количество постов")
 
     class Meta:
         verbose_name = "Тег"
@@ -74,6 +86,20 @@ class TaggedPost(GenericTaggedItemBase):
     """
 
     tag = models.ForeignKey(LowercaseTag, related_name="tagged_posts", on_delete=models.CASCADE)
+    # По умолчанию GenericTaggedItemBase задаёт natural_key_fields = ["object_id"].
+    # Это некорректно для создания фикстур: у одного поста (object_id) может быть несколько тегов,
+    # и natural key из одного object_id получается неуникальным среди записей TaggedPost.
+    #
+    # Из-за этого при dumpdata/loaddata с флагами --natural-foreign и --natural-primary все теги
+    # одного поста перезатирались по очереди с финальным сохранением записи одного тега для
+    # каждого поста (каждая следующая запись при загрузке находила по natural key уже созданную
+    # строку и перезаписывала её вместо создания новой).
+    #
+    # natural_key_fields = ["object_id", "tag_id"] задает уникальный natural_key для каждой
+    # записи TaggedPost, поэтому при загрузке фикстур у постов сохранятся все теги.
+    # "content_type" не добавляется в natural_key_fields, поскольку в модели TaggedPost
+    # хранятся записи о тегах только для постов.
+    natural_key_fields = ["object_id", "tag_id"]
 
     class Meta:
         verbose_name = "Тег поста"
