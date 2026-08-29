@@ -9,6 +9,10 @@ from posts.services import (
     strip_tags_and_whitespace_chars_from_html,
     translit_rus_to_eng,
 )
+from posts.services.text_processing import (
+    _protect_markdown_text_blocks,
+    _restore_markdown_text_blocks,
+)
 
 
 class TestNormalizeTagName:
@@ -50,6 +54,109 @@ class TestNormalizeTagName:
 )
 def test_strip_tags_and_whitespace_chars_from_html(html_text, expected):
     assert strip_tags_and_whitespace_chars_from_html(html_text) == expected
+
+
+class TestProtectAndRestoreMarkdownTextBlocks:
+    """Тестирование защиты и восстановления блоков текста через плейсхолдеры."""
+
+    def test_protect_replaces_matches_with_placeholders(self):
+        """Найденные по паттерну блоки заменяются на плейсхолдеры с заданным префиксом."""
+        text = 'before <span class="math-inline">x_1</span> after'
+        pattern = r'<span class="math-inline">.*?</span>'
+
+        protected_text, blocks = _protect_markdown_text_blocks(
+            text, pattern, placeholder_prefix="MATHINLINEBLOCK"
+        )
+
+        assert '<span class="math-inline">' not in protected_text
+        assert "before " in protected_text
+        assert " after" in protected_text
+        assert len(blocks) == 1
+
+        placeholder, original = blocks[0]
+        assert placeholder.startswith("MATHINLINEBLOCK")
+        assert placeholder in protected_text
+        assert original == '<span class="math-inline">x_1</span>'
+
+    def test_protect_handles_multiple_matches_with_unique_placeholders(self):
+        """При нескольких совпадениях каждому блоку присваивается уникальный плейсхолдер."""
+        text = '<span class="math-inline">a</span> text ' '<span class="math-inline">b</span>'
+        pattern = r'<span class="math-inline">.*?</span>'
+
+        protected_text, blocks = _protect_markdown_text_blocks(
+            text, pattern, placeholder_prefix="MATHINLINEBLOCK"
+        )
+
+        assert len(blocks) == 2
+        # Плейсхолдеры уникальны за счёт uuid
+        assert blocks[0][0] != blocks[1][0]
+        assert blocks[0][1] == '<span class="math-inline">a</span>'
+        assert blocks[1][1] == '<span class="math-inline">b</span>'
+
+    def test_protect_matches_across_newlines(self):
+        """
+        Паттерн находит совпадения, содержащие перенос строки (флаг re.DOTALL - точка
+        может означать любой символ, включая символ переноса строки).
+        """
+        text = '<div class="math">line1\nline2</div>'
+        pattern = r'<div class="math">.*?</div>'
+
+        protected_text, blocks = _protect_markdown_text_blocks(
+            text, pattern, placeholder_prefix="MATHCENTERBLOCK"
+        )
+
+        assert len(blocks) == 1
+        assert blocks[0][1] == '<div class="math">line1\nline2</div>'
+
+    def test_protect_no_matches_returns_original_text_and_empty_blocks(self):
+        """Если совпадений нет, текст возвращается без изменений, а список блоков пуст."""
+        text = "just plain text without protected blocks"
+        pattern = r'<span class="math-inline">.*?</span>'
+
+        protected_text, blocks = _protect_markdown_text_blocks(
+            text, pattern, placeholder_prefix="MATHINLINEBLOCK"
+        )
+
+        assert protected_text == text
+        assert blocks == []
+
+    def test_restore_puts_original_blocks_back_in_place_of_placeholders(self):
+        """Плейсхолдеры в html корректно заменяются обратно на исходные блоки."""
+        blocks = [("PLACEHOLDER1", '<span class="math-inline">x_1</span>')]
+        rendered_html = "<p>before PLACEHOLDER1 after</p>"
+
+        restored_html = _restore_markdown_text_blocks(rendered_html, blocks)
+
+        assert restored_html == '<p>before <span class="math-inline">x_1</span> after</p>'
+
+    def test_restore_with_multiple_blocks(self):
+        """Восстанавливаются несколько блоков одновременно, каждый по своему плейсхолдеру."""
+        blocks = [
+            ("PH1", '<span class="math-inline">a</span>'),
+            ("PH2", '<span class="math-inline">b</span>'),
+        ]
+        rendered_html = "<p>PH1 and PH2</p>"
+
+        restored_html = _restore_markdown_text_blocks(rendered_html, blocks)
+
+        assert restored_html == (
+            '<p><span class="math-inline">a</span> and ' '<span class="math-inline">b</span></p>'
+        )
+
+    def test_protect_then_restore_roundtrip(self):
+        """Последовательное применение protect и restore возвращает исходный блок текста."""
+        # Двойное экранирование: \\ - для экранирования \, чтобы в тексте буквально было \_,
+        # а \_ в LaTeX экранирует _, чтобы "_" воспринимался не как начало текста в нижнем индексе,
+        # а как просто нижнее подчеркивание.
+        text = 'text <span class="math-inline">a_1 \\_ b</span> more text'
+        pattern = r'<span class="math-inline">.*?</span>'
+
+        protected_text, blocks = _protect_markdown_text_blocks(
+            text, pattern, placeholder_prefix="MATHINLINEBLOCK"
+        )
+        restored_text = _restore_markdown_text_blocks(protected_text, blocks)
+
+        assert restored_text == text
 
 
 class TestRenderMarkdownSafe:
@@ -118,8 +225,7 @@ class TestRenderMarkdownSafe:
 
         assert "<pre>" in html or "<pre" in html
         assert "<code" in html
-        # экранирование кавычек ('hello')
-        assert "print(&#39;hello&#39;)" in html
+        assert "print('hello')" in html
 
     def test_task_lists(self):
         """
@@ -133,6 +239,47 @@ class TestRenderMarkdownSafe:
         assert "type=" in html
         assert "disabled" in html
         assert "checked" in html
+
+    def test_highlightjs_lang_class_added_to_code_block(self):
+        """
+        К блокам кода с указанием языка добавляется CSS-класс языка
+        (например, class="language-python") для интеграции с highlight.js
+        (из-за наличия "highlightjs-lang" в python списке extras).
+        """
+        code_block = "```python\nprint('hello')\n```"
+        html = render_markdown_safe(code_block)
+
+        assert 'class="python language-python"' in html
+
+    def test_break_on_newline_converts_single_newline_to_br(self):
+        """
+        Одиночный перевод строки внутри абзаца превращается в тег <br>
+        (проверяется наличие "break-on-newline" в python списке extras).
+        """
+        text = "line one\nline two"
+        html = render_markdown_safe(text)
+
+        assert "<br>" in html
+
+    def test_math_inline_block_is_preserved_as_is(self):
+        """
+        Inline math-блоки (<span class="math-inline">...</span>) защищаются от обработки
+        markdown2 и bleach и сохраняются в исходном виде в итоговом html.
+        """
+        text = 'Формула: <span class="math-inline">a_1 \\_ b</span> и текст дальше.'
+        html = render_markdown_safe(text)
+
+        assert '<span class="math-inline">a_1 \\_ b</span>' in html
+
+    def test_math_center_block_is_preserved_as_is(self):
+        """
+        Центрированные math-блоки (<div class="math">...</div>) защищаются от обработки
+        markdown2 и bleach и сохраняются в исходном виде в итоговом html.
+        """
+        text = 'Формула:\n<div class="math">x^2 + y^2 = z^2</div>\nдальше текст.'
+        html = render_markdown_safe(text)
+
+        assert '<div class="math">x^2 + y^2 = z^2</div>' in html
 
 
 class TestGenerateSlug(SimpleTestCase):
