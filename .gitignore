@@ -16,6 +16,7 @@ __pycache__/
 
 # Фикстуры
 **/fixtures/
+db_prod_dump.json
 
 # Медиа-файлы
 media/
