@@ -5,11 +5,17 @@ from django.contrib import admin, messages
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from django.db.models import Count
 from django.db.models.functions import Length
+from django.utils.html import format_html
 from django.utils.text import Truncator
 
 from posts.models import Comment, Like, LowercaseTag, Post, TaggedPost
+
+
+# Задает HTML-атрибуты для тега textarea для текстовых полей rendered_content и search_content
+# для Post и Comment.
+# class="vLargeTextField" - стандартный Django CSS-класс.
+READONLY_TEXTAREA_ATTRS = 'class="vLargeTextField" readonly rows="10" cols="40"'
 
 
 class IsEditedFilter(admin.SimpleListFilter):
@@ -98,6 +104,8 @@ class PostAdmin(admin.ModelAdmin):
         "is_edited_display",
         "short_title",
         "brief_info",
+        "likes_count",
+        "comments_count",
     )
     list_display_links = (
         "id",
@@ -114,7 +122,8 @@ class PostAdmin(admin.ModelAdmin):
     ]
     search_fields = [
         "title",
-        "content",
+        "search_content",
+        "tags__name",
     ]
     list_filter = [
         IsEditedFilter,
@@ -128,9 +137,23 @@ class PostAdmin(admin.ModelAdmin):
         "title",
         "slug",
         "content",
+        "rendered_content_display",
+        "search_content_display",
         "tags",
+        "likes_count",
+        "comments_count",
     ]
-    readonly_fields = ["id", "author", "slug", "time_create", "time_update"]
+    readonly_fields = [
+        "id",
+        "author",
+        "slug",
+        "time_create",
+        "time_update",
+        "rendered_content_display",
+        "search_content_display",
+        "likes_count",
+        "comments_count",
+    ]
 
     def get_queryset(self, request):
         """Добавляет content_len для сортировки по объему текста."""
@@ -172,6 +195,24 @@ class PostAdmin(admin.ModelAdmin):
     def brief_info(self, post: Post):
         return f"Контент из {post.content_len or 0} символов."
 
+    @admin.display(description="Отрендеренное содержимое (HTML из Markdown)")
+    def rendered_content_display(self, post: Post):
+        """Отображает rendered_content в readonly-textarea в стиле обычного поля content."""
+        # format_html — экранирует html-символы, чтобы текст вывелся как обычный текст,
+        # а не как html
+        return format_html(
+            f"<textarea {READONLY_TEXTAREA_ATTRS}>" "{}</textarea>",
+            post.rendered_content,
+        )
+
+    @admin.display(description="Текст для поиска по содержимому")
+    def search_content_display(self, post: Post):
+        """Отображает search_content в readonly-textarea в стиле обычного поля content."""
+        return format_html(
+            f"<textarea {READONLY_TEXTAREA_ATTRS}>" "{}</textarea>",
+            post.search_content,
+        )
+
     def _can_clear_content(self, user):
         """Проверяет наличие прав администратора или модератора для выполнения действий."""
         UserModel = get_user_model()  # noqa: N806
@@ -191,6 +232,7 @@ class CommentAdmin(admin.ModelAdmin):
         "author",
         "short_content",
         "short_post",
+        "likes_count",
     )
     list_display_links = ("id", "short_content")
     search_fields = ["content", "author__username", "post__title"]
@@ -206,6 +248,8 @@ class CommentAdmin(admin.ModelAdmin):
         "parent_comment",
         "reply_to",
         "content",
+        "rendered_content_display",
+        "likes_count",
     ]
     readonly_fields = [
         "id",
@@ -215,6 +259,8 @@ class CommentAdmin(admin.ModelAdmin):
         "post",
         "parent_comment",
         "reply_to",
+        "rendered_content_display",
+        "likes_count",
     ]
 
     def get_queryset(self, request):
@@ -233,6 +279,14 @@ class CommentAdmin(admin.ModelAdmin):
     @admin.display(description="Пост")
     def short_post(self, comment: Comment):
         return Truncator(comment.post.title).chars(40, truncate="...")
+
+    @admin.display(description="Отрендеренное содержимое (HTML из Markdown)")
+    def rendered_content_display(self, comment: Comment):
+        """Отображает rendered_content в readonly-textarea в стиле обычного поля content."""
+        return format_html(
+            f"<textarea {READONLY_TEXTAREA_ATTRS}>" "{}</textarea>",
+            comment.rendered_content,
+        )
 
     def has_add_permission(self, request):
         """Запрещает создание комментариев через админ-паенль."""
@@ -259,14 +313,17 @@ class LowercaseTagAdmin(admin.ModelAdmin):
     ordering = ["name", "id"]
     list_per_page = 15
 
-    def get_queryset(self, request):
-        """Расширяет стандартный запрос, добавляя количество постов для каждого тега."""
-        qs = super().get_queryset(request)
-        return qs.annotate(posts_count=Count("tagged_posts"))
-
-    @admin.display(description="Количество постов с этим тегом", ordering="posts_count")
-    def posts_count(self, tag: LowercaseTag):
-        return tag.posts_count
+    # Теперь у тегов есть денормализованное поле posts_count, поэтому переопределять
+    # get_queryset не нужно.
+    #
+    # def get_queryset(self, request):
+    #     """Расширяет стандартный запрос, добавляя количество постов для каждого тега."""
+    #     qs = super().get_queryset(request)
+    #     return qs.annotate(posts_count=Count("tagged_posts"))
+    #
+    # @admin.display(description="Количество постов с этим тегом", ordering="posts_count")
+    # def posts_count(self, tag: LowercaseTag):
+    #     return tag.posts_count
 
 
 @admin.register(TaggedPost)
