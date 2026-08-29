@@ -7,13 +7,16 @@
 {# Шаблон страницы детального представления поста #}
 
 {% block title %}
-    <title>Пост</title>
+    <title>{{ post.title|truncatechars:35 }}</title>
 {% endblock %}
 
 
 {% block extra_css %}
   {# Подключение CSS-темы для подсветки синтаксиса кода #}
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+
+  {# Подключение KaTeX CSS: стили для математических формул, latex-синтаксис, рендерятся через <span class="math-inline"> и <div class="math"> #}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 
   <link type="text/css" rel="stylesheet" href="{% static 'posts/css/post_base.css' %}">
 
@@ -52,10 +55,16 @@
                hx-indicator="#modal-loading-indicator"
                hx-on:htmx:before-request="openModal()">
 
-          <div>
-            <a id="username" href="{% url 'users:profile' post.author.username %}" class="author-name d-inline-block mb-1">
-              {{ post.author.username }} {% user_role_badge post.author %}
-            </a>
+          <div class="flex-grow-1" style="min-width: 0;">
+            <div id="username-row" class="d-flex align-items-center gap-1 mb-1">
+              <a id="username" href="{% url 'users:profile' post.author.username %}" class="author-name text-truncate" style="min-width: 0;">
+                {{ post.author.username }}
+              </a>
+              {% user_role_badge post.author %}
+              {% if post.author.is_blocked %}
+                <span class="text-danger flex-shrink-0">(заблокирован)</span>
+              {% endif %}
+            </div>
 
             <div id="time_create-time_update" class="text-secondary">
               Опубликовано: {{ post.time_create|date:"d.m.Y г. H:i" }}
@@ -156,11 +165,24 @@
 
 {% block extra_js %}
   {# Подключение JS-скрипта highlight.js для подсветки синтаксиса кода #}
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/dockerfile.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/nginx.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/apache.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/makefile.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/http.min.js"></script>
 
-  <script src="{% static 'posts/js/post_detail.js' %}"></script>
+  {# KaTeX JS: рендеринг математических формул (LaTeX) в кастомных элементах с классами math-inline и math #}
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 
   <script src="https://unpkg.com/htmx.org@2.0.7"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  {# JS-скрипт для рендеринга математических формул через KaTeX #}
+  <script src="{% static 'posts/js/katex_render.js' %}"></script>
+
+  <script src="{% static 'posts/js/post_detail.js' %}"></script>
 
   {# Запуск highlight.js #}
   <script src="{% static 'posts/js/highlight_run.js' %}"></script>
@@ -168,6 +190,4 @@
   <script src="{% static 'users/js/avatar_modal.js' %}"></script>
 
   <script src="{% static 'posts/js/comments_detail.js' %}"></script>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}

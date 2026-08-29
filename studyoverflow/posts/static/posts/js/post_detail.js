@@ -18,7 +18,6 @@ document.addEventListener("DOMContentLoaded", function() {
             hljs.highlightAll();
         }
     }
-    highlightCodeBlocks();
 
     // Показ формы и блокировка кнопки
     function showForm(containerId, toggleBtn) {
