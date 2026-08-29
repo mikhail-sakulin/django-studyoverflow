@@ -1,5 +1,10 @@
-#id_title, #id_content, #id_tags, #content-preview {
-    background-color: black;
+#id_title, #id_content, #id_tags {
+    background-color: #0d1117;
+    color: white;
+}
+
+#content-preview {
+    background-color: #202023;
     color: white;
 }
 

@@ -3,9 +3,9 @@
     transition: max-height 0.3s ease-out, opacity 0.3s ease-out, margin-top 0.3s ease;
 }
 
-#filters-form .form-control {
-    background-color: #000 !important;
-    color: #fff !important;
+#filters-form input.form-control:not(#tag-search) {
+    background-color: #0d1117;
+    color: #fff;
 }
 
 #filters-form .bg-black {
@@ -18,6 +18,7 @@
     opacity: 0 !important;
     margin-top: 0 !important;
     pointer-events: none;
+    color: #3c3c3c;
 }
 
 .filters-visible {
