@@ -6,7 +6,7 @@
     text-overflow: ellipsis;
     text-decoration: none;
     color: rgba(255, 193, 7, 0.85);
-    font-size: 1.3rem;
+    font-size: 1.34rem;
 }
 
 .title:hover {
@@ -43,7 +43,7 @@
     cursor: pointer;
 }
 
-#username {
+#username-row {
     margin-top: -0.25rem;
     font-size: 1.1rem;
 }

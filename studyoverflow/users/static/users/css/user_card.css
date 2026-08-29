@@ -73,7 +73,3 @@
 .author-name:hover {
     color: skyblue;
 }
-
-.author-name:hover .role {
-    filter: brightness(1.2);
-}

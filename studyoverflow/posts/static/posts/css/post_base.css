@@ -6,16 +6,10 @@
 .author-name {
     color: cornflowerblue;
     text-decoration: none;
-    white-space: normal;
-    word-break: break-word;
 }
 
 .author-name:hover {
     color: skyblue;
-}
-
-.author-name:hover .role {
-    filter: brightness(1.2);
 }
 
 pre, code.hljs {
@@ -59,7 +53,7 @@ pre, code.hljs {
 
 .content p {
     margin: 0 0 1em 0;
-    white-space: pre-wrap;
+    white-space: normal;
 }
 
 .content > :last-child {
@@ -70,6 +64,8 @@ pre, code.hljs {
     max-width: 100%;
     height: auto;
     display: block;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .content table {
