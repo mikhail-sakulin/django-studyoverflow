@@ -4,16 +4,24 @@
     <ul class="pagination mb-4">
 
       <li class="page-item {% if not page_obj.has_previous %} disabled {% endif %}">
-        <a class="page-link" href="?{{ querystring }}&page={{ page_obj.number|add:-1 }}">
-          <span aria-hidden="true">«</span>
-        </a>
+        {% if page_obj.has_previous %}
+          <a class="page-link" href="?{{ querystring }}&page={{ page_obj.number|add:-1 }}">
+            <span aria-hidden="true">«</span>
+          </a>
+        {% else %}
+          <span class="page-link" tabindex="-1" aria-disabled="true">
+            <span aria-hidden="true">«</span>
+          </span>
+        {% endif %}
       </li>
 
       {% if page_obj.number|add:-3 > 0 %}
         <li class="page-item">
           <a class="page-link" href="?{{ querystring }}&page={{ 1 }}">1</a>
         </li>
+      {% endif %}
 
+      {% if page_obj.number|add:-4 > 0 %}
         {% include 'posts/_pagination_jump.html' %}
       {% endif %}
 
@@ -45,18 +53,26 @@
         </li>
       {% endif %}
 
-      {% if page_obj.number|add:3 <= page_obj.paginator.num_pages %}
+      {% if page_obj.number|add:4 <= page_obj.paginator.num_pages %}
         {% include 'posts/_pagination_jump.html' %}
+      {% endif %}
 
+      {% if page_obj.number|add:3 <= page_obj.paginator.num_pages %}
         <li class="page-item">
           <a class="page-link" href="?{{ querystring }}&page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a>
         </li>
       {% endif %}
 
       <li class="page-item {% if not page_obj.has_next %} disabled {% endif %}">
-        <a class="page-link" href="?{{ querystring }}&page={{ page_obj.number|add:1 }}">
-          <span aria-hidden="true">»</span>
-        </a>
+        {% if page_obj.has_next %}
+          <a class="page-link" href="?{{ querystring }}&page={{ page_obj.number|add:1 }}">
+            <span aria-hidden="true">»</span>
+          </a>
+        {% else %}
+          <span class="page-link" tabindex="-1" aria-disabled="true">
+            <span aria-hidden="true">»</span>
+          </span>
+        {% endif %}
       </li>
 
     </ul>
