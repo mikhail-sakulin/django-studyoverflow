@@ -119,8 +119,9 @@ jobs:
           cache-from: type=gha,scope=prod-promtail
           cache-to: type=gha,mode=max,scope=prod-promtail
 
-  # Деплой prod-lite сборки на сервер
-  deploy-prod-lite:
+  # Деплой production сборки на сервер, режим lite или full production сборки выбирается исходя из значения
+  # переменной репозитория DEPLOY_MODE.
+  deploy-prod:
     needs: publish-images
     uses: ./.github/workflows/cd-deploy.yml
     # Передает секреты репозитория внутрь вызываемого workflow
