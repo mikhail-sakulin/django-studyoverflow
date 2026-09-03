@@ -70,6 +70,15 @@ jobs:
           cache-from: type=gha,scope=prod-promtail
           cache-to: type=gha,mode=max,scope=prod-promtail
 
+      - name: Build grafana image (cached)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./monitoring/grafana
+          tags: studyoverflow-grafana:prod
+          load: true
+          cache-from: type=gha,scope=prod-grafana
+          cache-to: type=gha,mode=max,scope=prod-grafana
+
       # Запуск prod сервисов и ожидание их полного запуска (присутствуют healthchecks)
       - name: Start production stack
         run: |
