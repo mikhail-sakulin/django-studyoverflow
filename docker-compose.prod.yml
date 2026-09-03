@@ -127,8 +127,13 @@ services:
     environment:
       # Домен, на котором доступна Grafana
       - GF_SERVER_DOMAIN=${SITE_DOMAIN}
-      # Базовый URL, по которому пользователи заходят в Grafana (нужен, чтобы Grafana правильно строила пути к своим файлам)
-      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/
+      # Параметр задает протокол веб-сервера Grafana внутри Docker-сети.
+      - GF_SERVER_PROTOCOL=http
+      # Secure-флаг у cookie авторизации выставляется только тогда, когда сайт доступен по https, иначе
+      # при http браузер не отправит cookie.
+      - GF_SECURITY_COOKIE_SECURE=${NGINX_SSL_ENABLED}
+      # Базовый URL, по которому пользователи заходят в Grafana, нужен для формирования внешних ссылок в уведомлениях и редиректах
+      - GF_SERVER_ROOT_URL=${GF_EXTERNAL_PROTOCOL}://%(domain)s/grafana/
       # Разрешает Grafana отдавать контент по вложенному пути (например /grafana/), а не из корня домена (/)
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
 
