@@ -62,11 +62,18 @@
                 {% endif %}
               </label>
               {{ f }}
-            </div>
 
-            <span class="text-danger">
-              {{ f.errors }}
-            </span>
+              {# Ошибки поля #}
+              {% if f.errors %}
+                <div class="text-danger mb-3">
+                  {% for err in f.errors %}
+                    <div class="mt-2">
+                      {{ err }}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
 
             {% if f == form.content %}
               <div class="mb-3">
