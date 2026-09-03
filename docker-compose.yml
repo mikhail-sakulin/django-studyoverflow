@@ -122,7 +122,8 @@ services:
       - loki
 
   grafana:
-    image: grafana/grafana:13.1
+    build: ./monitoring/grafana
+    image: ${GRAFANA_IMAGE}:${IMAGE_TAG}
     restart: unless-stopped
     expose:
       - "3000"

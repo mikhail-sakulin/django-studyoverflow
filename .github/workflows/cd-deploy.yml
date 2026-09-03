@@ -1,4 +1,7 @@
-# Выполняет деплой production-lite-сборки на сервер, вызывается в cd-release.
+# Выполняет деплой production сборки на сервер, вызывается в cd-release.
+#
+# Production-lite или production-full режим сборки выбирается через переменную репозитория
+# DEPLOY_MODE: lite или full.
 
 name: CD Deploy
 
@@ -12,6 +15,10 @@ jobs:
   deploy:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    # Задает переменную окружения DEPLOY_MODE (lite или full режим сборки) в контекст процессов каждого шага джобы,
+    # значение берется из переменной репозитория.
+    env:
+      DEPLOY_MODE: ${{ vars.DEPLOY_MODE }}
 
     steps:
       # Скачивание кода репозитория на виртуальную машину
@@ -37,26 +44,34 @@ jobs:
           host: ${{ secrets.PROD_SSH_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
           password: ${{ secrets.PROD_SSH_PASSWORD }}
+          # Передача переменной окружения в процесс скрипта на сервере
+          envs: DEPLOY_MODE
           # set -e - немедленное завершение скрипта при ошибке
-          # Новые Docker образы скачиваются, контейнеры перезапускаются, старые образы удаляются
+          #
+          # Создается переменная bash-скрипта COMPOSE_FILES, которой задается список docker-compose файлов
+          # в зависимости от режима сборки (lite или full), при неверном режиме скрипт выведет сообщение об ошибке и завершится.
+          #
+          # Новые Docker образы скачиваются, контейнеры перезапускаются, старые образы удаляются.
           script: |
             set -e
             cd /app/studyoverflow
             
-            docker compose \
-              -p studyoverflow-prod \
-              -f docker-compose.yml \
-              -f docker-compose.prod.yml \
-              -f docker-compose.prod-lite.yml \
-              --env-file .env.prod \
-              pull
+            case "$DEPLOY_MODE" in
+              lite)
+                COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.prod-lite.yml"
+                ;;
+              full)
+                COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml"
+                ;;
+              *)
+                echo "ERROR: Invalid DEPLOY_MODE: '$DEPLOY_MODE'"
+                echo "Expected: lite or full"
+                exit 1
+                ;;
+            esac
             
-            docker compose \
-              -p studyoverflow-prod \
-              -f docker-compose.yml \
-              -f docker-compose.prod.yml \
-              -f docker-compose.prod-lite.yml \
-              --env-file .env.prod \
-              up -d --wait
+            docker compose -p studyoverflow-prod $COMPOSE_FILES --env-file .env.prod pull
+            
+            docker compose -p studyoverflow-prod $COMPOSE_FILES --env-file .env.prod up -d --wait
             
             docker image prune -f

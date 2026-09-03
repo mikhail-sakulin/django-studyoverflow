@@ -128,8 +128,8 @@ html {
     flex: 1 0 auto;
 }
 
-footer a.text-secondary:hover {
-    color: #a23e3e !important;
+footer a:hover {
+    color: #bd4545 !important;
 }
 
 .text-white-muted {
@@ -138,4 +138,21 @@ footer a.text-secondary:hover {
 
 #footer {
     border-top: 1px solid darkgray;
+}
+
+.contact-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: fit-content;
+}
+
+.contact-block h5 {
+    width: 100%;
+    text-align: center;
+}
+
+.a-contact {
+    color: lightgray;
+    text-decoration: none;
 }

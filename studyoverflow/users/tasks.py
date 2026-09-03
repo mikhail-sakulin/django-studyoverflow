@@ -90,13 +90,13 @@ def delete_old_avatars_from_s3_storage(
         )
         return
 
-    if avatar_names_for_delete:
+    if avatar_names_for_delete is not None:
         files = [name for name in avatar_names_for_delete if name]
         if files:
             delete_old_avatar_names(files)
         return
 
-    prefix_for_avatars = f"avatars/{user.pk}"
+    prefix_for_avatars = f"avatars/{user.s3_storage_uuid}"
 
     _, files_in_avatars_dir = default_storage.listdir(prefix_for_avatars)
 
@@ -309,15 +309,25 @@ def download_and_set_avatar(user_id: int, avatar_url: str) -> None:
 
 
 @shared_task(ignore_result=True, acks_late=True, reject_on_worker_lost=True)
-def delete_files_from_storage_task(file_paths: list[str]) -> None:
+def delete_all_avatars_files_task(folder_uuid: str) -> None:
     """
-    Универсальная задача для удаления списка файлов из хранилища.
+    Задача для очистки всех файлов аватарок пользователя из хранилища, например
+    после удаления аккаунта пользователя.
+    """
+    prefix_for_avatars = f"avatars/{folder_uuid}"
 
-    Используется для асинхронной очистки файлов из хранилища, в том числе аватаров,
-    после удаления пользователя или обновления изображений.
-    """
-    if file_paths:
-        delete_old_avatar_names(file_paths)
+    try:
+        # listdir возвращает кортеж: (список_директорий, список_файлов)
+        _, files_in_avatars_dir = default_storage.listdir(prefix_for_avatars)
+
+        if files_in_avatars_dir:
+            # Формируются полные пути к файлам для удаления
+            file_paths = [f"{prefix_for_avatars}/{file}" for file in files_in_avatars_dir]
+            delete_old_avatar_names(file_paths)
+
+    except Exception as e:
+        # Логируются потенциальные сетевые таймауты, ошибки авторизации S3 и так далее
+        logger.error(f'Ошибка при удалении файлов в "папке" {prefix_for_avatars}: {e}')
 
 
 @shared_task(

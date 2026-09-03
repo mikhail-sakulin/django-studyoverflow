@@ -1,3 +1,5 @@
+import uuid
+
 from celery import chain
 from django.contrib.auth.models import AbstractUser, Group, UserManager
 from django.core.validators import MaxLengthValidator, validate_email
@@ -42,6 +44,8 @@ class User(AbstractUser):
     - last_name (CharField): Фамилия.
     - bio (TextField): Информация о пользователе.
     - date_birth (DateField): Дата рождения.
+    - s3_storage_uuid (UUIDField): Уникальный идентификатор "папки" аватарок пользователя в S3
+      хранилище, не зависящий от pk и username.
     - avatar (ImageField): Основной аватар.
     - avatar_small_size1 (ImageField): Миниатюра аватара №1 (100x100).
     - avatar_small_size2 (ImageField): Миниатюра аватара №2 (170x170).
@@ -143,6 +147,23 @@ class User(AbstractUser):
         blank=True, null=True, validators=[date_birth_validator], verbose_name="Дата рождения"
     )
 
+    # Уникальный идентификатор "папки" аватаров пользователя в S3 хранилище, не зависящий
+    # от pk и username. Используется, когда аватар не дефолтный.
+    #
+    # Используется вместо pk или username в путях хранения файлов (avatars/<uuid>/...), чтобы:
+    # 1) при загрузке фикстур БД, когда pk пользователей меняется, не терять
+    #    привязку уже загруженных файлов аватаров к пользователям;
+    # 2) не зависеть от username, чтобы изменение поля не требовало переноса файлов в S3 (изменить
+    #    имя файлов в S3 нельзя, только скопировать файлы с новым именем и удалить предыдущие).
+    #
+    # Задается один раз при создании пользователя и не меняется независимо от того, меняет
+    # пользователь аватар, сбрасывает его на дефолтный или нет.
+    s3_storage_uuid = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        unique=True,
+        verbose_name='UUID "папки" аватарок в S3',
+    )
     avatar = models.ImageField(
         upload_to=user_avatar_upload_path,
         blank=True,

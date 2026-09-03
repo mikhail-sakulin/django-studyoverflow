@@ -48,3 +48,13 @@
     filter: brightness(0.95);
     border: 0;
 }
+
+.text-lightgray {
+    color: lightgray;
+}
+
+.btn-disabled {
+    opacity: 0.6;
+    cursor: default;
+    pointer-events: none;
+}

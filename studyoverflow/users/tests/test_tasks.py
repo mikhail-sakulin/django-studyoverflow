@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from users.tasks import (
     clear_expired_sessions,
-    delete_files_from_storage_task,
+    delete_all_avatars_files_task,
     delete_old_avatars_from_s3_storage,
     download_and_set_avatar,
     flush_expired_jwt_tokens,
@@ -64,7 +64,7 @@ class TestAvatarTasks:
     def test_delete_old_avatars_auto_detect(self, user_factory, mocker):
         """Определяет и удаляет лишние файлы из хранилища."""
         user = user_factory()
-        user.avatar = f"avatars/{user.pk}/main.jpg"
+        user.avatar = f"avatars/{user.s3_storage_uuid}/main.jpg"
         user.save()
         mocker.patch.object(UserModel, "get_small_avatar_fields", return_value=[])
         mocker.patch(
@@ -73,13 +73,25 @@ class TestAvatarTasks:
         )
         mock_delete = mocker.patch("users.tasks.delete_old_avatar_names")
         delete_old_avatars_from_s3_storage(user.pk)
-        mock_delete.assert_called_once_with([f"avatars/{user.pk}/old.jpg"])
+        mock_delete.assert_called_once_with([f"avatars/{user.s3_storage_uuid}/old.jpg"])
 
     def test_delete_files_from_storage_task(self, mocker):
         """Вызывает удаление переданного списка файлов."""
+        folder_uuid = "test-uuid-123"
+
+        mocker.patch(
+            "users.tasks.default_storage.listdir",
+            return_value=([], ["file1.jpg", "file2.jpg"]),
+        )
         mock_delete = mocker.patch("users.tasks.delete_old_avatar_names")
-        delete_files_from_storage_task(["file1.jpg", "file2.jpg"])
-        mock_delete.assert_called_once_with(["file1.jpg", "file2.jpg"])
+
+        delete_all_avatars_files_task(folder_uuid=folder_uuid)
+
+        expected_paths = [
+            f"avatars/{folder_uuid}/file1.jpg",
+            f"avatars/{folder_uuid}/file2.jpg",
+        ]
+        mock_delete.assert_called_once_with(expected_paths)
 
 
 @pytest.mark.django_db

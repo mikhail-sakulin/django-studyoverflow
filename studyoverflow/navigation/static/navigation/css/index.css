@@ -6,7 +6,7 @@
 }
 
 #main_index {
-    min-height: 88vh;
+    min-height: 89vh;
     padding-bottom: 50px;
     animation: swayBG 20s ease-in-out infinite;
 }
@@ -50,7 +50,7 @@
 }
 
 :root{
-    --anim-duration: 1200ms;
+    --anim-duration: 1350ms;
 }
 
 #text-title{
@@ -62,16 +62,21 @@
     display: inline-block;
     position: relative;
     vertical-align: bottom;
-    overflow: hidden;
-    transition: width  var(--anim-duration) cubic-bezier(.4,0,.2,1),
-                height var(--anim-duration) cubic-bezier(.4,0,.2,1);
+    overflow: visible;
+    transition: width var(--anim-duration) cubic-bezier(.4,0,.2,1);
     box-sizing: content-box;
+    white-space: nowrap;
+}
+
+#changing-text::before {
+    content: "web-разработчика";
+    visibility: hidden;
     white-space: nowrap;
 }
 
 .phrase {
     position: absolute;
-    left: 0;
+    left: 50%;
     top: 0;
     right: auto;
     display: inline-block;
@@ -87,13 +92,21 @@
 }
 
 .from-top {
-    transform: translateY(-100%);
+    transform: translate(-50%, -100%);
     opacity: 0;
 }
 
 .in {
-    transform: translateY(0);
+    transform: translate(-50%, 0);
     opacity: 1;
+}
+
+.out {
+    transform: translate(-50%, 50%);
+    opacity: 0;
+    transition:
+      transform var(--anim-duration) cubic-bezier(.4,0,.2,1),
+      opacity calc(var(--anim-duration) * 0.6) ease-out;
 }
 
 .so-title-block {
@@ -148,8 +161,4 @@
 .new-line {
   display: block;
   width: 100%;
-}
-
-#footer {
-    border-top: none;
 }

@@ -12,7 +12,7 @@
         {% get_menu_for_header as menu %}
         {% for element_of_menu in menu %}
           <li><a href="{% url element_of_menu.url %}"
-                 class="{% if section_of_menu_selected == element_of_menu.url %}
+                 class="{% if section_of_menu_selected == element_of_menu.url or request.resolver_match.view_name == element_of_menu.url %}
                           nav-hover-selected
                         {% endif %}
                         nav-link nav-hover px-2 text-white">

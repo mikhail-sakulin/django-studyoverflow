@@ -119,6 +119,7 @@ SOCIALACCOUNT_PROVIDERS = {
         "SCOPE": [
             "login:info",
             "login:avatar",
+            "login:email",
         ],
     },
     "vk": {
