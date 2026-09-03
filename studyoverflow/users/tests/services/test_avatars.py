@@ -1,5 +1,6 @@
 import io
 import uuid
+from types import SimpleNamespace
 
 import pytest
 from botocore.exceptions import BotoCoreError
@@ -79,9 +80,10 @@ class TestFilenamesAndPaths:
         mock_gen = mocker.patch(
             "users.services.avatars.generate_new_filename_with_uuid", return_value="uuid.png"
         )
-        user = mocker.Mock(pk=pk)
+        user = SimpleNamespace(s3_storage_uuid="123e4567-e89b-12d3-a456-426614174000")
 
-        assert user_avatar_upload_path(user, "photo.png") == f"{expected_prefix}uuid.png"
+        expected_path = f"avatars/{user.s3_storage_uuid}/uuid.png"
+        assert user_avatar_upload_path(user, "photo.png") == expected_path  # type: ignore
         mock_gen.assert_called_once_with("photo.png")
 
     def test_get_storage_path_to_avatar_with_ext(self, mock_user):

@@ -47,22 +47,15 @@ def avatar_upload_to(instance: User, filename: str) -> str:
     return f"avatars/{generate_new_filename_with_uuid(filename)}"
 
 
-def user_avatar_upload_path(instance: User, filename: str) -> str:
+def user_avatar_upload_path(user: User, filename: str) -> str:
     """
     Генерирует путь загрузки основного аватара пользователя в хранилище.
 
-    Если пользователь еще не сохранён (нет pk):
-        avatars/tmp/<uuid>.<ext>
-
-    Если пользователь уже существует (есть pk):
-        avatars/<user_id>/<uuid>.<ext>
+    Путь файла: avatars/<s3_storage_uuid>/<file_uuid>.<ext>
     """
     new_filename = generate_new_filename_with_uuid(filename)
 
-    if instance.pk:
-        return f"avatars/{instance.pk}/{new_filename}"
-
-    return f"avatars/tmp/{new_filename}"
+    return f"avatars/{user.s3_storage_uuid}/{new_filename}"
 
 
 def generate_avatar_small(user: User, size_type: int) -> bool | str:

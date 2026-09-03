@@ -36,27 +36,11 @@ class TestUserDeletionSignals:
         """Удаление пользователя запускает очистку файлов аватара."""
         user = user_factory()
 
-        mocker.patch(
-            "users.signals.get_user_avatar_paths_list", return_value=["avatars/5/test.jpg"]
-        )
-        mock_task = mocker.patch("users.signals.delete_files_from_storage_task.delay")
+        mock_task = mocker.patch("users.signals.delete_all_avatars_files_task.delay")
 
         user.delete()
 
-        mock_task.assert_called_once_with(["avatars/5/test.jpg"])
-
-    def test_delete_user_without_avatar_does_not_trigger_cleanup(
-        self, user_factory, mocker, mock_on_commit
-    ):
-        """Удаление пользователя без файлов аватара не запускает очистку."""
-        user = user_factory()
-
-        mocker.patch("users.signals.get_user_avatar_paths_list", return_value=[])
-        mock_task = mocker.patch("users.signals.delete_files_from_storage_task.delay")
-
-        user.delete()
-
-        mock_task.assert_not_called()
+        mock_task.assert_called_once_with(str(user.s3_storage_uuid))
 
     def test_delete_user_writes_log(self, user_factory, mock_logger):
         """Удаление пользователя записывает событие в лог."""
