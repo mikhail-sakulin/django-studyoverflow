@@ -7,27 +7,18 @@
 
     {# Автор и время #}
     <div class="d-flex align-items-center mb-2">
-      <img id="avatar-comment"
-           src="{{ notification.actor.avatar_small_size1_url }}"
+      <img src="{{ notification.actor.avatar_small_size1_url }}"
+           data-full-avatar="{{ notification.actor.avatar.url }}"
            alt="{{ notification.actor.username }}"
-           class="rounded-circle"
-           style="cursor:pointer;"
-
-           hx-get="{% url 'users:avatar_preview' notification.actor.username %}"
-           hx-target="#modal-image-container"
-           hx-swap="innerHTML"
-
-           hx-indicator="#modal-loading-indicator"
-           hx-on:htmx:before-request="openModal()">
-
-      <div class="image-modal-wrapper"></div>
+           class="rounded-circle avatar-trigger avatar-comment-img"
+           style="cursor:pointer;">
 
       <div>
         <div class="d-flex align-items-center mb-1">
           <a href="{% url 'users:profile' notification.actor.username %}" class="username-comment author-name me-1">{{ notification.actor.username }} {% user_role_badge notification.actor %}</a>
         </div>
 
-        <div id="time_create-time_update-comment" class="text-secondary">
+        <div class="time-create-update-comment text-secondary">
           Создано: {{ notification.time_create|date:"d.m.Y г. H:i" }}
         </div>
       </div>

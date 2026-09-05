@@ -60,17 +60,11 @@
     border-radius: .25rem;
 }
 
-#users-load-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-    margin-top: -1rem;
+#users-sort-loading {
+    display: none;
 }
 
-.btn-warning-custom {
-    font-size: 1.25rem;
-}
-
-.btn-warning-custom:hover {
-    filter: brightness(80%);
+#users-sort-loading.htmx-request {
+    display: inline-flex !important;
+    align-items: center;
 }

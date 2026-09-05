@@ -32,7 +32,7 @@
     max-height: none;
 }
 
-#avatar-comment {
+.avatar-comment-img {
     margin-right: 0.7rem;
     width: 50px;
     height: 50px;
@@ -40,7 +40,7 @@
     transition: box-shadow 0.2s ease-in-out;
 }
 
-#avatar-comment:hover {
+.avatar-comment-img:hover {
     box-shadow: 0 0 0 1px rgba(255, 193, 7, 0.85);
     cursor: pointer;
 }
@@ -49,7 +49,7 @@
     margin-top: -0.25rem;
 }
 
-#time_create-time_update-comment {
+.time-create-update-comment {
     font-size: 0.94rem
 }
 

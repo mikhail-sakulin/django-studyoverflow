@@ -14,7 +14,7 @@ def generate_user_register_data():
 def generate_post_data():
     """Создает и возвращает данные для создания поста."""
     return {
-        "title": uuid.uuid4().hex,  # 32 символа
+        "title": f"abcdefghij_{uuid.uuid4().hex}",
         "content": uuid.uuid4().hex,  # 32 символа
         "tags": " ".join([uuid.uuid4().hex[:10]]),
     }

@@ -12,7 +12,6 @@ from .user_views import (
     UserRegisterView,
     UsersListHTMXView,
     UsersListView,
-    avatar_preview,
     block_user,
     unblock_user,
 )
@@ -27,7 +26,6 @@ __all__ = [
     "UserLogoutView",
     "AuthorProfileView",
     "UserProfileUpdateView",
-    "avatar_preview",
     "UserDeleteView",
     "UserPasswordChangeView",
     "UserPasswordResetView",

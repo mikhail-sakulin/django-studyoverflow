@@ -6,7 +6,7 @@
       action="{% url 'posts:comment_child_create' post_pk post_slug %}"
       hx-post="{% url 'posts:comment_child_create' post_pk post_slug %}"
       hx-swap="outerHTML"
-      hx-indicator="#loading-indicator">
+      hx-indicator="#loading-indicator, #sort-loading-indicator">
 
   {% csrf_token %}
   <input type="hidden" name="parent_comment" value="{% if comment.parent_comment %}{{ comment.parent_comment_id }}{% else %}{{ comment.id }}{% endif %}">

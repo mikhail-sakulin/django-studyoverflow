@@ -10,7 +10,7 @@
     font-size: 1.38rem;
 }
 
-#avatar {
+.avatar-img {
     margin-right: 0.9rem;
     width: 70px;
     height: 70px;
@@ -18,17 +18,17 @@
     transition: box-shadow 0.2s ease-in-out;
 }
 
-#avatar:hover {
+.avatar-img:hover {
     box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.85);
     cursor: pointer;
 }
 
-#username-row {
+.username-row {
     margin-top: -0.7rem;
     font-size: 1.2rem;
 }
 
-#time_create-time_update {
+.time-create-update {
     font-size: 1rem
 }
 
@@ -50,4 +50,22 @@
 
 .ms-6 {
     margin-left: 4rem;
+}
+
+#loading-indicator {
+    display: none;
+    width: 100%;
+}
+
+#comments-wrapper:not(:has(#comments-sort-block)) ~ #loading-indicator.htmx-request:not(.like-button) {
+    display: block;
+}
+
+#sort-loading-indicator {
+    display: none;
+}
+
+#sort-loading-indicator.htmx-request {
+    display: flex;
+    align-items: center;
 }

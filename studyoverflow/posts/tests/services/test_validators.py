@@ -12,11 +12,12 @@ from posts.services import (
 
 class TestPostTitleValidator:
     MIN_LEN = 10
+    MIN_LETTERS = 10
     MAX_LEN = 30
 
     @pytest.fixture
     def validator(self):
-        return PostTitleValidator(min_len=self.MIN_LEN, max_len=self.MAX_LEN)
+        return PostTitleValidator(min_len=self.MIN_LEN, min_letters=10, max_len=self.MAX_LEN)
 
     def test_valid_title(self, validator):
         """Заголовок допустимой длины."""
@@ -31,6 +32,22 @@ class TestPostTitleValidator:
 
         assert exc.value.code == "title_too_short"
         assert f"не менее {self.MIN_LEN} символов" in exc.value.messages[0]
+
+    def test_not_enough_letters(self, validator):
+        """
+        Заголовок с минимальной общей длиной, но с недостаточным числом буквенных символов,
+        вызывает ValidationError с кодом 'not_enough_letters'.
+        """
+        # Заголовок больше минимальной длины, но с недостаточным числом буквенных символов
+        letters_str = "a" * (self.MIN_LETTERS - 1)
+        non_letters_str = "!" * (self.MIN_LEN - self.MIN_LETTERS + 1)
+        invalid_title = f"{letters_str}{non_letters_str}"
+
+        with pytest.raises(ValidationError) as exc:
+            validator(invalid_title)
+
+        assert exc.value.code == "not_enough_letters"
+        assert f"как минимум {self.MIN_LETTERS} букв" in exc.value.messages[0]
 
     def test_title_too_long(self, validator):
         """Слишком длинный заголовок вызывает ValidationError."""

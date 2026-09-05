@@ -17,6 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleTagsBtn = document.getElementById('toggle-tags');
     const tagsWrapper = document.getElementById('tags-wrapper');
 
+    // Выход, если на странице нет нужных DOM-элементов
+    if (!input || !search || !tags.length || !toggleTagsBtn || !tagsWrapper) return;
+
     // --- Функция нормализации тегов (аналог Python normalize_tag_name) ---
     function normalizeTagName(tagName) {
         if (!tagName) return '';
@@ -86,5 +89,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Блок тегов изначально скрыт через CSS, JS-скрипт ничего не меняет ---
+    // --- Блок тегов изначально скрыт через CSS ---
 });

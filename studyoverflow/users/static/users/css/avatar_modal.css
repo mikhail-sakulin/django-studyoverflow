@@ -34,11 +34,6 @@
 
 .image-modal-body {
     position: relative;
-    z-index: 10000;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 .image-modal-content {
@@ -74,4 +69,21 @@
 
 .close-modal:focus {
     outline: none;
+}
+
+#modal-loading-indicator {
+    display: none;
+    align-items: center;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#modal-loading-indicator.is-loading {
+    display: flex;
+}
+
+#modal-avatar-img.is-loading {
+    visibility: hidden;
 }

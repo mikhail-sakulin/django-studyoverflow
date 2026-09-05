@@ -45,16 +45,10 @@
               <div class="d-flex justify-content-center mb-4 mb-xl-0 me-xl-4" style="flex-shrink: 0;">
                 <img id="avatar"
                      src="{{ author.avatar_small_size3_url }}"
+                     data-full-avatar="{{ author.avatar.url }}"
                      alt="{{ author.username }}"
-                     class="rounded"
-                     style="cursor:pointer;"
-
-                     hx-get="{% url 'users:avatar_preview' author.username %}"
-                     hx-target="#modal-image-container"
-                     hx-swap="innerHTML"
-
-                     hx-indicator="#modal-loading-indicator"
-                     hx-on:htmx:before-request="openModal()">
+                     class="rounded avatar-trigger"
+                     style="cursor:pointer;">
 
               </div>
 

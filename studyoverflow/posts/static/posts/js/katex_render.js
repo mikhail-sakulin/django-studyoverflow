@@ -1,8 +1,8 @@
 /*
     JS-скрипт для рендеринга математических формул через KaTeX:
-    - Инлайн-формулы: <span class="math-inline">LaTeX-код</span>
-    - Блочные формулы: <div class="math">LaTeX-код</div>
-    - Автоматический рендеринг при загрузке страницы и после HTMX-обновлений
+    - Инлайн-формулы: <span class="math-inline">LaTeX-код</span>;
+    - Блочные формулы: <div class="math">LaTeX-код</div>;
+    - Автоматический рендеринг при загрузке страницы и после HTMX-обновлений.
 */
 
 
@@ -12,7 +12,7 @@ function renderMath(container) {
     if (typeof katex === "undefined" || !container) return;
 
     // --- Блочные формулы (<div class="math">) ---
-    container.querySelectorAll("div.math").forEach((el) => {
+    container.querySelectorAll("div.math:not([data-katex-rendered])").forEach((el) => {
         // извлечение LaTeX-код
         const formula = el.textContent.trim();
         katex.render(formula, el, {
@@ -21,16 +21,20 @@ function renderMath(container) {
             // не прерывать выполнение при ошибке
             throwOnError: false,
         });
+        // Добавление защитного атрибута к элементу, чтобы не было повторного рендера KaTeX
+        el.setAttribute("data-katex-rendered", "true");
     });
 
     // --- Инлайн-формулы (<span class="math-inline">) ---
-    container.querySelectorAll(".math-inline").forEach((el) => {
+    container.querySelectorAll(".math-inline:not([data-katex-rendered])").forEach((el) => {
         const formula = el.textContent.trim();
         katex.render(formula, el, {
             // внутри текста
             displayMode: false,
             throwOnError: false,
         });
+        // Добавление защитного атрибута к элементу, чтобы не было повторного рендера KaTeX
+        el.setAttribute("data-katex-rendered", "true");
     });
 }
 

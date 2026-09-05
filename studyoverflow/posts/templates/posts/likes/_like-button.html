@@ -4,7 +4,8 @@
     id="likes-button-{{ obj_type }}-{{ liked_object.id }}"
     hx-post="{{ toggle_like_url }}"
     hx-target="#likes-button-{{ obj_type }}-{{ liked_object.id }}"
-    hx-swap="outerHTML">
+    hx-swap="outerHTML"
+    hx-indicator="none">
   <i id="i-like-{{ obj_type }}-{{ liked_object.id }}" class="{% if user_has_liked %}
               bi bi-heart-fill
             {% else %}

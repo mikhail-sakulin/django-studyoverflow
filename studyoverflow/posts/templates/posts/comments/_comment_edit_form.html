@@ -4,14 +4,14 @@
       hx-post="{% url 'posts:comment_update' post_pk post_slug comment.pk %}"
       hx-target="#comment-card-{{ comment.id }}"
       hx-swap="outerHTML"
-      hx-indicator="#loading-indicator">
+      hx-indicator="#loading-indicator, #sort-loading-indicator">
   {% csrf_token %}
 
   <div class="mb-2">
-    <textarea id="id_content"
-              name="content"
+    <textarea name="content"
               class="form-control"
               rows="5"
+              required
               placeholder="Редактировать комментарий...">{{ comment_form.content.value|default:comment.content }}</textarea>
   </div>
 

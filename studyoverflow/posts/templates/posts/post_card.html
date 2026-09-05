@@ -8,24 +8,15 @@
 
     {# Автор и время публикации #}
     <div class="d-flex align-items-center mb-2">
-      <img id="avatar"
-         src="{{ post.author.avatar_small_size1_url }}"
-         alt="{{ post.author.username }}"
-         class="rounded-circle"
-         style="cursor:pointer;"
-
-         hx-get="{% url 'users:avatar_preview' post.author.username %}"
-         hx-target="#modal-image-container"
-         hx-swap="innerHTML"
-
-         hx-indicator="#modal-loading-indicator"
-         hx-on:htmx:before-request="openModal()">
-
-      <div class="image-modal-wrapper"></div>
+      <img src="{{ post.author.avatar_small_size1_url }}"
+           data-full-avatar="{{ post.author.avatar.url }}"
+           alt="{{ post.author.username }}"
+           class="rounded-circle avatar-trigger avatar-img"
+           style="cursor:pointer;">
 
       <div class="flex-grow-1" style="min-width: 0;">
-        <div id="username-row" class="d-flex align-items-center gap-1 mb-1">
-          <a id="username" href="{% url 'users:profile' post.author.username %}" class="author-name text-truncate" style="min-width: 0;">
+        <div class="username-row d-flex align-items-center gap-1 mb-1">
+          <a href="{% url 'users:profile' post.author.username %}" class="author-name text-truncate" style="min-width: 0;">
             {{ post.author.username }}
           </a>
           {% user_role_badge post.author %}
@@ -34,7 +25,7 @@
           {% endif %}
         </div>
 
-        <div id="time_create-time_update" class="text-secondary">
+        <div class="time-create-update text-secondary">
           Опубликовано: {{ post.time_create|date:"d.m.Y г. H:i" }}
           {% if post.is_edited %}
             &nbsp;|&nbsp; Изменено: {{ post.time_update|date:"d.m.Y г. H:i" }}
@@ -72,7 +63,7 @@
           <span>
             Комментарии:
           </span>
-          <span id="comments_count" class="text-warning">
+          <span class="comments-count text-warning">
             {{ post.comments_count }}
           </span>
         </a>

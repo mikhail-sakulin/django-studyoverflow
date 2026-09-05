@@ -1,6 +1,7 @@
 /*
     JS-скрипт для управления комментариями:
     - Показ/скрытие формы комментария (root)
+    - Закрытие блока правил Markdown и LaTeX при отправке формы root-комментария
     - Показ/скрытие формы ответа (reply)
     - Показ/скрытие формы редактирования (edit)
     - Делегирование событий клика для кнопок управления комментариями
@@ -12,11 +13,17 @@
 
 document.addEventListener("DOMContentLoaded", function() {
 
-    // --- Подсветка всех блоков <pre><code> ---
-    function highlightCodeBlocks() {
-        if (window.hljs) {
-            hljs.highlightAll();
-        }
+    // --- Подсветка всех блоков <pre><code> только внутри переданного контейнера ---
+    function highlightCodeBlocks(container) {
+        if (!window.hljs || !container) return;
+        const codeBlocks = container.matches?.("pre code")
+            ? [container]
+            : container.querySelectorAll("pre code");
+        codeBlocks.forEach((block) => {
+            if (!block.dataset.highlighted) {
+                hljs.highlightElement(block);
+            }
+        });
     }
 
     // Показ формы и блокировка кнопки
@@ -134,6 +141,16 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
+    // --- Закрытие блока правил Markdown и LaTeX, используется при отправке root-формы ---
+    function closeMarkdownRules() {
+        const rulesWrapper = document.getElementById("markdown-rules-wrapper");
+        const rulesToggleBtn = document.getElementById("toggle-markdown-rules");
+        if (!rulesWrapper || !rulesToggleBtn) return;
+        rulesWrapper.style.display = "none";
+        rulesToggleBtn.textContent = "Показать наши правила синтаксиса Markdown и LaTeX ▼";
+        rulesToggleBtn.setAttribute("aria-expanded", "false");
+    }
+
     // --- Скрытие форм при отправке запросов до ответа сервера ---
     document.body.addEventListener("htmx:beforeRequest", function(event) {
         const element = event.target;
@@ -141,6 +158,11 @@ document.addEventListener("DOMContentLoaded", function() {
         // Форма родительского комментария (Root)
         if (element.id === "root-comment-form") {
             hideForm("comment-form-container", document.getElementById("show-comment-form"));
+            closeMarkdownRules();
+
+            const emptyText = document.getElementById("no-comments-message");
+            if (emptyText) emptyText.style.display = "none";
+
             return;
         }
 
@@ -167,8 +189,8 @@ document.addEventListener("DOMContentLoaded", function() {
     document.body.addEventListener("htmx:afterSwap", function(event) {
         const swappedEl = event.target;
 
-        // --- Подсветка кода после каждого HTMX swap ---
-        highlightCodeBlocks();
+        // --- Подсветка кода только в обновлённом фрагменте после HTMX swap ---
+        highlightCodeBlocks(swappedEl);
 
         // Если обновилась root форма, оставить её открытой
         if (swappedEl.id === "comment-form-container") {
@@ -247,13 +269,12 @@ document.addEventListener("DOMContentLoaded", function() {
             window.location.reload();
         }
     });
-});
 
-// --- Скролл к комментарию по хэшу после HTMX обновления ---
+    // --- Скролл к комментарию по хэшу после HTMX обновления ---
 
-let scrolledToAnchor = false;
+    // Флаг, чтобы скролл к комментарию сработал только один раз при первой загрузке
+    let scrolledToAnchor = false;
 
-document.addEventListener("DOMContentLoaded", () => {
     const commentsWrapper = document.getElementById("comments-wrapper");
     if (!commentsWrapper) return;
 

@@ -30,7 +30,7 @@
     pointer-events: none;
 }
 
-#avatar {
+.avatar-img {
     margin-right: 0.7rem;
     width: 50px;
     height: 50px;
@@ -38,17 +38,17 @@
     transition: box-shadow 0.2s ease-in-out;
 }
 
-#avatar:hover {
+.avatar-img:hover {
     box-shadow: 0 0 0 1px rgba(255, 193, 7, 0.85);
     cursor: pointer;
 }
 
-#username-row {
+.username-row {
     margin-top: -0.25rem;
     font-size: 1.1rem;
 }
 
-#time_create-time_update {
+.time-create-update {
     font-size: 0.94rem
 }
 
@@ -61,6 +61,6 @@
     color: #0a58ca !important;
 }
 
-.more-link:hover #comments_count {
+.more-link:hover .comments-count {
     filter: brightness(0.8);
 }

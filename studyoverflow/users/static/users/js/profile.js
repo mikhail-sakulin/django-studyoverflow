@@ -42,14 +42,15 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Проверка наличия ошибок в форме
-    const hasErrors =
-        editFormContainer.querySelector('.alert-danger') !== null ||
-        editFormContainer.querySelector('.text-danger div') !== null;
+    if (editFormContainer) {
+        const hasErrors =
+            editFormContainer.querySelector('.alert-danger') !== null ||
+            editFormContainer.querySelector('.text-danger div') !== null;
 
-    // Если в форме есть ошибки — показать форму и прокрутить к ней
-    if (hasErrors) {
-        editFormContainer.style.display = 'block';
-        if (toggleEditBtn) toggleEditBtn.textContent = 'Скрыть форму';
-        editFormContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (hasErrors) {
+            editFormContainer.style.display = 'block';
+            if (toggleEditBtn) toggleEditBtn.textContent = 'Скрыть форму';
+            editFormContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 });
