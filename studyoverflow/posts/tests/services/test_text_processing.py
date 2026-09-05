@@ -310,6 +310,13 @@ class TestGenerateSlug(SimpleTestCase):
         with self.assertRaises(TypeError):
             generate_slug(["список"])  # type: ignore
 
+    def test_multilingual_fallback_to_default_slug(self):
+        """
+        Для заголовка из символов, для которых не настроена транслитерация (например, иероглифы),
+        возвращается дефолтный slug 'post'.
+        """
+        self.assertEqual(generate_slug("投稿のタイトル"), "post")
+
 
 class TestTranslitRusToEng(SimpleTestCase):
     def test_normal_russian_text(self):

@@ -19,13 +19,22 @@ def generate_slug(title: str, max_length: int = 255) -> str:
     """
     Генерирует человекочитаемый slug на основе заголовка.
 
+    Если slug получился пустым (например, если в title используются не латиница и не кириллица, а
+    символы других языков), то для него задается стандартное значение.
+
     Пример:
         generate_slug("Новый заголовок") -> 'novyjj-zagolovok'
+        generate_slug("投稿のタイトル") -> 'post'
     """
     if not isinstance(title, str):
         raise TypeError
     base_slug = slugify(translit_rus_to_eng(title))
     slug = base_slug[:max_length]
+
+    # Если slug получился пустым, то задается стандартное значение
+    if not slug:
+        slug = "post"
+
     return slug
 
 
