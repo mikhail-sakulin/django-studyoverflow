@@ -70,7 +70,7 @@ class CommentCreateForm(forms.ModelForm):
     class Meta:
         model = Comment
         fields = ["content", "parent_comment", "reply_to"]
-        labels = {"content": "Комментарий (поддерживается синтаксис Markdown)"}
+        labels = {"content": "Комментарий (поддерживается синтаксис Markdown и LaTeX)"}
         widgets = {
             "content": forms.Textarea(
                 attrs={"class": "form-control", "placeholder": "Комментарий...", "rows": 5}
