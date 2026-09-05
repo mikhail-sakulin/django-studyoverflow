@@ -14,15 +14,15 @@
 
     <div class="row g-3 mb-3">
       <div class="col-12">
-        <label class="form-label">Поиск в постах</label>
-        <input type="text" name="q" class="form-control" value="{{ request.GET.q }}"
+        <label for="id_q" class="form-label">Поиск в постах</label>
+        <input type="text" id="id_q" name="q" class="form-control" value="{{ request.GET.q }}"
                placeholder="Текст в заголовке, содержимом или в именах тегов...">
       </div>
     </div>
 
     <div class="row g-3">
       <div class="col-md-6 mb-2">
-        <label class="form-label">Теги (вводятся через запятую)</label>
+        <label for="id_tags" class="form-label">Теги (вводятся через запятую)</label>
 
         <div class="d-flex align-items-center gap-3">
           <input type="text" id="id_tags" name="tags" class="form-control"
@@ -47,8 +47,8 @@
       </div>
 
       <div class="col-md-6">
-        <label class="form-label">Автор</label>
-        <input type="text" name="author" class="form-control" value="{{ request.GET.author }}"
+        <label for="id_author" class="form-label">Автор</label>
+        <input id="id_author" type="text" name="author" class="form-control" value="{{ request.GET.author }}"
                placeholder="Имя автора">
         {% if filter_form.author.errors %}
           <div class="text-danger mt-1">
@@ -64,7 +64,7 @@
 
     <div class="row g-3 mt-2">
       <div class="col-12">
-        <label class="form-label me-4">Совпадение</label>
+        <span class="form-label me-4">Совпадение</span>
 
         <div class="btn-group">
           <input type="hidden" name="tag_match" id="tag_match_input"
@@ -88,7 +88,7 @@
     <div class="row g-3 mt-1 mb-3">
 
       <div class="col-xl-6">
-        <label class="form-label me-2">Комментарии</label>
+        <span class="form-label me-2">Комментарии</span>
 
         <div class="btn-group">
           <input type="hidden" name="has_comments" id="has_comments_input"
@@ -116,7 +116,7 @@
 
       <div class="col-md-6">
         <div class="d-flex align-items-center">
-          <label class="form-label mb-2 me-3">Сортировать по</label>
+          <span class="form-label mb-2 me-3">Сортировать по</span>
 
           <div class="btn-group">
             <input type="hidden" name="sort" id="sort_input" value="{{ request.GET.sort|default:'created' }}">
