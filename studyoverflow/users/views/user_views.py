@@ -1,3 +1,4 @@
+import copy
 import logging
 
 from allauth.account.signals import user_signed_up
@@ -16,7 +17,7 @@ from django.contrib.auth.views import (
 )
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.cache import cache
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
@@ -69,6 +70,8 @@ class UsersListView(UserHTMXPaginationMixin, ListView):
             queryset = queryset.order_by("-reputation", "username")
             result = list(queryset[: self.paginate_htmx_by])
             remaining = queryset[self.paginate_htmx_by : self.paginate_htmx_by + 1].exists()
+            # Кеш устанавливается на 2 секунды для быстрого показа изменений, в production
+            # может быть увеличен
             cache.set(cache_key, {"users": result, "remaining": remaining}, timeout=2)
         else:
             result = cache_data["users"]
@@ -228,22 +231,28 @@ class UserProfileUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView)
     form_class = UserProfileUpdateForm
     template_name = "users/profile_current_user.html"
     success_url = reverse_lazy("users:my_profile")
-    context_object_name = "author"
     success_message = "Профиль успешно изменен!"
 
     def get_object(self, queryset=None):
-        return self.request.user
+        # При невалидной форме именно у нового (скопированного) python-объекта будут заменяться
+        # значения полей на невалидные значения, сам объект self.request.user не изменится.
+        return copy.copy(self.request.user)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
 
-def avatar_preview(request, username):
-    """
-    Возвращает HTML-фрагмент для просмотра аватара пользователя.
+        # В шаблон передается исходный пользователь, чтобы при невалидной форме данные
+        # самого профиля пользователя оставались актуальными (например, чтобы username в
+        # карточке профиля не изменялся на невалидный), при этом данные самой невалидной
+        # формы останутся теми, которые ввел пользователь.
+        #
+        # В шаблоне используется переменная "author", при этом "object" - стандартное имя
+        # объекта, которое не удаляется из контекста при переопределении переменной класса
+        # представления "context_object_name" самим Django, поэтому вручную "object" также задается.
+        context["author"] = self.request.user
+        context["object"] = self.request.user
 
-    Используется для отображения аватара в модальном окне.
-    """
-    queryset = User.objects.only("username", "avatar")
-    author = get_object_or_404(queryset, username=username)
-    return render(request, "users/_avatar_only_for_modal.html", {"author": author})
+        return context
 
 
 class UserDeleteView(LoginRequiredMixin, DeleteView):

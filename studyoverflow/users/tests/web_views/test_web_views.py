@@ -379,28 +379,6 @@ class TestUserProfileUpdateView:
 
 
 @pytest.mark.django_db
-class TestAvatarPreview:
-
-    def test_avatar_preview_nonexistent_user_returns_404(self, assert_not_found):
-        """Если указан несуществующий пользователь, возвращается 404."""
-        assert_not_found(
-            "users:avatar_preview",
-            url_kwargs={"username": "ghost"},
-            method="get",
-            is_api=False,
-        )
-
-    def test_avatar_preview_returns_html_fragment(self, client, user_factory):
-        """Проверяет запрос на превью аватара."""
-        user = user_factory(username="avatar_user")
-
-        response = client.get(reverse("users:avatar_preview", kwargs={"username": "avatar_user"}))
-
-        assert response.status_code == 200
-        assert response.context["author"] == user
-
-
-@pytest.mark.django_db
 class TestUserDeleteView:
 
     def test_unauthenticated_user_cannot_delete_profile(self, assert_login_required):

@@ -42,18 +42,11 @@
 
         <div class="d-flex align-items-center mb-2">
 
-          <img id="avatar"
-               src="{{ post.author.avatar_small_size2_url }}"
+          <img src="{{ post.author.avatar_small_size2_url }}"
+               data-full-avatar="{{ post.author.avatar.url }}"
                alt="{{ post.author.username }}"
-               class="rounded-circle"
-               style="cursor:pointer;"
-
-               hx-get="{% url 'users:avatar_preview' post.author.username %}"
-               hx-target="#modal-image-container"
-               hx-swap="innerHTML"
-
-               hx-indicator="#modal-loading-indicator"
-               hx-on:htmx:before-request="openModal()">
+               class="rounded-circle avatar-trigger avatar-img"
+               style="cursor:pointer;">
 
           <div class="flex-grow-1" style="min-width: 0;">
             <div id="username-row" class="d-flex align-items-center gap-1 mb-1">
