@@ -84,7 +84,7 @@
 
               <div id="preview-wrapper" style="display: none;">
                 <div class="mb-3">
-                  <label class="form-label">Предпросмотр Markdown и LaTeX</label>
+                  <span class="form-label">Предпросмотр Markdown и LaTeX</span>
                   <div id="content-preview" class="form-control content"></div>
                 </div>
               </div>
@@ -133,11 +133,11 @@
 
 
 {% block extra_js %}
-  {# KaTeX JS: рендеринг математических формул (LaTeX) в элементы с классами math-inline и math #}
+  {# KaTeX JS: рендеринг математических формул (LaTeX) в элементах с классами math-inline и math #}
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 
   {# Подключение JS-библиотеки markdown-it для конвертации текста с Markdown в HTML в браузере #}
-  <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/markdown-it-task-lists@2.1.1/dist/markdown-it-task-lists.min.js"></script>
 
@@ -149,8 +149,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/makefile.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/http.min.js"></script>
 
+  {# JS-скрипт для рендеринга математических формул через KaTeX #}
+  <script src="{% static 'posts/js/katex_render.js' %}"></script>
+
   {# Подключение локального JS-скрипта: управление окном предпросмотра, рендер Markdown и запуск подсветки синтаксиса кода #}
   <script src="{% static 'posts/js/create_post_content-preview.js' %}"></script>
+
+  <script src="{% static 'posts/js/markdown_rules_toggle.js' %}"></script>
 
   {# Подключение локального JS-скрипта для управления тегами и блоком готовых тегов #}
   <script src="{% static 'posts/js/create_post_tags.js' %}"></script>

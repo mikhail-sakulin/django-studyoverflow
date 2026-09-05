@@ -1,7 +1,7 @@
 {# Блок правил синтаксиса Markdown и Latex в проекте #}
 
 <div id="markdown-rules-wrapper" class="mb-3" style="display: none;">
-  <div class="markdown-rules-content p-3 rounded" style="background-color: #202023;">
+  <div class="markdown-rules-content p-3 rounded text-white" style="background-color: #202023;">
     <h4>Математические формулы через LaTeX</h4>
     <p>Для отображения математических выражений используйте специальные HTML-теги. <code>Запись через $...$ и $$...$$
       недоступна</code>. Введенный текст на сервере очищается от неразрешенных HTML-тегов и их атрибутов
@@ -156,11 +156,19 @@
     <hr>
 
     <p><strong>6) Изображения (img)</strong></p>
-    <pre><code class="language-markdown">![Логотип Django](https://static.djangoproject.com/img/logos/django-logo-negative.png "Всплывающий Title")</code></pre>
+    <pre><code class="language-markdown">![Логотип Django](https://static.djangoproject.com/img/logos/django-logo-negative.png "Всплывающий title")</code></pre>
 
     <p><strong>Результат:</strong></p>
     <div class="example-result content">
-      <img src="https://static.djangoproject.com/img/logos/django-logo-negative.png" alt="Логотип Django" title="Всплывающий Title" style="max-width:220px;">
+      <img src="https://static.djangoproject.com/img/logos/django-logo-negative.png" width="250" alt="Логотип Django" title="Всплывающий title">
+    </div>
+    <br>
+
+    <p><strong>Дополнительно:</strong> задать размеры изображения можно с помощью атрибута <code>width</code> напрямую через HTML-тег <code>img</code>.</p>
+    <pre><code class="language-markdown">&lt;img src="https://static.djangoproject.com/img/logos/django-logo-negative.png" width="200" alt="Логотип Django" title="Всплывающий title"&gt;</code></pre>
+    <p><strong>Результат:</strong></p>
+    <div class="example-result content mb-4">
+      <img src="https://static.djangoproject.com/img/logos/django-logo-negative.png" width="200" alt="Логотип Django" title="Всплывающий title">
     </div>
 
     <hr>

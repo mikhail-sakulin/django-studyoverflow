@@ -10,33 +10,8 @@
 // Полная загрузка DOM, чтобы код выполнился после построения структуры страницы
 document.addEventListener("DOMContentLoaded", function() {
 
-    // Функция рендеринга формул в указанном контейнере
-    function renderMath(container) {
-        // Проверка, что KaTeX загружен и контейнер существует
-        if (typeof katex === "undefined" || !container) return;
-
-        // --- Блочные формулы (<div class="math">) ---
-        container.querySelectorAll("div.math").forEach((el) => {
-            // извлечение LaTeX-код
-            const formula = el.textContent.trim();
-            katex.render(formula, el, {
-                // блочный режим (центрирование, крупный шрифт)
-                displayMode: true,
-                // не прерывать выполнение при ошибке
-                throwOnError: false,
-            });
-        });
-
-        // --- Инлайн-формулы (<span class="math-inline">) ---
-        container.querySelectorAll(".math-inline").forEach((el) => {
-            const formula = el.textContent.trim();
-            katex.render(formula, el, {
-                // внутри текста
-                displayMode: false,
-                throwOnError: false,
-            });
-        });
-    }
+    // Функция renderMath подключена из katex_render.js
+    // Объект hljs подключен из highlight.min.js
 
     // Получение ссылок на элементы страницы
     const textarea = document.getElementById("id_content");
@@ -91,7 +66,11 @@ document.addEventListener("DOMContentLoaded", function() {
         preview.innerHTML = html;
 
         if (wrapper.style.display !== "none") {
-            hljs.highlightAll();
+            if (typeof hljs !== "undefined") {
+                preview.querySelectorAll("pre code").forEach((block) => {
+                    hljs.highlightElement(block);
+                });
+            }
 
             if (typeof renderMath === "function") {
                 renderMath(preview);
@@ -125,31 +104,4 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Подготовка предпросмотра при загрузке страницы
     updatePreview();
-
-    // --- Блок правил Markdown ---
-    const rulesToggleBtn = document.getElementById("toggle-markdown-rules");
-    const rulesWrapper = document.getElementById("markdown-rules-wrapper");
-    let rulesRendered = false;
-
-    if (rulesToggleBtn && rulesWrapper) {
-        rulesToggleBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            const isHidden = rulesWrapper.style.display === "none" || rulesWrapper.style.display === "";
-            if (isHidden) {
-                rulesWrapper.style.display = "block";
-                rulesToggleBtn.textContent = "Скрыть наши правила синтаксиса Markdown и LaTeX ▲";
-                rulesToggleBtn.setAttribute("aria-expanded", "true");
-                // Рендер формул и подсветка синтаксиса в блоке правил
-                if (!rulesRendered && typeof renderMath === "function") {
-                    hljs.highlightAll();
-                    renderMath(rulesWrapper);
-                    rulesRendered = true;
-                }
-            } else {
-                rulesWrapper.style.display = "none";
-                rulesToggleBtn.textContent = "Показать наши правила синтаксиса Markdown и LaTeX ▼";
-                rulesToggleBtn.setAttribute("aria-expanded", "false");
-            }
-        });
-    }
 });
