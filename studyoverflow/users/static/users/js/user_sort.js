@@ -13,6 +13,8 @@ document.body.addEventListener('click', (event) => {
     const onlineBtn = event.target.closest('.user-online-btn');
     if (onlineBtn) {
         const input = document.getElementById('online_input');
+        if (!input) return;
+
         onlineBtn.closest('.btn-group')
             .querySelectorAll('.user-online-btn')
             .forEach(b => b.classList.remove('active'));
@@ -26,6 +28,8 @@ document.body.addEventListener('click', (event) => {
     const sortBtn = event.target.closest('.user-sort-btn');
     if (sortBtn) {
         const input = document.getElementById('user_sort_input');
+        if (!input) return;
+
         sortBtn.closest('.btn-group')
             .querySelectorAll('.user-sort-btn')
             .forEach(b => b.classList.remove('active'));
@@ -39,6 +43,8 @@ document.body.addEventListener('click', (event) => {
     const orderBtn = event.target.closest('.user-order-btn');
     if (orderBtn) {
         const input = document.getElementById('user_order_input');
+        if (!input) return;
+
         orderBtn.parentElement
             .querySelectorAll('.user-order-btn')
             .forEach(b => b.classList.remove('active'));
