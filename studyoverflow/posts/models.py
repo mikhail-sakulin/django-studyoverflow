@@ -146,7 +146,9 @@ class Post(models.Model):
     MAX_TITLE_SLUG_LENGTH_POST: Final = 255  # максимальная длина заголовка и slug поста
     MAX_CONTENT_LENGTH: Final = 15000  # максимальная длина содержимого поста
 
-    title_validator = PostTitleValidator(min_len=10, max_len=MAX_TITLE_SLUG_LENGTH_POST)
+    title_validator = PostTitleValidator(
+        min_len=10, min_letters=10, max_len=MAX_TITLE_SLUG_LENGTH_POST
+    )
 
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,

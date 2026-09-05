@@ -19,11 +19,13 @@ class PostTitleValidator:
 
     Проверяет:
     - минимальную длину заголовка;
+    - минимальное количество буквенных символов;
     - максимальную длину заголовка.
     """
 
-    def __init__(self, min_len=10, max_len=255):
+    def __init__(self, min_len=10, min_letters=10, max_len=255):
         self.min_len = min_len
+        self.min_letters = min_letters
         self.max_len = max_len
 
     def __call__(self, title):
@@ -31,6 +33,15 @@ class PostTitleValidator:
             raise ValidationError(
                 f"Длина заголовка должна быть не менее {self.min_len} символов.",
                 code="title_too_short",
+            )
+
+        # Подсчет количества буквенных символов
+        letters_count = sum(1 for char in title if char.isalpha())
+
+        if letters_count < self.min_letters:
+            raise ValidationError(
+                f"Заголовок должен содержать как минимум {self.min_letters} букв.",
+                code="not_enough_letters",
             )
 
         if len(title) > self.max_len:
