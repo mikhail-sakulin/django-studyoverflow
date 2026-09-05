@@ -1,0 +1,36 @@
+#users-load-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: -1rem;
+}
+
+.btn-warning-custom {
+    font-size: 1.25rem;
+}
+
+.btn-warning-custom:hover {
+    filter: brightness(115%);
+}
+
+#users-load-buttons.htmx-request {
+    display: none !important;
+}
+
+#users-load-indicator {
+    display: none;
+}
+
+#users-load-indicator.htmx-request {
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn-warning-custom:focus,
+.btn-warning-custom:active,
+.btn-warning-custom:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+}

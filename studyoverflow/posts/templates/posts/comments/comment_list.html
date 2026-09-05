@@ -1,10 +1,9 @@
-{# Заголовок и основной контейнер древовидного списка комментариев #}
 <div class="text-white mb-3 px-2">
   {% if root_comments %}
     <h5>Комментариев {{ post.comments_count }}:</h5>
   {% else %}
-    <span style="font-size: 1.2rem">Комментариев нет.
-      {% if post.author != user %}
+    <span id="no-comments-message" style="font-size: 1.2rem">Комментариев нет.
+      {% if post.author_id != user.pk %}
         Вы можете оставить первый!
       {% endif %}
     </span>
