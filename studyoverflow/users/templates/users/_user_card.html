@@ -10,17 +10,11 @@
     <div class="d-flex align-items-start mb-2">
 
       {# Аватар #}
-      <img
-        src="{{ user.avatar_small_size2_url }}"
-        alt="{{ user.username }}"
-        class="user-avatar rounded-circle"
-        style="color: white;"
-
-        hx-get="{% url 'users:avatar_preview' user.username %}"
-        hx-target="#modal-image-container"
-        hx-swap="innerHTML"
-        hx-indicator="#modal-loading-indicator"
-        hx-on:htmx:before-request="openModal()">
+      <img src="{{ user.avatar_small_size2_url }}"
+           data-full-avatar="{{ user.avatar.url }}"
+           alt="{{ user.username }}"
+           class="user-avatar rounded-circle avatar-trigger"
+           style="cursor:pointer; color: white;">
 
       <div class="ms-3 flex-grow-1 min-w-0">
 

@@ -9,20 +9,11 @@
 
     {# Автор и время #}
     <div class="d-flex align-items-center mb-2">
-      <img id="avatar-comment"
-           src="{{ comment.author.avatar_small_size1_url }}"
+      <img src="{{ comment.author.avatar_small_size1_url }}"
+           data-full-avatar="{{ comment.author.avatar.url }}"
            alt="{{ comment.author.username }}"
-           class="rounded-circle"
-           style="cursor:pointer;"
-
-           hx-get="{% url 'users:avatar_preview' comment.author.username %}"
-           hx-target="#modal-image-container"
-           hx-swap="innerHTML"
-
-           hx-indicator="#modal-loading-indicator"
-           hx-on:htmx:before-request="openModal()">
-
-      <div class="image-modal-wrapper"></div>
+           class="rounded-circle avatar-trigger avatar-comment-img"
+           style="cursor:pointer;">
 
       <div>
         <div class="d-flex flex-wrap align-items-center mb-1 comment-names-row">
@@ -46,7 +37,7 @@
           {% endif %}
         </div>
 
-        <div id="time_create-time_update-comment" class="text-secondary">
+        <div class="time-create-update-comment text-secondary">
           Опубликовано: {{ comment.time_create|date:"d.m.Y г. H:i" }}
           {% if comment.is_edited %}
             &nbsp;|&nbsp; Изменено: {{ comment.time_update|date:"d.m.Y г. H:i" }}
@@ -98,6 +89,7 @@
                 hx-post="{% url 'posts:comment_delete' post_pk post_slug comment.pk %}"
                 hx-target="#comment-wrapper-{{ comment.id }}"
                 hx-swap="outerHTML"
+                hx-indicator="#loading-indicator, #sort-loading-indicator"
                 hx-confirm="Вы уверены, что хотите удалить этот комментарий?">
             {% csrf_token %}
             <button type="submit"
