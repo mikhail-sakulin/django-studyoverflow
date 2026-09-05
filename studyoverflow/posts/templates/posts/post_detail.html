@@ -49,8 +49,8 @@
                style="cursor:pointer;">
 
           <div class="flex-grow-1" style="min-width: 0;">
-            <div id="username-row" class="d-flex align-items-center gap-1 mb-1">
-              <a id="username" href="{% url 'users:profile' post.author.username %}" class="author-name text-truncate" style="min-width: 0;">
+            <div class="username-row d-flex align-items-center gap-1 mb-1">
+              <a href="{% url 'users:profile' post.author.username %}" class="author-name text-truncate" style="min-width: 0;">
                 {{ post.author.username }}
               </a>
               {% user_role_badge post.author %}
@@ -59,7 +59,7 @@
               {% endif %}
             </div>
 
-            <div id="time_create-time_update" class="text-secondary">
+            <div class="time-create-update text-secondary">
               Опубликовано: {{ post.time_create|date:"d.m.Y г. H:i" }}
               {% if post.is_edited %}
                 &nbsp;|&nbsp; Изменено: {{ post.time_update|date:"d.m.Y г. H:i" }}
@@ -122,30 +122,34 @@
         </div>
       </div>
 
-      {# Форма комментария поста #}
-      <div id="comment-form-container"
-           style="display: none;" class="w-100 mb-4 px-0">
+      {# Кнопка правил Markdown и LaTeX и форма создания родительского комментария поста #}
+      <div id="comment-form-container" style="display: none;" class="w-100 mb-4 px-0">
+        <div class="mb-3 px-2">
+          <button id="toggle-markdown-rules" type="button" class="btn btn-outline-light me-2">
+            Показать наши правила синтаксиса Markdown и LaTeX ▼
+          </button>
+        </div>
+
+        {% include 'posts/_markdown_rules.html' %}
+
         {% include 'posts/comments/_comment_root_form.html' with post_pk=post.pk post_slug=post.slug %}
       </div>
 
-      {# Загрузка комментариев поста#}
+      {# Загрузка комментариев поста #}
       <div id="comments-wrapper"
            class="position-relative"
            hx-get="{% url 'posts:comment_list' post.pk post.slug %}"
            hx-trigger="load, commentsUpdated from:body"
            hx-swap="innerHTML"
-           hx-indicator="#loading-indicator">
+           hx-indicator="#loading-indicator, #sort-loading-indicator">
+      </div>
 
-        {% include 'posts/comments/comment_list.html' %}
-
-        {# Индикатор загрузки #}
-        <div id="loading-indicator"
-             class="d-flex flex-column justify-content-center align-items-center py-2"
-             style="display: none;">
-          <div class="spinner-border text-light mb-2" role="status"></div>
-          <span class="text-light">Загрузка комментариев...</span>
+      {# Индикатор загрузки, появляющийся при отсутствии комментариев на странице #}
+      <div id="loading-indicator" class="py-3">
+        <div class="d-flex align-items-center justify-content-center gap-2">
+          <div class="spinner-border text-light" role="status" style="width: 1.3rem; height: 1.3rem;"></div>
+          <span class="text-light" style="font-size: 1.05rem">Загрузка комментариев...</span>
         </div>
-
       </div>
 
     </div>
@@ -170,8 +174,6 @@
 
   <script src="https://unpkg.com/htmx.org@2.0.7"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
   {# JS-скрипт для рендеринга математических формул через KaTeX #}
   <script src="{% static 'posts/js/katex_render.js' %}"></script>
 
@@ -179,6 +181,8 @@
 
   {# Запуск highlight.js #}
   <script src="{% static 'posts/js/highlight_run.js' %}"></script>
+
+  <script src="{% static 'posts/js/markdown_rules_toggle.js' %}"></script>
 
   <script src="{% static 'users/js/avatar_modal.js' %}"></script>
 
