@@ -5,13 +5,13 @@
       hx-get="{% url 'posts:comment_list' post.pk post.slug %}"
       hx-target="#comments-wrapper"
       hx-swap="innerHTML"
-      hx-indicator="#sort-loading-indicator"
+      hx-indicator="#loading-indicator, #sort-loading-indicator"
       class="d-flex align-items-center flex-wrap gap-3">
 
       <input type="hidden" name="comment_sort" id="comment_sort_input" value="{{ request.GET.comment_sort|default:'date' }}">
       <input type="hidden" name="comment_order" id="comment_order_input" value="{{ request.GET.comment_order|default:'desc' }}">
 
-      <label class="form-label mb-0 me-1">Сортировать родительские комментарии по</label>
+      <span class="form-label mb-0 me-1">Сортировать родительские комментарии по</span>
 
       <div class="btn-group">
           <button type="button"
