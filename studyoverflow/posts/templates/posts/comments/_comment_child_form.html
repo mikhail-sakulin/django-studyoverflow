@@ -13,7 +13,7 @@
   <input type="hidden" name="reply_to" value="{{ comment.id }}">
 
   <div class="mb-2">
-    {{ comment_form.content|attr:"placeholder:Ответ на комментарий..." }}
+    {{ comment_form.content|attr:"placeholder:Ответ на комментарий..."|add_class:"markdown-content-textarea" }}
   </div>
 
   {% include 'posts/comments/_comment_base_form_errors.html' %}
