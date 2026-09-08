@@ -1,0 +1,103 @@
+# Публикует релиз по гит-тегу с версией релиза (например v1.0.0).
+#
+# Использует готовые образы, собранные и выложенные в cd-publish-deploy.yml, добавляя им
+# дополнительный тег - гит-тег с версией релиза.
+
+
+name: CD Tag Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  # Разрешает боту создавать GitHub Release. Создание релиза в GitHub API относится к тому же
+  # scope "contents: write", что и создание новых коммитов, но сами файлы при релизе не меняются.
+  contents: write
+  # Разрешает боту публиковать и обновлять пакеты в хранилище GHCR
+  packages: write
+
+jobs:
+  tag-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    env:
+      # Задает реестр Docker-образов
+      REGISTRY: ghcr.io
+      # Задает имя владельца репозитория
+      IMAGE_OWNER: ${{ github.repository_owner }}
+      # Задает версию на основе имени Git-тег, который запустил action,
+      # ref_name может указывать на ветку или на тег, в данном случае только на тег.
+      VERSION: ${{ github.ref_name }}
+
+    steps:
+      # Копирует код из репозитория в виртуальную машину
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Настройка Docker Buildx - расширения Docker с движком BuildKit с большими возможностями
+      # для Docker, нужен для создания нового тега образов.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Авторизация CI/CD бота в реестре Docker-образов GitHub GHCR
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Копирует существующие манифесты образов (по тегу sha коммита), которые уже собраны и
+      # выложены в реестр образов в cd-publish-deploy.yml под новым Git-тегом с версией релиза
+      # без пересборки образов и без их скачивания.
+      - name: Re-tag images with version
+        # set -e - немедленное завершение скрипта при ошибке
+        # docker buildx imagetools create --tag - команда создает новый манифест с новым тегом на основе существующего
+        # docker tag - сначала скачал бы все образы, локально задал новый тег и загрузил бы образы обратно, что дольше
+        run: |
+          set -e
+          IMAGES="
+            studyoverflow-backend \
+            studyoverflow-nginx \
+            studyoverflow-nginx-lite \
+            studyoverflow-loki \
+            studyoverflow-promtail \
+            studyoverflow-grafana
+          "
+          
+          for image in $IMAGES; do
+            docker buildx imagetools create \
+              --tag "${REGISTRY}/${IMAGE_OWNER}/${image}:${VERSION}" \
+              "${REGISTRY}/${IMAGE_OWNER}/${image}:${{ github.sha }}"
+          done
+
+      # Создается копия .env.example с прописанным тегом версии в IMAGE_TAG
+      - name: Prepare .env.example for release
+        # sed - консольная утилита для редактирования текста (не загружает файл целиком, а
+        # поочередно загружает строчку за строчкой, меняет текст, если нужно, и отправляет текст в поток вывода);
+        # s/.../.../ - замена текста, s/искомый_текст/на_что_заменяется/;
+        # ^IMAGE_TAG=.* - ищет строку, начинающуюся на IMAGE_TAG= и все что после (.*);
+        # IMAGE_TAG=${VERSION} - текст, на который заменяется искомый текст;
+        # .env.example > .env.example.release - читается .env.example, данные (включая изменения) пишутся в .env.example.release
+        run: |
+          sed "s/^IMAGE_TAG=.*/IMAGE_TAG=${VERSION}/" .env.example > .env.example.release
+
+      # Создает GitHub релиз
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: Release ${{ env.VERSION }}
+          files: |
+            docker-compose.yml
+            docker-compose.prod.yml
+            docker-compose.prod-lite.yml
+            .env.example.release
+          body: |
+            ## StudyOverflow ${{ env.VERSION }}

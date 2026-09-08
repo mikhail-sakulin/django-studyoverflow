@@ -1,7 +1,7 @@
 import pytest
 from django.contrib.contenttypes.models import ContentType
 
-from notifications.models import Notification, NotificationType
+from notifications.models import NotificationType
 from notifications.services import (
     handle_notification_comment_like,
     handle_notification_comment_on_post_created,
@@ -38,7 +38,9 @@ def mock_celery_task_create_notification(mocker):
 class TestNotificationHandlers:
     """Тестирование обработчиков создания уведомлений и запуска celery задач."""
 
-    def test_handle_send_channel_notify_event(self, user_factory, post_factory, mocker):
+    def test_handle_send_channel_notify_event(
+        self, user_factory, notification_post_factory, mocker
+    ):
         """
         Проверка создания celery-задачи для отправки обновления счетчика непрочитанных уведомлений.
         """
@@ -48,17 +50,16 @@ class TestNotificationHandlers:
         )
 
         user = user_factory()
-        post = post_factory()
 
-        notification = Notification.objects.create(
-            user=user, actor=user, notification_type=NotificationType.POST, content_object=post
-        )
+        notification = notification_post_factory(user=user)
 
         mock_task.reset_mock()
 
         handle_send_channel_notify_event(notification)
 
-        mock_task.assert_called_once_with(kwargs={"user_id": user.pk})
+        mock_task.assert_called_once_with(
+            kwargs={"user_id": user.pk, "update_list": True, "reason": "update"}
+        )
 
     def test_handle_notification_post_like_other_user(
         self, user_factory, post_factory, like_factory, mocker

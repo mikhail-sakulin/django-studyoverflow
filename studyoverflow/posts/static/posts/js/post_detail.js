@@ -151,7 +151,7 @@ document.addEventListener("DOMContentLoaded", function() {
         rulesToggleBtn.setAttribute("aria-expanded", "false");
     }
 
-    // --- Скрытие форм при отправке запросов до ответа сервера ---
+    // --- Скрытие форм и деактивация кнопок при отправке запросов до ответа сервера ---
     document.body.addEventListener("htmx:beforeRequest", function(event) {
         const element = event.target;
 
@@ -163,6 +163,18 @@ document.addEventListener("DOMContentLoaded", function() {
             const emptyText = document.getElementById("no-comments-message");
             if (emptyText) emptyText.style.display = "none";
 
+            return;
+        }
+
+        // Деактивирует кнопки на карточке комментария при подтверждении его удаления
+        if (element.classList.contains("delete-comment-form")) {
+            const commentId = element.dataset.commentId;
+            const card = document.getElementById(`comment-card-${commentId}`);
+            if (card) {
+                card.querySelectorAll("button").forEach(btn => {
+                    btn.disabled = true;
+                });
+            }
             return;
         }
 

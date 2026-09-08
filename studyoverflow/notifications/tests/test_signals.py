@@ -1,6 +1,8 @@
 import pytest
 from django.contrib.auth import get_user_model
 
+from notifications.signals import notification_delete_reason
+
 
 User = get_user_model()
 
@@ -154,7 +156,7 @@ class TestNotificationModelSignals:
 
         notification = notification_post_factory(user=user)
 
-        mock_ws_handler.assert_called_once_with(notification)
+        mock_ws_handler.assert_called_once_with(notification, update_list=True)
 
     def test_notification_creation_triggers_logging(
         self, user_factory, notification_post_factory, mocker
@@ -171,16 +173,61 @@ class TestNotificationModelSignals:
         assert "Создано уведомление" in log_args[0]
         assert log_kwargs["extra"]["for_user"] == user.pk
 
-    def test_notification_deletion_triggers_ws(
+    def test_notification_deletion_external_triggers_list_update(
         self, user_factory, notification_post_factory, mocker
     ):
-        """Проверка, что удаление уведомления вызывает handler с WebSocket-событием."""
+        """
+        Удаление уведомления без установленного ContextVar (внешнее/каскадное удаление)
+        вызывает handler с обновлением списка на клиенте.
+        """
         mock_ws_handler = mocker.patch("notifications.signals.handle_send_channel_notify_event")
 
-        user = user_factory()
-        notification = notification_post_factory(user=user)
+        notification = notification_post_factory()
 
         mock_ws_handler.reset_mock()
         notification.delete()
 
-        mock_ws_handler.assert_called_once()
+        mock_ws_handler.assert_called_once_with(
+            notification, update_list=True, reason="external_delete"
+        )
+
+    def test_notification_deletion_self_initiated_does_not_trigger_list_update(
+        self, user_factory, notification_post_factory, mocker
+    ):
+        """
+        Удаление уведомления с установленным ContextVar "self_delete" (пользователь
+        удалил уведомление сам) не обновляет список на клиенте.
+        """
+        mock_ws_handler = mocker.patch("notifications.signals.handle_send_channel_notify_event")
+
+        notification = notification_post_factory()
+
+        mock_ws_handler.reset_mock()
+
+        token = notification_delete_reason.set("self_delete")
+        try:
+            notification.delete()
+        finally:
+            notification_delete_reason.reset(token)
+
+        mock_ws_handler.assert_called_once_with(
+            notification, update_list=False, reason="self_delete"
+        )
+
+    def test_notification_mark_as_read_does_not_trigger_list_update(
+        self, user_factory, notification_post_factory, mocker
+    ):
+        """
+        Обновление is_read у существующего уведомления не должно триггерить обновление
+        списка уведомлений у клиента.
+        """
+        mock_ws_handler = mocker.patch("notifications.signals.handle_send_channel_notify_event")
+
+        notification = notification_post_factory()
+
+        mock_ws_handler.reset_mock()
+
+        notification.is_read = True
+        notification.save(update_fields=["is_read"])
+
+        mock_ws_handler.assert_called_once_with(notification, update_list=False)

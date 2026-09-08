@@ -5,3 +5,8 @@
 **/.vscode/
 
 **/test-results/
+
+Dockerfile
+docker-compose.e2e.yml
+
+requirements.in

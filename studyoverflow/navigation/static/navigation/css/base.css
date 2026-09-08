@@ -50,7 +50,9 @@ html {
 }
 
 #profile-icon {
-    font-size: 1.9rem
+    font-size: 1.9rem;
+    position: relative;
+    top: 0.2rem;
 }
 
 #profile-icon-label {
@@ -67,16 +69,27 @@ html {
     padding-top: 0.1rem;
 }
 
+#notifications-button,
+#profile-button {
+    display: inline-flex;
+    align-items: center;
+}
+
 #notifications-button:active {
     filter: brightness(1.05);
 }
 
 #i-notifications {
     font-size: 1.35rem;
+    position: relative;
+    top: 0.2rem;
 }
 
 #notifications-count {
-    font-size: 1.25rem
+    font-size: 1.25rem;
+    position: relative;
+    top: 0.1rem;
+    margin-left: 0.3rem;
 }
 
 .notification-particles {

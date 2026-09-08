@@ -40,7 +40,8 @@
     margin-top: 1.2rem;
 }
 
-#id_content {
+.markdown-content-textarea,
+.markdown-content-textarea:focus {
     background-color: #0d1117;
     color: white;
     overflow: auto;
@@ -68,4 +69,19 @@
 #sort-loading-indicator.htmx-request {
     display: flex;
     align-items: center;
+}
+
+#comments-section .card {
+    animation: commentSlideIn 0.3s ease-out both;
+}
+
+@keyframes commentSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-25px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

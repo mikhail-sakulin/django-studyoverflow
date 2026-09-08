@@ -116,6 +116,7 @@ class TestNotificationConsumer:
                 "type": "notify",
                 "unread_notifications_count": 5,
                 "update_list": False,
+                "reason": "self_delete",
             },
         )
 
@@ -126,6 +127,7 @@ class TestNotificationConsumer:
         assert response == {
             "unread_notifications_count": 5,
             "update_list": False,
+            "reason": "self_delete",
         }
 
         await communicator.disconnect()
@@ -153,6 +155,7 @@ class TestNotificationConsumer:
         assert response == {
             "unread_notifications_count": 0,
             "update_list": True,
+            "reason": "update",
         }
 
         await communicator.disconnect()

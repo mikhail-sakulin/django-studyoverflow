@@ -23,8 +23,13 @@
     {# Новые уведомления #}
     <div class="text-center">
 
-      <h3 class="text-white">
-        Оповещения
+      <h3 class="text-white d-inline-block position-relative mb-3">
+          <span id="notifications-refresh-spinner"
+                class="spinner-border spinner-border-sm text-white position-absolute d-none"
+                style="left: -40px; top: 3px; width: 1.8rem; height: 1.8rem;"
+                role="status"
+                aria-hidden="true"></span>
+          Уведомления
       </h3>
 
       <div id="notifications-list"
@@ -36,13 +41,13 @@
         {# Индикатор загрузки #}
         <div id="loading-indicator" class="htmx-indicator d-flex flex-column justify-content-center align-items-center py-2">
           <div class="spinner-border text-light mb-2" role="status"></div>
-          <span class="text-light">Загрузка оповещений...</span>
+          <span class="text-light">Загрузка уведомлений...</span>
         </div>
 
       </div>
 
       <div id="container-no-notifications" style="display: none">
-        <h5 class="text-secondary">Нет оповещений</h5>
+        <h5 class="text-secondary">Нет уведомлений</h5>
       </div>
 
     </div>

@@ -1,4 +1,5 @@
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.account.models import EmailAddress
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.contrib import messages
@@ -53,6 +54,8 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         Сохраняет пользователя после успешной OAuth-аутентификации.
 
         Логика:
+        - Сохраняет email из формы уточнения данных, если не удалось сразу создать пользователя
+          по полученным от провайдера данным.
         - Вызывает стандартный метод сохранения.
         - Устанавливает флаг is_social для пользователя.
         - Определяет OAuth-провайдера.
@@ -63,6 +66,28 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
 
         Загрузка аватара выполняется через Celery после выполнения транзакции.
         """
+        # Если пользователь вручную ввел email (новый) в форме уточнения данных (например, если
+        # email, который прислала соцсеть, был занят), то сохраниться должен именно новый email
+        # из формы, а не присланный от соцсети. Иначе пользователь с новым email создастся, но
+        # затем allauth перезапишет user.email обратно на старый, попробует сохранить пользователя
+        # через user.save() и вызовется исключение, поскольку старый email будет занят.
+        #
+        # Если form is None, то allauth создает пользователя из данных провайдера, форма уточнения
+        # данных не вызывалась и конфликтов email не было. Если form is not None, то email
+        # сохраняется тот, что из формы уточнения данных.
+        if form is not None:
+            new_email = form.cleaned_data.get("email")
+            if new_email:
+                # Заменяется список email_addresses внутри socaillogin новым списком из одного
+                # элемента - новым email из формы. Email, который был получен от провайдера
+                # игнорируется.
+                sociallogin.email_addresses = [
+                    # EmailAddress - модель Django из allauth.account.models. Это таблица
+                    # account_emailaddress, где allauth хранит email-адреса (предполагается,
+                    # что у одного пользователя их может быть несколько).
+                    EmailAddress(email=new_email, verified=False, primary=True)
+                ]
+
         user = super().save_user(request, sociallogin, form)
 
         user.is_social = True

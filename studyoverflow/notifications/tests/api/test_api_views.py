@@ -168,3 +168,42 @@ class TestNotificationViewSet:
 
         assert not Notification.objects.filter(user=user).exists()
         assert Notification.objects.filter(pk=other_notification.pk).exists()
+
+    def test_delete_notification_api_sets_self_delete_reason(
+        self, api_client, user_factory, notification_post_factory, mocker
+    ):
+        """DELETE уведомления через API помечает удаление как self_delete для сигнала."""
+        mock_ws_handler = mocker.patch("notifications.signals.handle_send_channel_notify_event")
+
+        user = user_factory()
+        notification = notification_post_factory(user=user)
+
+        url = reverse("api:notifications:notifications-detail", kwargs={"pk": notification.pk})
+        api_client.force_authenticate(user=user)
+
+        mock_ws_handler.reset_mock()
+
+        api_client.delete(url)
+
+        mock_ws_handler.assert_called_once_with(mocker.ANY, update_list=False, reason="self_delete")
+
+    def test_delete_all_action_sets_self_delete_reason(
+        self, api_client, user_factory, notification_post_factory, mocker
+    ):
+        """DELETE всех уведомлений через API помечает удаление как self_delete для сигнала."""
+        mock_ws_handler = mocker.patch("notifications.signals.handle_send_channel_notify_event")
+
+        user = user_factory()
+        notification_post_factory(user=user)
+        notification_post_factory(user=user)
+
+        api_client.force_authenticate(user=user)
+        url = reverse("api:notifications:notifications-delete-all")
+
+        mock_ws_handler.reset_mock()
+
+        api_client.delete(url)
+
+        assert mock_ws_handler.call_count == 2
+        for call in mock_ws_handler.call_args_list:
+            assert call.kwargs == {"update_list": False, "reason": "self_delete"}

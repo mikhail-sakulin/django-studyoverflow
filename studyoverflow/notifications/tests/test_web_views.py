@@ -196,6 +196,24 @@ class TestNotificationDeleteView:
         assert response.status_code == 200
         assert not Notification.objects.filter(pk=notification.pk).exists()
 
+    def test_delete_notification_web_sets_self_delete_reason(
+        self, client, user_factory, notification_post_factory, mocker
+    ):
+        """Удаление уведомления пользователем помечает причину как self_delete для сигнала."""
+        mock_ws_handler = mocker.patch("notifications.signals.handle_send_channel_notify_event")
+
+        user = user_factory()
+        notification = notification_post_factory(user=user)
+
+        client.force_login(user)
+        url = reverse("notifications:delete", kwargs={"pk": notification.pk})
+
+        mock_ws_handler.reset_mock()
+
+        client.post(url)
+
+        mock_ws_handler.assert_called_once_with(mocker.ANY, update_list=False, reason="self_delete")
+
 
 @pytest.mark.django_db
 class TestNotificationDeleteAllView:
@@ -232,3 +250,24 @@ class TestNotificationDeleteAllView:
 
         assert not Notification.objects.filter(user=user).exists()
         assert Notification.objects.filter(pk=other_notification.pk).exists()
+
+    def test_delete_all_sets_self_delete_reason(
+        self, client, user_factory, notification_post_factory, mocker
+    ):
+        """Bulk-удаление уведомлений пользователем помечает причину как self_delete для сигнала."""
+        mock_ws_handler = mocker.patch("notifications.signals.handle_send_channel_notify_event")
+
+        user = user_factory()
+        notification_post_factory(user=user)
+        notification_post_factory(user=user)
+
+        client.force_login(user)
+        url = reverse("notifications:delete_all")
+
+        mock_ws_handler.reset_mock()
+
+        client.post(url)
+
+        assert mock_ws_handler.call_count == 2
+        for call in mock_ws_handler.call_args_list:
+            assert call.kwargs == {"update_list": False, "reason": "self_delete"}

@@ -83,17 +83,17 @@
             Редактировать
           </button>
 
-          <form class="d-inline-block m-0 p-0"
+          <form class="d-inline-block m-0 p-0 delete-comment-form"
                 method="POST"
                 action="{% url 'posts:comment_delete' post_pk post_slug comment.pk %}"
                 hx-post="{% url 'posts:comment_delete' post_pk post_slug comment.pk %}"
-                hx-target="#comment-wrapper-{{ comment.id }}"
-                hx-swap="outerHTML"
+                hx-swap="none"
                 hx-indicator="#loading-indicator, #sort-loading-indicator"
-                hx-confirm="Вы уверены, что хотите удалить этот комментарий?">
+                hx-confirm="Вы уверены, что хотите удалить этот комментарий?"
+                data-comment-id="{{ comment.id }}">
             {% csrf_token %}
             <button type="submit"
-                    class="btn btn-outline-danger btn-sm mb-2"
+                    class="btn btn-outline-danger btn-sm mb-2 delete-comment-btn"
                     title="Удалить комментарий">
               Удалить
             </button>
