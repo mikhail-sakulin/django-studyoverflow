@@ -43,8 +43,21 @@
         modalImg.classList.remove('is-loading');
     }
 
+    // Перезапуск CSS-анимации появления картинки
+    function restartAnimation() {
+        // Сброс анимации
+        modalImg.style.animation = 'none';
+        // Заставляет браузер принудительно перерисовать объект (перезапустить анимацию)
+        void modalImg.offsetWidth;
+        // Возврат анимации
+        modalImg.style.animation = '';
+    }
+
     // Обработчики успешной загрузки и ошибки загрузки картинки
-    modalImg.addEventListener('load', hideLoading);
+    modalImg.addEventListener('load', function () {
+        hideLoading();
+        restartAnimation();
+    });
     modalImg.addEventListener('error', hideLoading);
 
     // Закрытие модального окна по нажатию клавиши Escape
@@ -75,6 +88,7 @@
         // Проверка на случай, если изображение уже загружено из кэша браузера
         if (modalImg.complete) {
             hideLoading();
+            restartAnimation();
         }
     });
 })();
