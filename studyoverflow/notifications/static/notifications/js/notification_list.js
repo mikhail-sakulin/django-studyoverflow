@@ -77,9 +77,13 @@
                     // скрыть надпись
                     container_no_notifications.style.display = 'none';
                 }
-                // Сделать кнопки активными
-                if (markAllBtn) markAllBtn.disabled = false;
+                // Кнопка "Удалить все" активна, пока есть хотя бы одно уведомление
                 if (deleteAllBtn) deleteAllBtn.disabled = false;
+
+                // Кнопка "Отметить все прочитанными" активна только если есть
+                // хотя бы одно непрочитанное уведомление (карточка с рамкой)
+                const hasUnread = container.querySelector("[id^='notification-card-'].border-warning") !== null;
+                if (markAllBtn) markAllBtn.disabled = !hasUnread;
             }
         });
     }

@@ -102,8 +102,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 // Если сервер прислал флаг обновления списка
                 if (data.update_list && notificationsListEl) {
+                    const spinner = document.getElementById("notifications-refresh-spinner");
+                    if (spinner) spinner.classList.remove("d-none");
+
                     // htmx запрос для обновления списка уведомлений
-                    htmx.ajax('GET', '/notifications/list/', { target: '#notifications-list', swap: 'innerHTML' });
+                    htmx.ajax('GET', '/notifications/list/', {
+                        target: '#notifications-list',
+                        swap: 'innerHTML'
+                    }).then(() => {
+                        if (spinner) spinner.classList.add("d-none");
+
+                        let toastText = "Пришло новое уведомление";
+                        if (data.reason === "external_delete") {
+                            toastText = "Событие удалено, уведомления обновлены";
+                        }
+
+                        document.body.dispatchEvent(new CustomEvent("showMessage", {
+                            detail: { text: toastText, type: "info" }
+                        }));
+                    });
                 }
 
             } catch (e) {
