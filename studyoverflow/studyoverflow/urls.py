@@ -31,7 +31,7 @@ urlpatterns = [
     path("posts/", include("posts.urls")),
     path("users/", include("users.urls")),
     path("notifications/", include("notifications.urls")),
-    path("social-auth/", include("users.urls_socialaccount")),
+    path("social-auth/", include("users.urls_oauth")),
     path("api/v1/", include("studyoverflow.urls_api_v1", namespace="api")),
     path(
         "sitemap.xml",
