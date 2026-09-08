@@ -23,7 +23,9 @@ if TYPE_CHECKING:
     from users.models import User
 
 
-def handle_send_channel_notify_event(notification: Notification) -> None:
+def handle_send_channel_notify_event(
+    notification: Notification, update_list: bool = True, reason: str = "update"
+) -> None:
     """
     Обработчик для отправки обновления счетчика непрочитанных уведомлений через Channels WebSocket.
 
@@ -32,7 +34,7 @@ def handle_send_channel_notify_event(notification: Notification) -> None:
     """
     transaction.on_commit(
         lambda: send_channel_notify_event.apply_async(
-            kwargs={"user_id": notification.user_id},
+            kwargs={"user_id": notification.user_id, "update_list": update_list, "reason": reason},
         )
     )
 

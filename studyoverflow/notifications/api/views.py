@@ -16,6 +16,7 @@ from notifications.api.openapi_responses import NotificationNotFoundOpenApiRespo
 from notifications.api.serializers import DetailSerializer, NotificationSerializer
 from notifications.mixins import NotificationOptimizeMixin
 from notifications.models import Notification
+from notifications.signals import notification_delete_reason
 from notifications.tasks import send_channel_notify_event
 from users.api.openapi_responses_examples import OpenApiUnauthenticated401Response
 
@@ -89,6 +90,18 @@ class NotificationViewSet(
             queryset = queryset.filter(is_read=is_read)
 
         return self.optimize_notification_queryset(queryset)
+
+    def perform_destroy(self, instance):
+        """
+        Удаляет уведомление, помечая через переменную ContextVar, что удаление инициировано
+        самим пользователем через API - обработчик сигнала post_delete не будет
+        триггерить обновление списка уведомлений у клиента.
+        """
+        token = notification_delete_reason.set("self_delete")
+        try:
+            instance.delete()
+        finally:
+            notification_delete_reason.reset(token)
 
     @extend_schema(
         summary="Получить количество непрочитанных уведомлений текущего пользователя.",
@@ -180,6 +193,15 @@ class NotificationViewSet(
     )
     @action(detail=False, methods=["delete"], url_path="delete-all")
     def delete_all(self, request):
-        """Удаляет все уведомления пользователя"""
-        self.get_queryset().delete()
+        """
+        Удаляет все уведомления пользователя, помечая через переменную ContextVar,
+        что удаление инициировано самим пользователем через API - обработчик
+        сигнала post_delete не будет триггерить обновление списка уведомлений у клиента.
+        """
+        token = notification_delete_reason.set("self_delete")
+        try:
+            self.get_queryset().delete()
+        finally:
+            notification_delete_reason.reset(token)
+
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -85,7 +85,9 @@ class TestCreateNotificationTask:
 
 @pytest.mark.django_db
 class TestSendChannelNotifyEventTask:
-    def test_send_event_success_counts_only_unread(self, user_factory, post_factory, mocker):
+    def test_send_event_success_counts_only_unread(
+        self, user_factory, post_factory, notification_post_factory, mocker
+    ):
         """
         Проверка подсчета непрочитанных уведомлений
         и отправки данных через channel_layer.
@@ -93,27 +95,9 @@ class TestSendChannelNotifyEventTask:
         user = user_factory()
 
         # Создаются 2 непрочитанных и 1 прочитанное уведомление
-        Notification.objects.create(
-            user=user,
-            actor_id=user.pk,
-            notification_type=NotificationType.POST.value,  # type: ignore[attr-defined]
-            content_object=post_factory(),
-            is_read=False,
-        )
-        Notification.objects.create(
-            user=user,
-            actor_id=user.pk,
-            notification_type=NotificationType.POST.value,  # type: ignore[attr-defined]
-            content_object=post_factory(),
-            is_read=False,
-        )
-        Notification.objects.create(
-            user=user,
-            actor_id=user.pk,
-            notification_type=NotificationType.POST.value,  # type: ignore[attr-defined]
-            content_object=post_factory(),
-            is_read=True,
-        )
+        notification_post_factory(user=user, is_read=False)
+        notification_post_factory(user=user, is_read=False)
+        notification_post_factory(user=user, is_read=True)
 
         # В celery-задаче
         #
@@ -140,5 +124,26 @@ class TestSendChannelNotifyEventTask:
                 "type": "notify",
                 "unread_notifications_count": 2,
                 "update_list": False,
+                "reason": "update",
+            },
+        )
+
+    def test_send_event_with_explicit_reason(self, user_factory, mocker):
+        """Проверка, что явно переданный reason попадает в событие channel_layer."""
+        user = user_factory()
+
+        mocker.patch("notifications.tasks.get_channel_layer")
+        mock_async_to_sync = mocker.patch("notifications.tasks.async_to_sync")
+        mock_group_send = mock_async_to_sync.return_value
+
+        send_channel_notify_event(user_id=user.pk, update_list=True, reason="self_delete")
+
+        mock_group_send.assert_called_once_with(
+            f"user_{user.pk}",
+            {
+                "type": "notify",
+                "unread_notifications_count": 0,
+                "update_list": True,
+                "reason": "self_delete",
             },
         )

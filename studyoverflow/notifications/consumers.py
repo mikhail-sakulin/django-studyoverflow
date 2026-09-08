@@ -61,6 +61,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 {
                     "unread_notifications_count": event.get("unread_notifications_count", 0),
                     "update_list": event.get("update_list", True),
+                    "reason": event.get("reason", "update"),
                 }
             )
         )

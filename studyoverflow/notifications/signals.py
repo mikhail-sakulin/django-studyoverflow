@@ -1,4 +1,5 @@
 import logging
+from contextvars import ContextVar
 
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_delete, post_save
@@ -20,6 +21,14 @@ from posts.models import Comment, Like, Post
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
+
+# Сохраняет причину удаления уведомления для текущего запроса/контекста выполнения.
+# None означает внешнее (каскадное) удаление уведомления из-за удаления связанных
+# объектов другими пользователями. Если пользователь удаляет уведомление сам,
+# значение должно задаваться "self_delete".
+notification_delete_reason: ContextVar[str | None] = ContextVar(
+    "notification_delete_reason", default=None
+)
 
 
 @receiver(post_save, sender=Like)
@@ -111,16 +120,26 @@ def notification_count_when_notification_created(sender, instance, created, raw,
     if raw:
         return
 
-    handle_send_channel_notify_event(instance)
+    handle_send_channel_notify_event(instance, update_list=created)
 
 
 @receiver(post_delete, sender=Notification)
 def notification_count_when_notification_deleted(sender, instance, **kwargs):
     """
-    Запускает WebSocket-событие для обновления счетчика
+    Запускает WebSocket-событие для обновления счетчика и списка уведомлений при необходимости
     при удалении уведомления через handler.
+
+    Список уведомлений не обновляется, если уведомление было удалено самим пользователем,
+    а не каскадом из-за удаления связанного объекта другим пользователем.
     """
-    handle_send_channel_notify_event(instance)
+    # Получение значения переменной контекста для текущего запроса для определения, пользователь
+    # сам инициировал удаление уведомления, или же нет.
+    reason = notification_delete_reason.get()
+
+    if reason == "self_delete":
+        handle_send_channel_notify_event(instance, update_list=False, reason="self_delete")
+    else:
+        handle_send_channel_notify_event(instance, update_list=True, reason="external_delete")
 
 
 @receiver(post_save, sender=Notification)

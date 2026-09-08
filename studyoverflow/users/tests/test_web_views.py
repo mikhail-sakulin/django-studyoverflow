@@ -409,7 +409,7 @@ class TestUserPasswordChangeView:
 
     def test_password_change_logging_and_success_message(self, client, user_factory, mocker):
         """Смена пароля создает кастомный лог и выводит сообщение."""
-        mock_logger = mocker.patch("users.views.user_views.logger.info")
+        mock_logger = mocker.patch("users.views.logger.info")
 
         user = user_factory(username="password_changer", password="StrongPassword123")
         client.force_login(user)
@@ -569,7 +569,7 @@ class TestModeratorActions:
         При наличии права users.block_user вызывается сервис блокировки и возвращается сообщение.
         """
         mock_service = mocker.patch(
-            "users.views.user_views.block_user_service",
+            "users.views.block_user_service",
             return_value=(True, "Пользователь заблокирован."),
         )
 
@@ -596,7 +596,7 @@ class TestModeratorActions:
         При наличии права users.block_user вызывается сервис блокировки и возвращается сообщение.
         """
         mock_service = mocker.patch(
-            "users.views.user_views.unblock_user_service",
+            "users.views.unblock_user_service",
             return_value=(True, "Пользователь разблокирован."),
         )
 

@@ -89,10 +89,12 @@ def create_notification(
     soft_time_limit=15,
     time_limit=25,
 )
-def send_channel_notify_event(user_id: int, update_list=True) -> None:
+def send_channel_notify_event(
+    user_id: int, update_list: bool = True, reason: str = "update"
+) -> None:
     """
-    Celery задача для отправки обновления счетчика непрочитанных уведомлений
-    через Channels WebSocket пользователю.
+    Celery задача для отправки обновления счетчика непрочитанных уведомлений и флага обновления
+    списка уведомлений через Channels WebSocket пользователю.
     """
     unread_notifications_count = Notification.objects.filter(user_id=user_id, is_read=False).count()
 
@@ -108,5 +110,6 @@ def send_channel_notify_event(user_id: int, update_list=True) -> None:
             "type": "notify",
             "unread_notifications_count": unread_notifications_count,
             "update_list": update_list,
+            "reason": reason,
         },
     )
