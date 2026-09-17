@@ -6,7 +6,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from posts.models import Post
-from posts.services import get_post_cache_key, get_tags_cache_key
+from posts.services.cache import get_post_cache_key, get_tags_cache_key
 
 
 User = get_user_model()

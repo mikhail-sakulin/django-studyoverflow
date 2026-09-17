@@ -36,12 +36,9 @@ from users.mixins import (
     UserOnlineFilterMixin,
     UserSortMixin,
 )
-from users.services import (
-    block_user_service,
-    get_cached_online_user_ids,
-    get_cached_user,
-    unblock_user_service,
-)
+from users.services.cache import get_cached_user
+from users.services.moderation import block_user_service, unblock_user_service
+from users.services.online import get_cached_online_user_ids
 
 
 User = get_user_model()

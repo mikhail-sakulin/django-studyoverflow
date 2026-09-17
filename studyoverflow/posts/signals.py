@@ -5,12 +5,12 @@ from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 
 from posts.models import Comment, Like, LowercaseTag, Post, TaggedPost
-from posts.services import (
+from posts.services.cache import (
     delete_cache_post_detail,
     delete_cache_tags_list,
     delete_cached_posts_by_author,
 )
-from users.services import update_user_counter_field
+from users.services.user_stats import update_user_counter_field
 
 
 User = get_user_model()

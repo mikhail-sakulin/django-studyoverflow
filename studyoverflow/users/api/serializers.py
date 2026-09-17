@@ -5,7 +5,8 @@ from django.core import exceptions
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 
-from users.services import is_user_online, validate_email_unique
+from users.services.online import is_user_online
+from users.services.validators import validate_email_unique
 
 
 User = get_user_model()

@@ -2,7 +2,7 @@ import logging
 
 from django.http import HttpRequest
 
-from users.services import get_cached_online_user_ids
+from users.services.online import get_cached_online_user_ids
 
 
 logger = logging.getLogger(__name__)

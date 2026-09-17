@@ -18,7 +18,7 @@ from posts.mixins import (
     SingleObjectCacheMixin,
 )
 from posts.models import Comment, Post
-from posts.services import log_comment_event
+from posts.services.loggers import log_comment_event
 from users.mixins import IsAuthorOrModeratorMixin
 
 

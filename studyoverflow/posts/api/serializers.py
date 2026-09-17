@@ -5,9 +5,9 @@ from rest_framework import serializers
 from taggit.serializers import TagListSerializerField
 
 from posts.models import Comment, LowercaseTag, Post
-from posts.services import validate_and_normalize_tags, validate_comment
+from posts.services.validators import validate_and_normalize_tags, validate_comment
 from users.api.serializers import AvatarSerializer
-from users.services import is_author_or_moderator
+from users.services.permissions import is_author_or_moderator
 
 
 User = get_user_model()

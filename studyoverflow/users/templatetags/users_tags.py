@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 from django import template
 from django.contrib.auth import get_user_model
 
-from users.services import can_moderate, is_user_online
+from users.services.online import is_user_online
+from users.services.permissions import can_moderate
 
 
 register = template.Library()

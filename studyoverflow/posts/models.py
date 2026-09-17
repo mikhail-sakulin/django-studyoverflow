@@ -13,13 +13,13 @@ from django.utils.text import Truncator
 from taggit.managers import TaggableManager
 from taggit.models import GenericTaggedItemBase, TagBase
 
-from posts.services import (
-    PostTitleValidator,
+from posts.services.text_processing import (
     generate_slug,
     normalize_tag_name,
     render_markdown_safe,
     strip_tags_and_whitespace_chars_from_html,
 )
+from posts.services.validators import PostTitleValidator
 from studyoverflow import settings
 
 

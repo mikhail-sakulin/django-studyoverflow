@@ -12,7 +12,7 @@ from django.views import View
 
 from posts.mixins import LoginRequiredHTMXMixin
 from posts.models import Comment, Post
-from posts.services import perform_toggle_like
+from posts.services.like_handler import perform_toggle_like
 
 
 logger = logging.getLogger(__name__)

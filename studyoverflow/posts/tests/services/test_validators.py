@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 from django.core.exceptions import ValidationError
 
-from posts.services import (
+from posts.services.validators import (
     PostTitleValidator,
     validate_and_normalize_tags,
     validate_comment,

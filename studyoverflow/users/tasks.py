@@ -17,13 +17,9 @@ from django.core.files.storage import default_storage
 from django.core.management import call_command
 from django.utils import timezone
 
-from users.services import (
-    delete_old_avatar_names,
-    generate_avatar_small,
-    get_cached_online_user_ids,
-    get_counts_map,
-    get_reputation_map,
-)
+from users.services.avatars import delete_old_avatar_names, generate_avatar_small
+from users.services.online import get_cached_online_user_ids
+from users.services.user_stats import get_counts_map, get_reputation_map
 
 
 UserModel = get_user_model()

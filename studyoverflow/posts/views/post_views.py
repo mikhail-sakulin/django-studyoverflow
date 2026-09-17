@@ -15,7 +15,8 @@ from posts.mixins import (
     SingleObjectCacheMixin,
 )
 from posts.models import Post
-from posts.services import get_cached_post, log_post_event
+from posts.services.cache import get_cached_post
+from posts.services.loggers import log_post_event
 from users.mixins import IsAuthorOrModeratorMixin
 
 

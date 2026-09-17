@@ -4,7 +4,7 @@ from django.db import connection
 from django.http import Http404
 from django.test.utils import CaptureQueriesContext
 
-from users.services import delete_cache_user, get_cached_user, get_user_cache_key
+from users.services.cache import delete_cache_user, get_cached_user, get_user_cache_key
 
 
 @pytest.fixture(autouse=True)

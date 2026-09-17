@@ -2,16 +2,14 @@ import pytest
 from django.test import SimpleTestCase
 
 from posts.models import Post
-from posts.services import (
+from posts.services.text_processing import (
+    _protect_markdown_text_blocks,
+    _restore_markdown_text_blocks,
     generate_slug,
     normalize_tag_name,
     render_markdown_safe,
     strip_tags_and_whitespace_chars_from_html,
     translit_rus_to_eng,
-)
-from posts.services.text_processing import (
-    _protect_markdown_text_blocks,
-    _restore_markdown_text_blocks,
 )
 
 

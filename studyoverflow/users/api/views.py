@@ -62,7 +62,8 @@ from users.api.serializers import (
     UserRegisterSerializer,
 )
 from users.mixins import UserOnlineFilterMixin, UserSortMixin
-from users.services import block_user_service, get_cached_user, unblock_user_service
+from users.services.cache import get_cached_user
+from users.services.moderation import block_user_service, unblock_user_service
 from users.tasks import send_password_reset_email_task
 
 

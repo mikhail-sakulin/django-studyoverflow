@@ -3,7 +3,7 @@ import io
 import pytest
 from PIL import Image
 
-from users.services import (
+from users.services.image_processing import (
     generate_gif,
     generate_image,
     generate_static_image,

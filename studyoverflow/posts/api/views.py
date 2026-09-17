@@ -40,13 +40,9 @@ from posts.mixins import (
     PostFilterSortMixin,
 )
 from posts.models import Comment, LowercaseTag, Post
-from posts.services import (
-    get_cached_post,
-    get_cached_tags,
-    log_comment_event,
-    log_post_event,
-    perform_toggle_like,
-)
+from posts.services.cache import get_cached_post, get_cached_tags
+from posts.services.like_handler import perform_toggle_like
+from posts.services.loggers import log_comment_event, log_post_event
 from users.api.openapi_responses_examples import OpenApiUnauthenticated401Response
 
 

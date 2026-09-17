@@ -11,7 +11,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from users.services import get_user_cache_key
+from users.services.cache import get_user_cache_key
 
 
 User = get_user_model()

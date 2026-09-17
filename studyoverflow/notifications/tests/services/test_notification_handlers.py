@@ -2,7 +2,7 @@ import pytest
 from django.contrib.contenttypes.models import ContentType
 
 from notifications.models import NotificationType
-from notifications.services import (
+from notifications.services.notification_handlers import (
     handle_notification_comment_like,
     handle_notification_comment_on_post_created,
     handle_notification_post_created,

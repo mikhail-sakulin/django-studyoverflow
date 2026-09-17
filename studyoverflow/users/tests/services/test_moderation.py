@@ -2,7 +2,7 @@ import pytest
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 
-from users.services import block_user_service, unblock_user_service
+from users.services.moderation import block_user_service, unblock_user_service
 
 
 @pytest.mark.django_db
@@ -16,7 +16,7 @@ class TestUserBlockServices:
         ],
     )
     def test_permission_denied(self, user_factory, mocker, service_func):
-        mocker.patch("users.services.can_moderate", return_value=False)
+        mocker.patch("users.services.moderation.can_moderate", return_value=False)
 
         moderator = user_factory()
         target_user = user_factory()

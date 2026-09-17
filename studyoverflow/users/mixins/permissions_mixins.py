@@ -3,7 +3,7 @@ from typing import Optional
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest
 
-from users.services import is_author_or_moderator
+from users.services.permissions import is_author_or_moderator
 
 
 class IsAuthorOrModeratorMixin:

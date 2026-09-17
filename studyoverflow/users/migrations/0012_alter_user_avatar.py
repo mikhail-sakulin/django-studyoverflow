@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='user',
             name='avatar',
-            field=models.ImageField(blank=True, default='avatars/default_avatar.jpg', upload_to='', validators=[users.services.AvatarFileValidator()], verbose_name='Аватар'),
+            field=models.ImageField(blank=True, default='avatars/default_avatar.jpg', upload_to='', validators=[users.services.validators.AvatarFileValidator()], verbose_name='Аватар'),
         ),
     ]

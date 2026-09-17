@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models import Count, F
 from django.db.models.functions import Greatest
 
-from users.services import delete_cache_user
+from users.services.cache import delete_cache_user
 
 
 def update_user_counter_field(author_id: int, counter_field: str, value_change: int) -> None:

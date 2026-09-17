@@ -8,7 +8,8 @@ from django.db.models import Q
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from users.services import delete_cache_user, remove_user_offline
+from users.services.cache import delete_cache_user
+from users.services.online import remove_user_offline
 from users.services.permissions import MODERATOR_PERMISSIONS, STAFF_PERMISSIONS
 from users.tasks import delete_all_avatars_files_task
 

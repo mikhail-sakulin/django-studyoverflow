@@ -1,17 +1,15 @@
 import pytest
 
-from users.services import (
-    get_cached_online_user_ids,
-    get_online_user_ids,
-    is_user_online,
-    remove_user_offline,
-    set_user_online,
-)
 from users.services.online import (
     ONLINE_SET_KEY,
     ONLINE_TTL,
     REDIS_KEY_PREFIX,
+    get_cached_online_user_ids,
+    get_online_user_ids,
     get_user_key_for_redis,
+    is_user_online,
+    remove_user_offline,
+    set_user_online,
 )
 
 

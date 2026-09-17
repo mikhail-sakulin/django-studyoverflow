@@ -9,7 +9,7 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
-from users.services import get_user_cache_key
+from users.services.cache import get_user_cache_key
 
 
 User = get_user_model()

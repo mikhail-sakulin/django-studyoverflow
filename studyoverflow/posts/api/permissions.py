@@ -1,6 +1,6 @@
 from rest_framework import permissions
 
-from users.services import is_author_or_moderator
+from users.services.permissions import is_author_or_moderator
 
 
 class IsAuthorOrModeratorPermission(permissions.BasePermission):

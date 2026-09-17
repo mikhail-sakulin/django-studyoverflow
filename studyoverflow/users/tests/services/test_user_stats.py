@@ -1,6 +1,6 @@
 import pytest
 
-from users.services import get_counts_map, get_reputation_map, update_user_counter_field
+from users.services.user_stats import get_counts_map, get_reputation_map, update_user_counter_field
 
 
 @pytest.mark.django_db

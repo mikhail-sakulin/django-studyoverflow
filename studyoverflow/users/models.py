@@ -12,14 +12,16 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy
 
-from users.services import (
+from users.services.avatars import (
+    generate_default_avatar_in_different_sizes,
+    get_old_avatar_names,
+    user_avatar_upload_path,
+)
+from users.services.validators import (
     AvatarFileValidator,
     BirthDateValidator,
     CustomUsernameValidator,
     PersonalNameValidator,
-    generate_default_avatar_in_different_sizes,
-    get_old_avatar_names,
-    user_avatar_upload_path,
 )
 
 

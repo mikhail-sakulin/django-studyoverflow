@@ -1,4 +1,4 @@
-from posts.services import perform_toggle_like
+from posts.services.like_handler import perform_toggle_like
 
 
 class TestPerformToggleLike:

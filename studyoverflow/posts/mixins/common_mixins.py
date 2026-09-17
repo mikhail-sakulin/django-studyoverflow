@@ -8,7 +8,7 @@ from django.http import HttpRequest
 from django.shortcuts import get_object_or_404, redirect
 
 from posts.models import Post
-from posts.services import get_cached_tags
+from posts.services.cache import get_cached_tags
 
 
 class ContextTagMixin:
