@@ -35,7 +35,7 @@ class PostSerializer(serializers.ModelSerializer):
     author = AuthorSerializer(read_only=True)
     time_update = serializers.SerializerMethodField()
     title = serializers.CharField(
-        min_length=10,
+        min_length=Post.MIN_TITLE_LENGTH,
         max_length=Post.MAX_TITLE_SLUG_LENGTH_POST,
         required=True,
         error_messages={

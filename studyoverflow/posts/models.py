@@ -1,4 +1,6 @@
-from typing import Final
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Final
 from urllib.parse import urlencode
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -11,7 +13,6 @@ from django.utils.text import Truncator
 from taggit.managers import TaggableManager
 from taggit.models import GenericTaggedItemBase, TagBase
 
-from notifications.models import Notification
 from posts.services import (
     PostTitleValidator,
     generate_slug,
@@ -20,6 +21,10 @@ from posts.services import (
     strip_tags_and_whitespace_chars_from_html,
 )
 from studyoverflow import settings
+
+
+if TYPE_CHECKING:
+    from users.models import User
 
 
 class LowercaseTag(TagBase):
@@ -32,7 +37,7 @@ class LowercaseTag(TagBase):
       с конкретным тегом.
     """
 
-    MAX_NAME_LENGTH_TAG: Final = 50  # максимальная длина имени тега
+    MAX_NAME_LENGTH_TAG: Final[int] = 50  # максимальная длина имени тега
 
     name = models.CharField(
         max_length=MAX_NAME_LENGTH_TAG,
@@ -143,11 +148,12 @@ class Post(models.Model):
     - time_update (DateTimeField): Дата и время последнего изменения.
     """
 
-    MAX_TITLE_SLUG_LENGTH_POST: Final = 255  # максимальная длина заголовка и slug поста
-    MAX_CONTENT_LENGTH: Final = 15000  # максимальная длина содержимого поста
+    MIN_TITLE_LENGTH: Final[int] = 10
+    MAX_TITLE_SLUG_LENGTH_POST: Final[int] = 255  # максимальная длина заголовка и slug поста
+    MAX_CONTENT_LENGTH: Final[int] = 15000  # максимальная длина содержимого поста
 
     title_validator = PostTitleValidator(
-        min_len=10, min_letters=10, max_len=MAX_TITLE_SLUG_LENGTH_POST
+        min_len=MIN_TITLE_LENGTH, min_letters=MIN_TITLE_LENGTH, max_len=MAX_TITLE_SLUG_LENGTH_POST
     )
 
     author = models.ForeignKey(
@@ -185,7 +191,7 @@ class Post(models.Model):
         "Like", content_type_field="content_type", object_id_field="object_id", verbose_name="Лайк"
     )
     notifications = GenericRelation(
-        Notification,
+        "notifications.Notification",
         content_type_field="content_type",
         object_id_field="object_id",
         verbose_name="Уведомления",
@@ -251,10 +257,7 @@ class Post(models.Model):
         super().__init__(*args, **kwargs)
         # Сохранение записанного в БД значения content для проверки изменения поля
         # Проверка, загружено ли поле 'content' из БД в текущий экземпляр
-        if "content" in self.__dict__:
-            self._original_content = self.content
-        else:
-            self._original_content = None
+        self._original_content = self.__dict__.get("content")
 
     def __str__(self):
         """Возвращает строковое представление объекта."""
@@ -282,7 +285,7 @@ class Post(models.Model):
         return reverse("posts:detail", kwargs={"pk": self.pk, "slug": self.slug})
 
     @property
-    def is_edited(self):
+    def is_edited(self) -> bool:
         """Вычисляемое свойство. Определяет факт редактирования поста."""
         return (self.time_update - self.time_create).total_seconds() > 3
 
@@ -293,11 +296,11 @@ class CommentQuerySet(models.QuerySet):
     для работы с иерархией комментариев.
     """
 
-    def roots(self):
+    def roots(self) -> CommentQuerySet:
         """Возвращает родительские комментарии (которые без родительского комментария)."""
         return self.filter(parent_comment__isnull=True)
 
-    def children(self):
+    def children(self) -> CommentQuerySet:
         """Возвращает дочерние комментарии (имеющие родительский комментарий)."""
         return self.filter(parent_comment__isnull=False)
 
@@ -320,7 +323,7 @@ class Comment(models.Model):
     - time_update (DateTimeField): Дата и время последнего изменения.
     """
 
-    MAX_CONTENT_LENGTH: Final = 5000  # максимальная длина содержимого комментария
+    MAX_CONTENT_LENGTH: Final[int] = 5000  # максимальная длина содержимого комментария
 
     post = models.ForeignKey(
         Post, on_delete=models.CASCADE, related_name="comments", verbose_name="Пост"
@@ -362,7 +365,7 @@ class Comment(models.Model):
         "Like", content_type_field="content_type", object_id_field="object_id", verbose_name="Лайк"
     )
     notifications = GenericRelation(
-        Notification,
+        "notifications.Notification",
         content_type_field="content_type",
         object_id_field="object_id",
         verbose_name="Уведомления",
@@ -410,14 +413,11 @@ class Comment(models.Model):
         super().__init__(*args, **kwargs)
         # Сохранение записанного в БД значения content для проверки изменения поля
         # Проверка, загружено ли поле 'content' из БД в текущий экземпляр
-        if "content" in self.__dict__:
-            self._original_content = self.content
-        else:
-            self._original_content = None
+        self._original_content = self.__dict__.get("content")
 
     def __str__(self):
         """Возвращает строковое представление объекта."""
-        return f"{self.author}: {Truncator(self.content).chars(30, truncate="…")}"
+        return f"{self.author}: {Truncator(self.content).chars(30, truncate='…')}"
 
     def save(self, *args, **kwargs):
         """
@@ -434,7 +434,7 @@ class Comment(models.Model):
         return f"{self.post.get_absolute_url()}#comment-card-{self.pk}"
 
     @property
-    def is_edited(self):
+    def is_edited(self) -> bool:
         """Вычисляемое свойство. Определяет факт редактирования комментария."""
         return (self.time_update - self.time_create).total_seconds() > 3
 
@@ -444,7 +444,7 @@ class LikeManager(models.Manager):
     Менеджер модели Like с дополнительной логикой проверки лайков.
     """
 
-    def is_liked(self, user, obj):
+    def is_liked(self, user: User, obj: models.Model) -> bool:
         """Проверяет, поставил ли пользователь лайк указанному объекту."""
         ct = ContentType.objects.get_for_model(obj)
         return self.filter(content_type=ct, object_id=obj.pk, user=user).exists()
@@ -477,7 +477,7 @@ class Like(models.Model):
     content_object = GenericForeignKey("content_type", "object_id")
 
     notifications = GenericRelation(
-        Notification,
+        "notifications.Notification",
         content_type_field="content_type",
         object_id_field="object_id",
         verbose_name="Уведомления",
@@ -498,7 +498,9 @@ class Like(models.Model):
         unique_together = ("user", "content_type", "object_id")
 
         indexes = [
-            # Индекс для получения всех лайков конкретного объекта (Post, Comment):
+            # Индекс для получения всех лайков конкретного объекта (Post, Comment), также
+            # используется GenericRelation при каскадном удалении из-за удаления
+            # связанного объекта:
             #   Like.objects.filter(content_type=ct, object_id=obj_id)
             #       WHERE content_type_id = ? AND object_id = ?
             models.Index(fields=["content_type_id", "object_id"]),
