@@ -81,6 +81,7 @@ html {
 
 #i-notifications {
     font-size: 1.35rem;
+    display: inline-block;
     position: relative;
     top: 0.2rem;
 }
@@ -92,14 +93,23 @@ html {
     margin-left: 0.3rem;
 }
 
+.bell-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
+}
+
 .notification-particles {
     position: absolute;
     top: 50%;
-    left: 100%;
+    left: 50%;
     width: 60px;
     height: 60px;
     pointer-events: none;
-    transform: translate(-50%, -50%);
+    transform: translate(calc(-50% + 2.5rem), calc(-50% + 0.2rem));
 }
 
 .particle {

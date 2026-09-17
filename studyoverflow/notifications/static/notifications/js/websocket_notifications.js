@@ -31,19 +31,22 @@ document.addEventListener("DOMContentLoaded", function () {
     // Анимация новых уведомлений
     // --------------------------
     function animateNotification() {
-        // Пульс иконки
+        // Пульсация иконки
         iconEl.classList.add("pulse");
         setTimeout(() => iconEl.classList.remove("pulse"), 500);
 
-        // Частицы
+        // Фиксированные частицы
         const container = buttonEl.querySelector(".notification-particles");
-        for (let i = 0; i < 8; i++) {
+        const particleCount = 8;
+        const radius = 25;
+        const startAngle = -Math.PI / 2;
+
+        for (let i = 0; i < particleCount; i++) {
             const particle = document.createElement("div");
             particle.classList.add("particle");
 
-            // Случайное направление
-            const angle = Math.random() * 2 * Math.PI;
-            const radius = 20 + Math.random() * 10;
+            const angle = startAngle + (i / particleCount) * 2 * Math.PI;
+
             particle.style.setProperty("--dx", `${Math.cos(angle) * radius}px`);
             particle.style.setProperty("--dy", `${Math.sin(angle) * radius}px`);
 
