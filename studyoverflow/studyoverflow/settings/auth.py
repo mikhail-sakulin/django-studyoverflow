@@ -183,6 +183,9 @@ REST_AUTH = {
     # False, если токен забирает фронтенд сам из JSON-тела.
     # True для передачи refresh-токена только в httponly куке, тогда js не имеет к ней доступа.
     "JWT_AUTH_HTTPONLY": False,
+    # Сериализатор для отображения данных пользователя в ответах dj-rest-auth
+    # после успешной аутентификации.
+    "USER_DETAILS_SERIALIZER": "users.api.serializers.UserMyProfileSerializer",
 }
 
 # HTTPS конфигурация dj_rest_auth, если Nginx настроен на работу по SSL/HTTPS
