@@ -52,11 +52,11 @@
     <p><strong>2) Текст: жирный, курсив, зачёркнутый, HTML-теги</strong></p>
     <p><pre><code class="language-markdown">Это обычный текстовый абзац. В нём можно использовать **жирный**, *курсив* и ~~зачеркнутый~~ тексты.
 
-Явные HTML-теги тоже допускаются: &lt;u&gt;подчёркнутый&lt;/u&gt;, &lt;s&gt;зачёркнутый&lt;/s&gt; или &lt;del&gt;удалённый&lt;/del&gt;.</code></pre></p>
+Явные HTML-теги тоже допускаются: &lt;strong&gt;жирный&lt;/strong&gt;, &lt;em&gt;курсив&lt;/em&gt; и &lt;del&gt;зачеркнутый&lt;/del&gt; тексты.</code></pre></p>
     <p><strong>Результат:</strong></p>
     <div class="example-result content">
-      <p>Это обычный текстовый абзац. В нём можно использовать <strong>жирный</strong> и <em>курсив</em>. Также работает <del>зачеркнутый</del>.</p>
-      <p>Явные HTML-теги тоже допускаются: <u>подчёркнутый</u>, <s>зачёркнутый</s> или <del>удалённый</del>.</p>
+      <p>Это обычный текстовый абзац. В нём можно использовать <strong>жирный</strong>, <em>курсив</em> и <del>зачеркнутый</del> тексты.</p>
+      <p>Явные HTML-теги тоже допускаются: <strong>жирный</strong>, <em>курсив</em> и <del>зачеркнутый</del> тексты.</p>
     </div>
 
     <hr>
@@ -176,7 +176,7 @@
     <p><strong>7) Блоки кода</strong></p>
     <pre><code class="language-markdown">```python
 @login_required
-def create_post(request):
+def example_view(request):
     """
     Пример функции для тестирования подсветки синтаксиса.
     """
@@ -186,7 +186,7 @@ def create_post(request):
     <p><strong>Результат:</strong></p>
     <div class="codehilite">
 <pre><span></span><code><span class="nd">@login_required</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">create_post</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">example_view</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Пример функции для тестирования подсветки синтаксиса.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -196,7 +196,7 @@ def create_post(request):
 
     <hr>
 
-    <p><strong>8) Inline-код и символы, которые не трактуются как LaTeX</strong></p>
+    <p><strong>8) Inline-код</strong></p>
     <pre><code class="language-markdown">Инлайн-код: `print("hello")`</code></pre>
 
     <p><strong>Результат:</strong></p>
