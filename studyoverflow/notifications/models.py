@@ -91,6 +91,12 @@ class Notification(models.Model):
             #       WHERE user_id = ?
             #       ORDER BY time_create DESC
             models.Index(fields=["user", "-time_create"]),
+            # Индекс для получения всех уведомлений связанного объекта, также
+            # используется GenericRelation при каскадном удалении из-за удаления
+            # связанного объекта:
+            #   Notification.objects.filter(content_type=ct, object_id=obj_id)
+            #       WHERE content_type_id = ? AND object_id = ?
+            models.Index(fields=["content_type", "object_id"]),
         ]
 
     def __str__(self):
