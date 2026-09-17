@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 
 from celery import chain
@@ -28,9 +30,16 @@ class CustomUserManager(UserManager):
     Позволяет искать пользователя как по username, так и по email.
     """
 
-    def get_by_natural_key(self, username_or_email):
+    def get_by_natural_key(self, username_or_email) -> User:
         """Возвращает пользователя по username или email."""
-        return self.get(Q(username=username_or_email) | Q(email__iexact=username_or_email))
+        # Поиск по введенному username выполняется регистрозависимый, а поиск по введенному
+        # email выполняется регистроНЕзависимый, поскольку лукап "email__iexact" в SQL-запросе
+        # использует UPPER(email), а для поля "email" задан UniqueConstraint Lower("email"),
+        # что также создает соответствующий индекс в БД, то поиск идет по аннотированному полю
+        # "email_lower" для использования индекса.
+        return self.annotate(email_lower=Lower("email")).get(
+            Q(username=username_or_email) | Q(email_lower=username_or_email.lower())
+        )
 
 
 class User(AbstractUser):
@@ -217,6 +226,7 @@ class User(AbstractUser):
             ("block_user", "Can block/unblock users"),
         ]
         constraints = [
+            # Также создает соответствующий индекс.
             models.UniqueConstraint(
                 Lower("email"),
                 name="unique_user_lowercase_email",
@@ -258,63 +268,99 @@ class User(AbstractUser):
           для генерации миниатюр аватара и удаление старых файлов.
         """
         is_creation = not self.pk
+
         update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            update_fields = set(update_fields)
 
-        if not update_fields or "role" in update_fields:
+        # Флаги "is_staff" и "is_superuser" синхронизируются с ролью, если явно не задан
+        # update_fields (неизвестно, изменена роль или нет) или если роль явно изменена.
+        if update_fields is None or "role" in update_fields:
             self._sync_role_flags()
+            # Если role в update_fields, то остальные изменения тоже должны
+            # быть сохранены в БД.
+            if update_fields is not None:
+                update_fields.update({"role", "is_staff", "is_superuser"})
 
+        # Cловарь с флагами и данными для пост-обработки аватаров после сохранения пользователя,
+        # измененный оригинал аватара сохраняется сразу, пост-обработка выполняется позже.
+        # Словарь заполняется только если аватар был изменен.
         post_save_context = {}
-        if not is_creation and (not update_fields or "avatar" in update_fields):
+
+        # post_save_context заполняется если пользователь не создается, а также если явно не задан
+        # update_fields (неизвестно, изменен аватар или нет) или если аватар явно изменен.
+        if not is_creation and (update_fields is None or "avatar" in update_fields):
             post_save_context = self._handle_update_avatar()
+            # Если avatar в update_fields, то остальные изменения тоже должны
+            # быть сохранены в БД.
+            if update_fields is not None:
+                update_fields.update({"avatar", *self.get_small_avatar_fields()})
 
         if self.email:
             self.email = self.email.lower()
 
+        if update_fields is not None:
+            kwargs["update_fields"] = list(update_fields)
+
+        # Одна транзакция БД для сохранения изменений пользователя и синхронизации групп,
+        # после коммита транзакции запускаются Celery-задачи.
         with transaction.atomic():
             super().save(*args, **kwargs)
 
-            if not update_fields or "role" in update_fields:
+            if update_fields is None or "role" in update_fields:
                 self._sync_role_groups()
 
-        if is_creation:
-            self._schedule_creation_celery_tasks()
-        elif post_save_context:
-            self._schedule_update_celery_tasks(post_save_context)
+            # Пост-обработка аватаров.
+            #
+            # Если пользователь был создан, вызывается обработчик для запуска соответствующей
+            # Celery-задачи.
+            if is_creation:
+                self._schedule_creation_celery_tasks()
+            # Если аватар был изменен, то словарь post_save_context будет содержать данные,
+            # которые передаются в обработчик для запуска соответствующих Celery-задач.
+            elif post_save_context:
+                self._schedule_update_celery_tasks(post_save_context)
 
-    def get_absolute_url(self):
+    def get_absolute_url(self) -> str:
         """Возвращает уникальный URL профиля пользователя."""
         return reverse("users:profile", kwargs={"username": self.username})
 
-    def get_avatar_small_url(self, size="size1"):
+    def get_avatar_small_url(self, size: str = "size1") -> str | None:
         """
         Возвращает URL конкретной миниатюры или URL оригинала аватара.
+
+        При загрузке нового аватара, пока новые миниатюры еще не сгенерированы Celery-задачей,
+        поля-миниатюры принимают значения None (задается в методе _reset_small_avatars при его
+        вызове с default=None), поэтому текущий метод в случае отсутствия миниатюры вернет оригинал.
         """
         fields = {
             "size1": self.avatar_small_size1,
             "size2": self.avatar_small_size2,
             "size3": self.avatar_small_size3,
         }
+
         target_field = fields.get(size)
         if target_field:
             return target_field.url
+
         return self.avatar.url if self.avatar else None
 
     @property
-    def avatar_small_size1_url(self):
+    def avatar_small_size1_url(self) -> str | None:
         """URL миниатюры аватара размера size1."""
         return self.get_avatar_small_url("size1")
 
     @property
-    def avatar_small_size2_url(self):
+    def avatar_small_size2_url(self) -> str | None:
         """URL миниатюры аватара размера size2."""
         return self.get_avatar_small_url("size2")
 
     @property
-    def avatar_small_size3_url(self):
+    def avatar_small_size3_url(self) -> str | None:
         """URL миниатюры аватара размера size3."""
         return self.get_avatar_small_url("size3")
 
-    def _sync_role_flags(self):
+    def _sync_role_flags(self) -> None:
         """
         Синхронизирует флаги "is_staff" и "is_superuser" и роль.
 
@@ -329,7 +375,7 @@ class User(AbstractUser):
             for field, value in flags.items():
                 setattr(self, field, value)
 
-    def _sync_role_groups(self):
+    def _sync_role_groups(self) -> None:
         """
         Назначает или удаляет группы "Moderators" и "StaffViewers" в зависимости от роли.
         """
@@ -351,7 +397,7 @@ class User(AbstractUser):
                 group, _ = Group.objects.get_or_create(name=group_name)
                 self.groups.add(group)
 
-    def _handle_update_avatar(self):
+    def _handle_update_avatar(self) -> dict[str, bool | list[str]]:
         """
         Обрабатывает изменения аватара перед обновлением.
         Возвращает словарь с флагами и данными для пост-обработки.
@@ -378,7 +424,7 @@ class User(AbstractUser):
             "was_default": avatar_name_in_db == default_avatar,
         }
 
-    def _reset_small_avatars(self, default: bool):
+    def _reset_small_avatars(self, default: bool) -> None:
         """
         Сбрасывает значения миниатюр аватара.
 
@@ -391,7 +437,7 @@ class User(AbstractUser):
                 value = None
             setattr(self, field_name, value)
 
-    def _schedule_creation_celery_tasks(self):
+    def _schedule_creation_celery_tasks(self) -> None:
         """
         Задачи Celery при создании пользователя.
 
@@ -403,7 +449,7 @@ class User(AbstractUser):
         if self.avatar != default_avatar:
             transaction.on_commit(lambda: generate_and_save_avatars_small.delay(self.pk))
 
-    def _schedule_update_celery_tasks(self, context: dict):
+    def _schedule_update_celery_tasks(self, context: dict) -> None:
         """
         Задачи Celery при обновлении пользователя.
 
@@ -422,7 +468,7 @@ class User(AbstractUser):
         was_default = context.get("was_default")
 
         if is_new_upload:
-            # цепочка celery задач на создание миниатюр и удаление
+            # цепочка celery задач на создание миниатюр и удаление предыдущих
             # .si - immutable signature - результат первой задачи не передается во вторую
             tasks = chain(
                 generate_and_save_avatars_small.si(self.pk),
@@ -439,7 +485,7 @@ class User(AbstractUser):
             )
 
     @classmethod
-    def generate_default_avatar_different_sizes(cls):
+    def generate_default_avatar_different_sizes(cls) -> None:
         """
         Генерирует уменьшенные версии стандартного аватара default_avatar
         для всех размеров, указанных в AVATAR_SMALL_SIZES.

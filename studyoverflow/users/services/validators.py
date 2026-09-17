@@ -104,11 +104,11 @@ class AvatarFileValidator:
         "image/x-icon",
     )
 
-    MAX_SIZE: Final = 10 * 1024 * 1024
-    MIN_HEIGHT: Final = 100
-    MIN_WIDTH: Final = 100
-    MIN_ASPECT_RATION: Final = 0.25
-    MAX_ASPECT_RATION: Final = 4
+    MAX_SIZE: Final[int] = 10 * 1024 * 1024
+    MIN_HEIGHT: Final[int] = 100
+    MIN_WIDTH: Final[int] = 100
+    MIN_ASPECT_RATION: Final[float] = 0.25
+    MAX_ASPECT_RATION: Final[int] = 4
 
     def __call__(self, file: File, *args, **kwargs):
         # Файл валидируется, только если он заново загружен, иначе валидация не нужна.
@@ -182,7 +182,7 @@ class BirthDateValidator:
     - текущий возраст не превышает MAX_AGE лет.
     """
 
-    MAX_AGE: Final = 120
+    MAX_AGE: Final[int] = 120
 
     def __call__(self, value: date):
         today = timezone.localdate()
