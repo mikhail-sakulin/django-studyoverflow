@@ -12,8 +12,9 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from navigation.api.serializers import DetailSerializer
 from notifications.api.openapi_responses import NotificationNotFoundOpenApiResponse
-from notifications.api.serializers import DetailSerializer, NotificationSerializer
+from notifications.api.serializers import NotificationSerializer
 from notifications.mixins import NotificationOptimizeMixin
 from notifications.models import Notification
 from notifications.signals import notification_delete_reason
@@ -81,6 +82,15 @@ class NotificationViewSet(
     serializer_class = NotificationSerializer
 
     def get_queryset(self):
+        # Заглушка для интеграции с генератором документации drf-spectacular, например, при
+        # использовании команды "python manage.py spectacular".
+        # Прописывается, так как при генерации документации нет self.request.user, из-за чего
+        # будет вызвана и показана ошибка.
+        # Флаг swagger_fake_view равен True во время генерации схемы. При реальном запросе от
+        # пользователя значение будет равным False.
+        if getattr(self, "swagger_fake_view", False):
+            return Notification.objects.none()
+
         queryset = Notification.objects.filter(user=self.request.user)
 
         # Сортировка по полю is_read, если задан соответствующий GET-параметр
@@ -178,9 +188,15 @@ class NotificationViewSet(
     def mark_read(self, request, pk=None):
         """Помечает одно уведомление прочитанным."""
         notification = self.get_object()
-        if not notification.is_read:
-            notification.is_read = True
-            notification.save(update_fields=["is_read"])
+
+        serializer = self.get_serializer(
+            notification,
+            data={"is_read": True},
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
         return Response({"detail": "Уведомление изменено на прочитанное."})
 
     @extend_schema(
