@@ -57,7 +57,7 @@ jobs:
       - name: Re-tag images with version
         # set -e - немедленное завершение скрипта при ошибке
         # docker buildx imagetools create --tag - команда создает новый манифест с новым тегом на основе существующего
-        # docker tag - сначала скачал бы все образы, локально задал новый тег и загрузил бы образы обратно, что дольше
+        # docker tag - пришлось бы сначала скачать образы через docker pull, локально задать новый тег и загрузить образы обратно, что дольше
         run: |
           set -e
           IMAGES="
@@ -75,7 +75,7 @@ jobs:
               "${REGISTRY}/${IMAGE_OWNER}/${image}:${{ github.sha }}"
           done
 
-      # Создается копия .env.example с прописанным тегом версии в IMAGE_TAG
+      # Создается копия .env.example с прописанными именами образов сервисов из реестра образов и тегом версии в IMAGE_TAG
       - name: Prepare .env.example for release
         # sed - консольная утилита для редактирования текста (не загружает файл целиком, а
         # поочередно загружает строчку за строчкой, меняет текст, если нужно, и отправляет текст в поток вывода);
@@ -84,7 +84,13 @@ jobs:
         # IMAGE_TAG=${VERSION} - текст, на который заменяется искомый текст;
         # .env.example > .env.example.release - читается .env.example, данные (включая изменения) пишутся в .env.example.release
         run: |
-          sed "s/^IMAGE_TAG=.*/IMAGE_TAG=${VERSION}/" .env.example > .env.example.release
+          sed -e "s/^IMAGE_TAG=.*/IMAGE_TAG=${VERSION}/" \
+              -e "s|^STUDYOVERFLOW_IMAGE=.*|STUDYOVERFLOW_IMAGE=ghcr.io/${IMAGE_OWNER}/studyoverflow-backend|" \
+              -e "s|^LOKI_IMAGE=.*|LOKI_IMAGE=ghcr.io/${IMAGE_OWNER}/studyoverflow-loki|" \
+              -e "s|^PROMTAIL_IMAGE=.*|PROMTAIL_IMAGE=ghcr.io/${IMAGE_OWNER}/studyoverflow-promtail|" \
+              -e "s|^GRAFANA_IMAGE=.*|GRAFANA_IMAGE=ghcr.io/${IMAGE_OWNER}/studyoverflow-grafana|" \
+              -e "s|^NGINX_IMAGE=.*|NGINX_IMAGE=ghcr.io/${IMAGE_OWNER}/studyoverflow-nginx|" \
+              .env.example > .env.example.release
 
       # Создает GitHub релиз
       - name: Create GitHub Release
