@@ -703,32 +703,6 @@ class TestUserViewSetMe:
 
 
 @pytest.mark.django_db
-class TestUserViewSetAvatarFull:
-    """Тестирование получения оригинала аватара."""
-
-    def test_avatar_full_not_found(self, assert_not_found):
-        """Если указан несуществующий пользователь, возвращается 404."""
-        assert_not_found(
-            "api:users:users-avatar-full",
-            url_kwargs={"username": "non_existent_user"},
-            method="get",
-            is_api=True,
-        )
-
-    def test_avatar_full_success(self, api_client, user_factory):
-        """Если аватар есть, возвращается URL."""
-        user = user_factory(avatar="avatars/test_avatar.jpg")
-
-        url = reverse("api:users:users-avatar-full", kwargs={"username": user.username})
-        response = api_client.get(url)
-
-        assert response.status_code == 200
-        assert response.data["username"] == user.username
-        assert "http" in response.data["full_avatar_url"]
-        assert "avatars/test_avatar.jpg" in response.data["full_avatar_url"]
-
-
-@pytest.mark.django_db
 class TestUserViewSetModeration:
     """Тестирование блокировки/разблокировки пользователей."""
 

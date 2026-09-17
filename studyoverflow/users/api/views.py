@@ -39,6 +39,7 @@ from rest_framework_simplejwt.serializers import (
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 
+from navigation.api.serializers import DetailSerializer
 from posts.api.openapi_responses import PaginationErrorOpenApiResponse
 from users.api.openapi_responses_examples import (
     LOGIN_REQUEST_EXAMPLES,
@@ -49,7 +50,6 @@ from users.api.openapi_responses_examples import (
 )
 from users.api.permissions import CanBlockUserPermission, UserPasswordNotSocialPermission
 from users.api.serializers import (
-    DetailSerializer,
     LoginSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
@@ -353,7 +353,7 @@ class AuthViewSet(viewsets.GenericViewSet):
 
         return Response(
             {
-                "detail": "Вы успешно вышли из системы,"
+                "detail": "Вы успешно вышли из системы, "
                 "все сессии и токены для текущего устройства удалены."
             },
             status=status.HTTP_200_OK,
@@ -369,7 +369,7 @@ class AuthViewSet(viewsets.GenericViewSet):
                 response=UserMyProfileSerializer,
             ),
             400: OpenApiResponse(
-                description="Ошибка валидации данных: несовпадение паролей,"
+                description="Ошибка валидации данных: несовпадение паролей, "
                 "занятый username или email, слабый пароль и так далее.",
                 response=inline_serializer(
                     name="RegistryErrorSerializer",
@@ -433,7 +433,7 @@ class AuthViewSet(viewsets.GenericViewSet):
                 description="Ошибки валидации пароля: несовпадение паролей, "
                 "слабый пароль и так далее.",
                 response=inline_serializer(
-                    name="RegistryErrorResponse",
+                    name="PasswordChangeErrorSerializer",
                     fields={"field": serializers.ListField(child=serializers.CharField())},
                 ),
                 examples=[
@@ -645,7 +645,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             401: OpenApiResponse(
                 description="Прислан невалидный refresh токен.",
                 response=inline_serializer(
-                    name="TokenVerifyErrorSerializer",
+                    name="TokenRefreshErrorSerializer",
                     fields={
                         "detail": serializers.CharField(default="Token is invalid or expired"),
                         "code": serializers.CharField(default="token_not_valid"),
@@ -726,7 +726,7 @@ def extend_social_login_schema(provider_name: str):
             responses={
                 200: OpenApiResponse(
                     response=JWTSerializer,
-                    description="Успешная аутентификация. Возвращаются JWT-токены access и refresh"
+                    description="Успешная аутентификация. Возвращаются JWT-токены access и refresh "
                     "и данные пользователя.",
                 ),
                 400: OpenApiResponse(
@@ -905,7 +905,7 @@ class UserViewSet(
         """
         Переопределяется для использования кеша профиля пользователя из сервиса.
         """
-        # Если в URL передан username (retrieve, avatar_full, block, unblock)
+        # Если в URL передан username (retrieve, block, unblock)
         if self.lookup_field in self.kwargs:
             username = self.kwargs[self.lookup_field]
 
@@ -963,7 +963,10 @@ class UserViewSet(
     @extend_schema(
         methods=["patch"],
         summary="Частичное обновление профиля текущего пользователя.",
-        request={"multipart/form-data": UserMyProfileSerializer},
+        request={
+            "multipart/form-data": UserMyProfileSerializer,
+            "application/json": UserMyProfileSerializer,
+        },
         responses={
             200: OpenApiResponse(
                 description="Профиль успешно обновлен.",
@@ -1026,42 +1029,6 @@ class UserViewSet(
         return Response(serializer.data)
 
     @extend_schema(
-        summary="Получение оригинального аватара (не миниатюра) пользователя.",
-        auth=[],
-        responses={
-            200: OpenApiResponse(
-                description="Адрес URL оригинального аватара.",
-                response=inline_serializer(
-                    name="UserAvatarFullSerializer",
-                    fields={
-                        "username": serializers.CharField(),
-                        "full_avatar_url": serializers.URLField(),
-                    },
-                ),
-            ),
-            404: UserNotFoundOpenApiResponse,
-        },
-    )
-    @action(detail=True, methods=["get"], url_path="avatar-full")
-    def avatar_full(self, request, username=None):
-        """
-        Возвращает URL оригинального аватара пользователя.
-        """
-        user = self.get_object()
-
-        if not user.avatar:
-            return Response(
-                {"detail": "У пользователя нет аватара."}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        return Response(
-            {
-                "username": user.username,
-                "full_avatar_url": request.build_absolute_uri(user.avatar.url),
-            }
-        )
-
-    @extend_schema(
         summary="Блокировка пользователя модератором.",
         request=None,
         responses={
@@ -1092,7 +1059,7 @@ class UserViewSet(
                     OpenApiExample(
                         name="Недостаточно прав для блокировки.",
                         value={
-                            "message": (
+                            "detail": (
                                 "Нельзя модерировать пользователя с равной или более "
                                 "высокой ролью. / Нельзя модерировать самого себя."
                             ),
@@ -1157,7 +1124,7 @@ class UserViewSet(
                     OpenApiExample(
                         name="Недостаточно прав для разблокировки.",
                         value={
-                            "message": (
+                            "detail": (
                                 "Нельзя модерировать пользователя с равной или более "
                                 "высокой ролью. / "
                                 "Нельзя модерировать самого себя."
