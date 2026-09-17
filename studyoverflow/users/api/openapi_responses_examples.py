@@ -1,6 +1,6 @@
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse
 
-from users.api.serializers import DetailSerializer
+from navigation.api.serializers import DetailSerializer
 
 
 LOGIN_REQUEST_EXAMPLES = [
@@ -18,7 +18,7 @@ LOGIN_REQUEST_EXAMPLES = [
 
 
 OpenApiLoginFailed401Response = OpenApiResponse(
-    description="Ошибка аутентификации" "(неверные данные или аккаунт заблокирован).",
+    description="Ошибка аутентификации (неверные данные или аккаунт заблокирован).",
     response=DetailSerializer,
     examples=[
         OpenApiExample(
