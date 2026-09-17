@@ -27,8 +27,8 @@ from posts.api.pagination import PostCommentsPagination
 from posts.api.permissions import IsAuthorOrModeratorPermission
 from posts.api.serializers import (
     AuthorSerializer,
+    CommentBaseSerializer,
     CommentSerializer,
-    DetailSerializer,
     PostSerializer,
     TagSerializer,
 )
@@ -121,12 +121,9 @@ class LikeMixin:
         user_ids = obj.likes.values_list("user_id", flat=True)
         queryset = User.objects.filter(id__in=user_ids).order_by("id")
 
-        page = self.paginate_queryset(queryset)  # type: ignore[attr-defined]
-        if page is not None:
-            serializer = AuthorSerializer(page, many=True)
-            return self.get_paginated_response(serializer.data)  # type: ignore[attr-defined]
-
-        serializer = AuthorSerializer(queryset, many=True)
+        serializer = AuthorSerializer(
+            queryset, many=True, context=self.get_serializer_context()  # type: ignore[attr-defined]
+        )
         return Response(serializer.data)
 
 
@@ -242,7 +239,6 @@ class LikeMixin:
         responses={
             204: OpenApiResponse(
                 description="Пост успешно удален.",
-                response=DetailSerializer,
             ),
             401: OpenApiUnauthenticated401Response,
             403: PermissionDeniedOpenApiResponse,
@@ -386,7 +382,7 @@ class PostViewSet(
         auth=[],
         responses={
             200: OpenApiResponse(
-                description="Данные комментария успешно получены.", response=CommentSerializer
+                description="Данные комментария успешно получены.", response=CommentBaseSerializer
             ),
             404: create_new_not_found_response('"Object"'),
         },
@@ -397,7 +393,7 @@ class PostViewSet(
         "к указанному посту от имени текущего авторизованного пользователя.",
         responses={
             201: OpenApiResponse(
-                description="Комментарий успешно создан.", response=CommentSerializer
+                description="Комментарий успешно создан.", response=CommentBaseSerializer
             ),
             400: CommentFieldErrorValidationOpenApiResponse,
             401: OpenApiUnauthenticated401Response,
@@ -407,9 +403,18 @@ class PostViewSet(
     partial_update=extend_schema(
         summary="Частичное обновление комментария.",
         description="Изменяет текст комментария. Доступно автору или модератору.",
+        request=inline_serializer(
+            name="CommentUpdateSerializer",
+            fields={
+                "content": serializers.CharField(
+                    max_length=Comment.MAX_CONTENT_LENGTH,
+                    help_text="Текст комментария.",
+                ),
+            },
+        ),
         responses={
             200: OpenApiResponse(
-                description="Комментарий успешно обновлен.", response=CommentSerializer
+                description="Комментарий успешно обновлен.", response=CommentBaseSerializer
             ),
             400: CommentFieldErrorValidationOpenApiResponse,
             401: OpenApiUnauthenticated401Response,
@@ -445,9 +450,19 @@ class CommentViewSet(
 
     pagination_class = PostCommentsPagination
     queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
+    serializer_class = CommentBaseSerializer
     moderator_permission_name = "posts.moderate_comment"
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_serializer_class(self):
+        """
+        Возвращает CommentSerializer с деревом дочерних комментариев только для списка
+        и просмотра ветки (thread). Для остальных действий возвращает CommentBaseSerializer.
+        """
+        if self.action in ["list", "thread"]:
+            return CommentSerializer
+
+        return CommentBaseSerializer
 
     def get_permissions(self):
         """
@@ -484,7 +499,7 @@ class CommentViewSet(
             # Аннотирование полями для лайков
             queryset = self.annotate_queryset(queryset)
 
-        queryset = queryset.annotate(children_count=Count("child_comments", distinct=True))
+        queryset = queryset.annotate(child_count=Count("child_comments", distinct=True))
 
         return queryset
 
@@ -513,7 +528,7 @@ class CommentViewSet(
 
         queryset = self.get_comment_tree_queryset(post=self.get_post(), root_id=root_id)
 
-        queryset = queryset.annotate(children_count=Count("child_comments", distinct=True))
+        queryset = queryset.annotate(child_count=Count("child_comments", distinct=True))
 
         root_comment = queryset.first()
 

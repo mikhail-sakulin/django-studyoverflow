@@ -270,8 +270,8 @@ class TestCommentViewSet:
         assert response.data["results"][0]["id"] == root_comment2.pk
         assert response.data["results"][1]["id"] == root_comment1.pk
 
-        # Проверка вложенности (children_count и prefetch_related)
-        assert response.data["results"][0]["children_count"] == 1
+        # Проверка вложенности (child_count и prefetch_related)
+        assert response.data["results"][0]["child_count"] == 1
         assert "child_comments" in response.data["results"][0]
 
     def test_comment_thread_action(self, api_client, post_factory, comment_factory):
@@ -420,7 +420,7 @@ class TestLikeMixin:
         response = api_client.get(url)
 
         assert response.status_code == 200
-        results = response.data["results"]
+        results = response.data
 
         assert len(results) == 2
         usernames = [user["username"] for user in results]

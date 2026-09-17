@@ -130,7 +130,7 @@ class TestCommentSerializer:
         assert serializer_no_tree.get_child_comments(parent_comment) is None
 
         # CommentSerializer заменяется на MagicMock
-        mock_serializer_cls = mocker.patch("posts.api.serializers.CommentSerializer")
+        mock_serializer_cls = mocker.patch("posts.api.serializers.ChildCommentSerializer")
         # mock_serializer_cls.return_value - то, что вернется при вызове класса - MagicMock
         # .data - у вернувшегося MagicMock задается атрибут .data с нужным значением,
         # у настоящего CommentSerializer .data - это @property
@@ -145,17 +145,17 @@ class TestCommentSerializer:
             context=serializer_with_tree.context,
         )
 
-    def test_get_children_count(self):
+    def test_get_child_count(self):
         """Количество ответов возвращается только для родительских комментариев."""
         serializer = CommentSerializer()
 
-        comment_root_with_count = SimpleNamespace(parent_comment_id=None, children_count=5)
-        comment_child_with_count = SimpleNamespace(parent_comment_id=1, children_count=5)
+        comment_root_with_count = SimpleNamespace(parent_comment_id=None, child_count=5)
+        comment_child_with_count = SimpleNamespace(parent_comment_id=1, child_count=5)
         comment_no_count = SimpleNamespace(parent_comment_id=None)
 
-        assert serializer.get_children_count(comment_root_with_count) == 5
-        assert serializer.get_children_count(comment_child_with_count) is None
-        assert serializer.get_children_count(comment_no_count) is None
+        assert serializer.get_child_count(comment_root_with_count) == 5
+        assert serializer.get_child_count(comment_child_with_count) is None
+        assert serializer.get_child_count(comment_no_count) is None
 
     def test_validate_hierarchy_calls_service(self, mocker):
         """Проверка вызова сервиса validate_comment при валидации."""
