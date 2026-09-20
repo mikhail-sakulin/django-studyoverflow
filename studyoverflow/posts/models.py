@@ -255,8 +255,9 @@ class Post(models.Model):
         Используется для оптимизации рендеринга Markdown при сохранении.
         """
         super().__init__(*args, **kwargs)
-        # Сохранение записанного в БД значения content для проверки изменения поля
-        # Проверка, загружено ли поле 'content' из БД в текущий экземпляр
+        # Сохранение записанного в БД значения content для проверки изменения поля.
+        # Если поле 'content' не загружалось из БД в текущий экземпляр (.only() / .defer()),
+        # то задается None без обращения в БД.
         self._original_content = self.__dict__.get("content")
 
     def __str__(self):
@@ -274,7 +275,11 @@ class Post(models.Model):
         if not self.slug:
             self.slug = generate_slug(self.title, self.MAX_TITLE_SLUG_LENGTH_POST)
 
-        if not self.pk or self.content != self._original_content:
+        # Проверка, что поле 'content' было задано (не было исключено через .only() / .defer()),
+        # чтобы далее не грузить поле из БД при обращении "self.content".
+        content_loaded = "content" in self.__dict__
+
+        if not self.pk or (content_loaded and self.content != self._original_content):
             self.rendered_content = render_markdown_safe(self.content)
             self.search_content = strip_tags_and_whitespace_chars_from_html(self.rendered_content)
 
@@ -411,8 +416,9 @@ class Comment(models.Model):
         Используется для оптимизации рендеринга Markdown при сохранении.
         """
         super().__init__(*args, **kwargs)
-        # Сохранение записанного в БД значения content для проверки изменения поля
-        # Проверка, загружено ли поле 'content' из БД в текущий экземпляр
+        # Сохранение записанного в БД значения content для проверки изменения поля.
+        # Если поле 'content' не загружалось из БД в текущий экземпляр (.only() / .defer()),
+        # то задается None без обращения в БД.
         self._original_content = self.__dict__.get("content")
 
     def __str__(self):
@@ -424,7 +430,11 @@ class Comment(models.Model):
         Добавлена логика при сохранении комментария:
         - Рендеринг Markdown в HTML только при создании или изменении контента.
         """
-        if not self.pk or self.content != self._original_content:
+        # Проверка, что поле 'content' было задано (не было исключено через .only() / .defer()),
+        # чтобы далее не грузить поле из БД при обращении "self.content".
+        content_loaded = "content" in self.__dict__
+
+        if not self.pk or (content_loaded and self.content != self._original_content):
             self.rendered_content = render_markdown_safe(self.content)
 
         super().save(*args, **kwargs)
