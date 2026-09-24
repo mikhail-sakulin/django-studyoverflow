@@ -1,11 +1,14 @@
 from django import forms
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from taggit.forms import TagWidget
 
 from posts.models import Comment, Post
-from posts.services.validators import validate_and_normalize_tags, validate_comment
-from users.services.validators import CustomUsernameValidator
+from posts.services.validators import (
+    validate_and_normalize_tags,
+    validate_author_exists,
+    validate_comment,
+    validate_search_query,
+)
 
 
 class PostCreateForm(forms.ModelForm):
@@ -42,22 +45,20 @@ class PostFilterForm(forms.Form):
     Форма фильтрации постов по автору с валидацией существования пользователя.
     """
 
+    q = forms.CharField(required=False)
     author = forms.CharField(required=False)
+
+    def clean_q(self):
+        q = self.cleaned_data["q"].strip()
+
+        q = validate_search_query(q)
+
+        return q
 
     def clean_author(self):
         author = self.cleaned_data["author"].strip()
 
-        if not author:
-            return author
-
-        validator = CustomUsernameValidator()
-        try:
-            validator(author)
-        except ValidationError as e:
-            raise ValidationError(e.messages)
-
-        if not get_user_model().objects.filter(username__iexact=author).exists():
-            raise ValidationError("Указанного автора не существует.")
+        author = validate_author_exists(author)
 
         return author
 

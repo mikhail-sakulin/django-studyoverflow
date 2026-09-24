@@ -4,9 +4,12 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from posts.services.validators import (
+    MIN_SEARCH_LENGTH,
     PostTitleValidator,
     validate_and_normalize_tags,
+    validate_author_exists,
     validate_comment,
+    validate_search_query,
 )
 
 
@@ -243,3 +246,45 @@ class TestValidateComment:
         errors = validate_comment(**base_kwargs)
 
         assert not errors
+
+
+class TestValidateSearchQuery:
+    """Тестирует validate_search_query."""
+
+    @pytest.mark.parametrize("q", ["", "   \t\n"])
+    def test_empty_or_whitespace_is_valid(self, q):
+        """Пустая строка и строка из пробельных символов допустимы (поиска по тексту нет)."""
+        assert validate_search_query(q) == ""
+
+    @pytest.mark.parametrize("q", ["a", "ab", "  ab  ", "a b"])
+    def test_too_short_raises_error(self, q):
+        """Меньше MIN_SEARCH_LENGTH не пробельных символов вызывает ошибку."""
+        with pytest.raises(ValidationError, match=str(MIN_SEARCH_LENGTH)):
+            validate_search_query(q)
+
+    @pytest.mark.parametrize(
+        ("q", "expected"),
+        [("abc", "abc"), ("  abc  ", "abc"), ("a b c", "a b c")],
+    )
+    def test_valid_query_is_stripped(self, q, expected):
+        """Граничное значение (число не пробельных символа) проходит."""
+        assert validate_search_query(q) == expected
+
+
+@pytest.mark.django_db
+class TestValidateAuthorExists:
+    """Тестирует validate_author_exists."""
+
+    def test_empty_author_is_valid(self):
+        """Пустая строка допустима (поиска по автору нет)."""
+        assert validate_author_exists("   ") == ""
+
+    def test_existing_author_case_insensitive(self, user_factory):
+        """Поиск по автору ведется регистронезависимый."""
+        user_factory(username="valid_author")
+        assert validate_author_exists("  VALID_AUTHOR ") == "VALID_AUTHOR"
+
+    def test_nonexistent_author_raises_error(self):
+        """Если введенного автора не существует, вызывается ошибка."""
+        with pytest.raises(ValidationError, match="Указанного автора не существует."):
+            validate_author_exists("ghost_user")

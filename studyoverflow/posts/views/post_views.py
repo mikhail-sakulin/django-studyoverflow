@@ -39,7 +39,24 @@ class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMix
     paginate_by = 7
     extra_context = {"section_of_menu_selected": "posts:list"}
 
+    def get_filter_form(self):
+        """Создает и сохраняет форму фильтрации один раз за запрос."""
+        # Форма валидируется автоматически при первом обращении к полю errors
+        if not hasattr(self, "_filter_form"):
+            self._filter_form = PostFilterForm(self.request.GET or None)
+        return self._filter_form
+
+    def get_paginate_by(self, queryset):
+        # При ошибках в фильтрации пагинация не нужна
+        if self.get_filter_form().errors:
+            return None
+        return super().get_paginate_by(queryset)
+
     def get_queryset(self):
+        # При ошибках в фильтрации не выполняет запросы в БД
+        if self.get_filter_form().errors:
+            return Post.objects.none()
+
         queryset = super().get_queryset()
 
         # Фильтрация по полям модели (через PostFilterSortMixin)
@@ -56,16 +73,11 @@ class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMix
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        filter_form = PostFilterForm(self.request.GET or None)
-
-        if filter_form.data.get("author"):
-            filter_form.is_valid()
-
-        context["filter_form"] = filter_form
+        context["filter_form"] = self.get_filter_form()
 
         get_params = self.request.GET.copy()
-        if "page" in get_params:
-            get_params.pop("page")
+        get_params.pop("page", None)
+
         context["querystring"] = get_params.urlencode()
 
         return context
