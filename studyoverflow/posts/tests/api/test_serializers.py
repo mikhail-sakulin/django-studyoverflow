@@ -4,7 +4,7 @@ import pytest
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from posts.api.serializers import CommentSerializer, PostSerializer
+from posts.api.serializers import CommentSerializer, PostFilterSerializer, PostSerializer
 
 
 class TestPostSerializer:
@@ -90,6 +90,35 @@ class TestPostSerializer:
 
         mock_super_update.assert_called_once_with(mock_instance, {"title": "Обновлено"})
         mock_instance.tags.set.assert_called_once_with(["drf"])
+
+
+class TestPostFilterSerializer:
+    """Тестирование сериализатора для валидации GET-параметров фильтрации списка постов."""
+
+    @pytest.mark.parametrize("data", [{}, {"q": ""}, {"q": "   "}, {"author": ""}])
+    def test_empty_values_are_valid(self, data):
+        """Разрешено передавать пустые значения GET-параметров или не передавать их вовсе."""
+        assert PostFilterSerializer(data=data).is_valid()
+
+    def test_short_q_is_invalid(self):
+        """При неверном "q" возвращается ошибка поля."""
+        serializer = PostFilterSerializer(data={"q": "ab"})
+        assert not serializer.is_valid()
+        assert "q" in serializer.errors
+
+    @pytest.mark.django_db
+    def test_author_validation(self, user_factory):
+        """
+        Если указанный автор существует, валидация проходит. Для несуществующего автора
+        вызывается исключение.
+        """
+        user_factory(username="valid_author")
+
+        assert PostFilterSerializer(data={"author": "VALID_AUTHOR"}).is_valid()
+
+        serializer = PostFilterSerializer(data={"author": "ghost_user"})
+        assert not serializer.is_valid()
+        assert "author" in serializer.errors
 
 
 class TestCommentSerializer:

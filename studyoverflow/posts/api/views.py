@@ -29,6 +29,7 @@ from posts.api.serializers import (
     AuthorSerializer,
     CommentBaseSerializer,
     CommentSerializer,
+    PostFilterSerializer,
     PostSerializer,
     TagSerializer,
 )
@@ -195,6 +196,18 @@ class LikeMixin:
             200: OpenApiResponse(
                 description="Список постов успешно получен.", response=PostSerializer(many=True)
             ),
+            400: OpenApiResponse(
+                description="Некорректные параметры фильтрации.",
+                response=inline_serializer(
+                    name="PostFilterErrorSerializer",
+                    fields={
+                        "q": serializers.ListField(child=serializers.CharField(), required=False),
+                        "author": serializers.ListField(
+                            child=serializers.CharField(), required=False
+                        ),
+                    },
+                ),
+            ),
             404: PaginationErrorOpenApiResponse,
         },
     ),
@@ -320,6 +333,10 @@ class PostViewSet(
             queryset = self.prepare_post_queryset(queryset)
 
         return queryset
+
+    def list(self, request, *args, **kwargs):  # noqa: A003
+        PostFilterSerializer(data=request.query_params).is_valid(raise_exception=True)
+        return super().list(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         """Создание поста с добавлением текущего пользователя."""

@@ -5,7 +5,12 @@ from rest_framework import serializers
 from taggit.serializers import TagListSerializerField
 
 from posts.models import Comment, LowercaseTag, Post
-from posts.services.validators import validate_and_normalize_tags, validate_comment
+from posts.services.validators import (
+    validate_and_normalize_tags,
+    validate_author_exists,
+    validate_comment,
+    validate_search_query,
+)
 from users.api.serializers import AvatarSerializer
 from users.services.permissions import is_author_or_moderator
 
@@ -129,6 +134,19 @@ class PostSerializer(serializers.ModelSerializer):
         if tags is not None:
             instance.tags.set(tags)
         return instance
+
+
+class PostFilterSerializer(serializers.Serializer):
+    """Сериализатор для валидации GET-параметров фильтрации списка постов."""
+
+    q = serializers.CharField(required=False, allow_blank=True)
+    author = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_q(self, value: str) -> str:
+        return validate_search_query(value)
+
+    def validate_author(self, value: str) -> str:
+        return validate_author_exists(value)
 
 
 class CommentBaseSerializer(serializers.ModelSerializer):
