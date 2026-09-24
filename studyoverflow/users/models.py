@@ -7,7 +7,7 @@ from django.contrib.auth.models import AbstractUser, Group, UserManager
 from django.core.validators import MaxLengthValidator, validate_email
 from django.db import models, transaction
 from django.db.models import Q
-from django.db.models.functions import Lower, Upper
+from django.db.models.functions import Upper
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy
@@ -35,13 +35,8 @@ class CustomUserManager(UserManager):
     def get_by_natural_key(self, username_or_email) -> User:
         """Возвращает пользователя по username или email."""
         # Поиск по введенному username выполняется регистрозависимый, а поиск по введенному
-        # email выполняется регистроНЕзависимый, поскольку лукап "email__iexact" в SQL-запросе
-        # использует UPPER(email), а для поля "email" задан UniqueConstraint Lower("email"),
-        # что также создает соответствующий индекс в БД, то поиск идет по аннотированному полю
-        # "email_lower" для использования индекса.
-        return self.annotate(email_lower=Lower("email")).get(
-            Q(username=username_or_email) | Q(email_lower=username_or_email.lower())
-        )
+        # email выполняется регистроНЕзависимый.
+        return self.get(Q(username=username_or_email) | Q(email__iexact=username_or_email))
 
 
 class User(AbstractUser):
@@ -124,6 +119,8 @@ class User(AbstractUser):
     username = models.CharField(
         verbose_name="Имя пользователя",
         max_length=30,
+        # unique также задан через UniqueConstraint для Upper("username"),
+        # unique=True для самого поля задается для поиска с учетом регистра.
         unique=True,
         help_text=(
             "Имя пользователя должно быть не менее 4 символов и "
@@ -136,6 +133,9 @@ class User(AbstractUser):
     )
     email = models.EmailField(
         validators=[validate_email],
+        # unique задан через UniqueConstraint для Upper("email"),
+        # unique=True для самого поля не задается, так как поиск осуществляется
+        # только без учета регистра (iexact)
         verbose_name=gettext_lazy("email address"),
     )
 
@@ -229,16 +229,20 @@ class User(AbstractUser):
         ]
         constraints = [
             # Также создает соответствующий индекс.
-            models.UniqueConstraint(
-                Lower("email"),
-                name="unique_user_lowercase_email",
-            )
-        ]
-        indexes = [
-            # Индекс для поиска пользователя по имени без учета регистра:
+            # Индекс используется для поиска пользователя по имени без учета регистра:
             #   queryset.filter(author__username__iexact=author)
             #       WHERE UPPER(username) = UPPER(?)
-            models.Index(Upper("username"), name="user_username_upper_idx"),
+            models.UniqueConstraint(
+                Upper("username"),
+                name="unique_user_uppercase_username",
+            ),
+            # Также создает соответствующий индекс.
+            models.UniqueConstraint(
+                Upper("email"),
+                name="unique_user_uppercase_email",
+            ),
+        ]
+        indexes = [
             # Индекс для сортировки пользователей по последнему визиту:
             #   User.objects.order_by('last_seen')
             #       ORDER BY last_seen DESC

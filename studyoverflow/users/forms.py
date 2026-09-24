@@ -173,6 +173,18 @@ class UserProfileUpdateForm(BootstrapFormMixin, forms.ModelForm):
             "date_birth": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
 
+    def clean_username(self):
+        """Проверка уникальности username без учета регистра."""
+        username = self.cleaned_data.get("username")
+
+        queryset = UserModel.objects.filter(username__iexact=username)
+        queryset = queryset.exclude(pk=self.instance.pk)
+
+        if queryset.exists():
+            raise ValidationError("Пользователь с таким именем (в любом регистре) уже существует.")
+
+        return username
+
     def clean_email(self):
         """Проверка уникальности email без учета регистра."""
         email = self.cleaned_data.get("email")
