@@ -1,5 +1,6 @@
 import logging
 
+from django.core.exceptions import BadRequest
 from django.http import HttpRequest
 
 from users.services.online import get_cached_online_user_ids
@@ -97,6 +98,8 @@ class UserHTMXPaginationMixin:
     paginate_htmx_by = 9
     offset_param = "offset"
     limit_param = "limit"
+    # специальное значение: вернуть всех, начиная с offset
+    limit_all = -1
 
     def paginate_queryset(self, queryset):
         """
@@ -114,6 +117,10 @@ class UserHTMXPaginationMixin:
         try:
             offset = int(offset)
             limit = int(limit)
+
+            if offset < 0 or (limit < 1 and limit != self.limit_all):
+                raise ValueError("Некорректные параметры пагинации.")
+
         except ValueError:
             logger.warning(
                 "Некорректные параметры пагинации.",
@@ -125,12 +132,15 @@ class UserHTMXPaginationMixin:
                     "event_type": "htmx_pagination_invalid_params",
                 },
             )
-            # Дефолтные значения, чтобы во view не было ошибок
-            self.offset = 0
-            self.limit = self.paginate_htmx_by
-            self.remaining = False
+            # Дефолтные значения, чтобы во view не было ошибок (при return queryset.none())
+            # self.offset = 0
+            # self.limit = self.paginate_htmx_by
+            # self.remaining = False
 
-            return queryset.none()
+            # return queryset.none()
+
+            # Вместо возврата пустого списка возвращается 400-ый ответ
+            raise BadRequest("Некорректные параметры пагинации.")
 
         self.offset = offset
         self.limit = limit

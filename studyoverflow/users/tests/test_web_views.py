@@ -119,7 +119,7 @@ class TestUsersListHTMXView:
         assert response.context["offset"] == 0
         assert response.context["limit"] == 1
 
-    def test_htmx_view_pagination_invalid_params(self, client, user_factory, caplog):
+    def test_htmx_view_pagination_invalid_params(self, client, user_factory):
         """Проверяет обработку некорректных параметров пагинации."""
         user_factory(username="test_user")
         url = reverse("users:list_htmx")
@@ -130,11 +130,8 @@ class TestUsersListHTMXView:
             HTTP_HX_REQUEST="true",
         )
 
-        assert response.status_code == 200
-        # При ValueError (некорректные "limit" и "offset") возвращается queryset.none()
-        assert len(response.context["users"]) == 0
-
-        assert "Некорректные параметры пагинации." in caplog.text
+        # При некорректных "limit" и "offset" возвращается 400-ый ответ
+        assert response.status_code == 400
 
     def test_htmx_view_sorting_fallback_to_defaults(self, client, user_factory):
         """Проверяет, что при невалидных параметрах сортировки применяются дефолтные."""
