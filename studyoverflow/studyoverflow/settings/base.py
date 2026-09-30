@@ -199,7 +199,7 @@ EMAIL_HOST = env("EMAIL_HOST")
 EMAIL_PORT = env("EMAIL_PORT")
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
-EMAIL_USE_SSL = env("EMAIL_USE_SSL")
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL")
 
 # Email по умолчанию для исходящих писем с сайта
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
@@ -262,3 +262,6 @@ if NGINX_SSL_ENABLED:
     SESSION_COOKIE_SECURE = True
     # Добавляет флаг Secure к куке с CSRF-токеном (csrftoken), куку можно передать только по https.
     CSRF_COOKIE_SECURE = True
+    # Список доверенных доменов, с которых бекенду разрешено принимать небезопасные
+    # HTTP-запросы (POST, PUT, DELETE и PATCH) при запросе по протоколу https.
+    CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
