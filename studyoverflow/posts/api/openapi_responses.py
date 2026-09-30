@@ -2,6 +2,7 @@ from drf_spectacular.utils import OpenApiExample, OpenApiResponse, inline_serial
 from rest_framework import serializers
 
 from navigation.api.serializers import DetailSerializer
+from posts.models import Comment, Post
 
 
 def create_new_not_found_response(model_name: str = '"Object"') -> OpenApiResponse:
@@ -49,9 +50,11 @@ PostFieldErrorValidationOpenApiResponse = OpenApiResponse(
     ),
     examples=[
         OpenApiExample(
-            name="Длина заголовка должна быть не менее 10 символов.",
+            name=f"Длина заголовка должна быть не менее {Post.MIN_TITLE_LENGTH} символов.",
             value={
-                "title": ["Длина заголовка должна быть не менее 10 символов."],
+                "title": [
+                    f"Длина заголовка должна быть не менее {Post.MIN_TITLE_LENGTH} символов."
+                ],
             },
             response_only=True,
         ),
@@ -81,8 +84,12 @@ CommentFieldErrorValidationOpenApiResponse = OpenApiResponse(
             response_only=True,
         ),
         OpenApiExample(
-            name="Пустой комментарий.",
-            value={"content": ["Длина комментария не должна превышать 5000 символов."]},
+            name="Слишком длинный комментарий.",
+            value={
+                "content": [
+                    f"Длина комментария не должна превышать {Comment.MAX_CONTENT_LENGTH} символов."
+                ]
+            },
             response_only=True,
         ),
         OpenApiExample(
