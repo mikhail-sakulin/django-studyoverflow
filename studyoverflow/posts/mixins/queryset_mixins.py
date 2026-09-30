@@ -89,7 +89,7 @@ class PostFilterSortMixin:
     - tag_match: any/all
     - author: имя автора
     - has_comments: yes/no
-    - sort: created/likes/answers
+    - sort: created/likes/comments
     - order: asc/desc
     """
 
@@ -230,6 +230,7 @@ class CommentTreeQuerysetMixin:
             "id",
             "username",
             "role",
+            "is_blocked",
             "avatar",
             "avatar_small_size1",
             "avatar_small_size2",

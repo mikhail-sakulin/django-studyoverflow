@@ -27,7 +27,7 @@ class AuthorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "username", "avatars")
+        fields = ("id", "username", "role", "is_blocked", "avatars")
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -39,24 +39,6 @@ class PostSerializer(serializers.ModelSerializer):
 
     author = AuthorSerializer(read_only=True)
     time_update = serializers.SerializerMethodField()
-    title = serializers.CharField(
-        min_length=Post.MIN_TITLE_LENGTH,
-        max_length=Post.MAX_TITLE_SLUG_LENGTH_POST,
-        required=True,
-        error_messages={
-            "max_length": f"Длина заголовка не должна превышать "
-            f"{Post.MAX_TITLE_SLUG_LENGTH_POST} символов."
-        },
-    )
-    content = serializers.CharField(
-        write_only=True,
-        required=False,
-        allow_blank=True,
-        max_length=Post.MAX_CONTENT_LENGTH,
-        error_messages={
-            "max_length": f"Длина контента не должна превышать {Post.MAX_CONTENT_LENGTH} символов."
-        },
-    )
     tags = TagListSerializerField()
     likes_count = serializers.IntegerField(read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
@@ -98,6 +80,26 @@ class PostSerializer(serializers.ModelSerializer):
             "comments_count",
             "can_edit_or_delete",
         )
+        extra_kwargs = {
+            "title": {
+                "min_length": Post.MIN_TITLE_LENGTH,
+                "help_text": (
+                    f"От {Post.MIN_TITLE_LENGTH} всего символов, "
+                    f"минимум {Post.MIN_TITLE_LENGTH} буквенных символов."
+                ),
+                "error_messages": {
+                    "max_length": f"Длина заголовка не должна превышать "
+                    f"{Post.MAX_TITLE_SLUG_LENGTH_POST} символов."
+                },
+            },
+            "content": {
+                "write_only": True,
+                "error_messages": {
+                    "max_length": f"Длина контента не должна превышать "
+                    f"{Post.MAX_CONTENT_LENGTH} символов."
+                },
+            },
+        }
 
     @extend_schema_field(serializers.DateTimeField(allow_null=True))
     def get_time_update(self, post) -> str | None:
