@@ -17,8 +17,13 @@ def create_static_image(size=(400, 400), fmt: str | None = "PNG", mode="RGB"):
     return image
 
 
-def create_gif(size=(300, 300), frames=3):
-    """Создает тестовую гифку."""
+def create_gif(size=(300, 300), frames=3, fmt: str | None = None):
+    """
+    Создает тестовую гифку.
+
+    Параметр fmt не используется, добавлен только для единообразия вызовов в параметризованном
+    тесте вместе с функцией create_static_image.
+    """
     images = [
         Image.new("RGBA", size, color="red" if frame % 2 == 0 else "green")
         for frame in range(frames)
@@ -54,7 +59,7 @@ class TestGenerateImage:
     def test_routing_and_formats(
         self, create_image_or_gif_func, ext, expected_format, expected_animated
     ):
-        image = create_image_or_gif_func()
+        image = create_image_or_gif_func(fmt=expected_format)
 
         result = generate_image(image, ext, (100, 100))
 
