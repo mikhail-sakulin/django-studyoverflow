@@ -4,6 +4,7 @@ from users.services.online import (
     ONLINE_SET_KEY,
     ONLINE_TTL,
     REDIS_KEY_PREFIX,
+    async_set_user_online,
     get_cached_online_user_ids,
     get_online_user_ids,
     get_user_key_for_redis,
@@ -25,6 +26,46 @@ def mock_redis_conn(mocker):
     return mock_conn, mock_pipe
 
 
+@pytest.fixture
+def mock_async_redis_conn(mocker):
+    """
+    Мок асинхронного Redis-соединения с настроенным асинхронным контекстным менеджером pipeline().
+    """
+    # MagicMock, а не AsyncMock, поскольку mock_conn.pipeline() должен возвращать
+    # объект-контекстный менеджер, а не корутину, mock_conn.pipeline должен быть MagicMock.
+    mock_conn = mocker.MagicMock()
+
+    # В pipeline set() и sadd() синхронные (только ставят команду в очередь
+    # и возвращают pipeline), асинхронный только execute(), поэтому mock_pipe - MagicMock.
+    mock_pipe = mocker.MagicMock()
+    mock_pipe.execute = mocker.AsyncMock()
+
+    # AsyncMock эмулирует __aenter__ и __aexit__
+    mock_context_manager = mocker.AsyncMock()
+    mock_context_manager.__aenter__.return_value = mock_pipe
+
+    mock_conn.pipeline.return_value = mock_context_manager
+
+    mocker.patch("users.services.online.get_async_redis", return_value=mock_conn)
+
+    return mock_conn, mock_pipe
+
+
+@pytest.fixture(autouse=True)
+def reset_async_redis_singleton():
+    """
+    Сбрасывает синглтон асинхронного Redis-клиента после каждого теста.
+
+    Фикстура задается для сброса состояния в случае использования реального
+    асинхронного Redis-клиента в тестах.
+    """
+    import users.services.online as online_module
+
+    online_module._async_redis_client = None
+    yield
+    online_module._async_redis_client = None
+
+
 def test_get_user_key_for_redis():
     """Проверяет правильность формирования Redis-ключа."""
     user_id = 5
@@ -38,6 +79,19 @@ def test_set_user_online(mock_redis_conn):
 
     user_id = 5
     set_user_online(user_id)
+
+    mock_pipe.set.assert_called_once_with(f"{REDIS_KEY_PREFIX}:{user_id}", "1", ex=ONLINE_TTL)
+    mock_pipe.sadd.assert_called_once_with(ONLINE_SET_KEY, user_id)
+    mock_pipe.execute.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_async_set_user_online(mock_async_redis_conn):
+    """Проверяет асинхронную отправку данных в Redis при установке онлайн-статуса."""
+    _, mock_pipe = mock_async_redis_conn
+
+    user_id = 5
+    await async_set_user_online(user_id)
 
     mock_pipe.set.assert_called_once_with(f"{REDIS_KEY_PREFIX}:{user_id}", "1", ex=ONLINE_TTL)
     mock_pipe.sadd.assert_called_once_with(ONLINE_SET_KEY, user_id)

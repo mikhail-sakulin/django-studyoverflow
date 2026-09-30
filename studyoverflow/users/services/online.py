@@ -1,19 +1,41 @@
 import logging
 
+import redis
+from django.conf import settings
 from django.core.cache import cache
 from django.core.files.storage import storages
 from django_redis import get_redis_connection
 
 
+# Асинхронный Redis клиент
+_async_redis_client: redis.asyncio.Redis | None = None
+
 logger = logging.getLogger(__name__)
 
-
 storage_default = storages["default"]
-
 
 REDIS_KEY_PREFIX = "online_user"
 ONLINE_SET_KEY = "online_users_set"
 ONLINE_TTL = 120
+
+
+def get_async_redis() -> redis.asyncio.Redis:
+    """
+    Ленивая инициализация асинхронного Redis-клиента.
+
+    Создаётся один раз для процесса и переиспользуется, имеет свой connection pool.
+    """
+    global _async_redis_client
+
+    if _async_redis_client is None:
+        # используется URL Redis для кеша из настроек
+        _async_redis_client = redis.asyncio.from_url(
+            settings.CACHES["default"]["LOCATION"],
+            # декодирует данные, получаемые из Redis, из байт в строки str
+            decode_responses=True,
+        )
+
+    return _async_redis_client
 
 
 def get_user_key_for_redis(user_id: int) -> str:
@@ -45,6 +67,30 @@ def set_user_online(user_id: int) -> None:
         # Добавление ID пользователя во множество (set)
         pipe.sadd(ONLINE_SET_KEY, user_id)
         pipe.execute()
+
+
+async def async_set_user_online(user_id: int) -> None:
+    """
+    Асинхронная версия set_user_online. Помечает пользователя как онлайн.
+
+    Механизм работы:
+    - Создает временный Redis-ключ user_key с TTL = ONLINE_TTL.
+    - Добавляет ID пользователя в общее множество ONLINE_SET_KEY.
+    """
+    redis_conn = get_async_redis()
+    user_key = get_user_key_for_redis(user_id)
+
+    async with redis_conn.pipeline() as pipe:
+        # Операции не выполняются сразу, а добавляются во внутренний список команд,
+        # поэтому await перед ними не нужен.
+
+        # Создание временного ключа user_key
+        pipe.set(user_key, "1", ex=ONLINE_TTL)
+        # Добавление ID пользователя во множество (set)
+        pipe.sadd(ONLINE_SET_KEY, user_id)
+
+        # Выполнение списка команд.
+        await pipe.execute()
 
 
 def is_user_online(user_id: int) -> bool:

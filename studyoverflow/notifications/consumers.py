@@ -6,7 +6,7 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from users.services.online import set_user_online
+from users.services.online import async_set_user_online
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):
@@ -19,14 +19,21 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         Регистрирует канал в группе пользователя и обновляет статус онлайн.
         """
         if not self.scope["user"].is_authenticated:
-            return await self.close()
+            await self.close()
+            return
 
         self.group_name = f"user_{self.scope['user'].pk}"
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
-        set_user_online(self.scope["user"].pk)
+        # При использовании синхронной функции set_user_online нужно оборачивает ее в sync_to_async.
+        #
+        # set_user_online не работает с Django ORM, поэтому вызовы можно выполнять не в одном
+        # потоке, как было бы при thread_sensitive=True по умолчанию, а в разных потоках из пула.
+        # await sync_to_async(set_user_online, thread_sensitive=False)(self.scope["user"].pk)
+
+        await async_set_user_online(self.scope["user"].pk)
 
     async def disconnect(self, code):
         """
@@ -49,7 +56,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             data = json.loads(text_data)
 
             if data.get("type") == "heartbeat":
-                set_user_online(self.scope["user"].pk)
+                await async_set_user_online(self.scope["user"].pk)
 
     async def notify(self, event):
         """

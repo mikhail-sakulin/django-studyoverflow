@@ -33,6 +33,26 @@ def communicator_factory():
     return _factory
 
 
+@pytest.fixture(autouse=True)
+def mock_async_set_online(mocker):
+    return mocker.patch("notifications.consumers.async_set_user_online")
+
+
+@pytest.fixture(autouse=True)
+def reset_async_redis_singleton():
+    """
+    Сбрасывает синглтон асинхронного Redis-клиента после каждого теста.
+
+    Фикстура задается для сброса состояния в случае использования реального
+    асинхронного Redis-клиента в тестах.
+    """
+    import users.services.online as online_module
+
+    online_module._async_redis_client = None
+    yield
+    online_module._async_redis_client = None
+
+
 @pytest.mark.asyncio
 class TestNotificationConsumer:
     """Тестирование NotificationConsumer."""
@@ -47,31 +67,31 @@ class TestNotificationConsumer:
 
         assert connected is False
 
-    async def test_authenticated_connection_success(self, mocker, communicator_factory):
+    async def test_authenticated_connection_success(
+        self, mock_async_set_online, communicator_factory
+    ):
         """Авторизованный пользователь успешно устанавливает WebSocket подключение."""
-        mock_set_online = mocker.patch("notifications.consumers.set_user_online")
-
         user = SimpleNamespace(pk=1, is_authenticated=True)
         communicator = communicator_factory(user)
 
         connected, _ = await communicator.connect()
 
         assert connected is True
-        mock_set_online.assert_called_once_with(1)
+        mock_async_set_online.assert_called_once_with(1)
 
         await communicator.disconnect()
 
-    async def test_receive_heartbeat_updates_online(self, mocker, communicator_factory):
+    async def test_receive_heartbeat_updates_online(
+        self, mock_async_set_online, communicator_factory
+    ):
         """Heartbeat обновляет онлайн-статус пользователя."""
-        mock_set_online = mocker.patch("notifications.consumers.set_user_online")
-
         user = SimpleNamespace(pk=1, is_authenticated=True)
         communicator = communicator_factory(user)
 
         connected, _ = await communicator.connect()
         assert connected is True
 
-        mock_set_online.reset_mock()
+        mock_async_set_online.reset_mock()
 
         # .send_json_to - сериализует python-словарь в json-строку перед отправкой сообщения от
         # клиента на сервер;
@@ -87,13 +107,13 @@ class TestNotificationConsumer:
         # чтобы таска консьюмера проснулась и выполнилась в цикле с максимальным ожиданием
         # не более 1 секунды, иначе вызывается исключение во время тестирования.
         for _ in range(200):
-            if mock_set_online.called:
+            if mock_async_set_online.called:
                 break
             await asyncio.sleep(0.005)
         else:
-            pytest.fail("set_user_online не был вызван")
+            pytest.fail("async_set_user_online не был вызван")
 
-        mock_set_online.assert_called_once_with(1)
+        mock_async_set_online.assert_called_once_with(1)
 
         await communicator.disconnect()
 
