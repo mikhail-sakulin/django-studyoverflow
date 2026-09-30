@@ -10,7 +10,6 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  workflow_dispatch:
 
 permissions:
   # Разрешает боту создавать GitHub Release. Создание релиза в GitHub API относится к тому же
@@ -105,5 +104,26 @@ jobs:
             docker-compose.prod.yml
             docker-compose.prod-lite.yml
             .env.example.release
+            README.md
           body: |
             ## StudyOverflow ${{ env.VERSION }}
+
+            ### Запуск проекта
+            
+            1) Скачайте `docker-compose.yml`, `docker-compose.prod.yml` (и `docker-compose.prod-lite.yml` для VPS с 1 ГБ RAM);
+            2) Переименуйте `.env.example.release` в `.env.prod` и заполните своими значениями;
+            3) Запустите нужный вариант сборки:
+            
+            Полная prod-сборка:
+            
+            ```bash
+            docker compose -p studyoverflow-prod -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d --wait
+            ```
+            
+            Prod-lite-сборка для VPS с 1 ГБ RAM:
+            
+            ```bash
+            docker compose -p studyoverflow-prod -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.prod-lite.yml --env-file .env.prod up -d --wait
+            ```
+            
+            Подробности запуска проекта в `README.md`, пункт "2.8 Запуск prod- и prod-lite-сборок".
