@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Count
+from django.http import Http404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -90,13 +91,22 @@ class LikeMixin:
         """
         Кастомное действие, которое инвертирует лайк от пользователя к объекту:
         ставит, если нет, убирает, если есть.
+
+        При подобной реализации не вызывается self.check_object_permissions(request, obj)
+        (вместо self.get_object() объект получается напрямую через queryset внутри
+        perform_toggle_like), так как бизнес-логикой не предусмотрены права для конкретных
+        объектов. Для реализации вызова потребуется либо выносить транзакцию из perform_toggle_like
+        в данный action, либо вызывать метод внутри perform_toggle_like (с передачей callback).
         """
-        obj = self.get_object()  # type: ignore[attr-defined]
-        user = request.user
+        queryset = self.filter_queryset(self.get_queryset())  # type: ignore[attr-defined]
+        pk = kwargs[self.lookup_url_kwarg or self.lookup_field]  # type: ignore[attr-defined]
 
-        liked_now, likes_count = perform_toggle_like(user, obj, source="api")
+        try:
+            liked_object, liked_now = perform_toggle_like(request.user, queryset, pk, source="api")
+        except queryset.model.DoesNotExist:  # type: ignore[attr-defined]
+            raise Http404
 
-        return Response({"liked_now": liked_now, "likes_count_on_object": likes_count})
+        return Response({"liked_now": liked_now, "likes_count_on_object": liked_object.likes_count})
 
     @extend_schema(
         summary="Список пользователей, лайкнувших объект.",
@@ -482,12 +492,12 @@ class CommentViewSet(
         Логика прав доступа:
         - Просмотр (list, retrieve): Доступно всем.
         - Создание (create): Только авторизованным пользователям.
-        - Изменение/Удаление (update, partial_update, destroy): Автору или Модератору.
+        - Изменение/Удаление (partial_update, destroy): Автору или Модератору.
         """
         if self.action in ["create", "like"]:
             return [IsAuthenticated()]
 
-        if self.action in ["update", "partial_update", "destroy"]:
+        if self.action in ["partial_update", "destroy"]:
             return [
                 IsAuthenticated(),
                 IsAuthorOrModeratorPermission(moderate_permission=self.moderator_permission_name),
@@ -502,17 +512,21 @@ class CommentViewSet(
         """
         post = self.get_post()
 
+        queryset = super().get_queryset()
+
         if self.action == "list":
             # queryset родительских комментариев с prefetch_related queryset дочерних комментариев
-            # для отображения списка комментариев поста
+            # для отображения списка комментариев поста, в вызываемом методе также используются
+            # select_related и аннотации.
             queryset = self.get_comment_tree_queryset(post)
         else:
-            # select_related автора и аннотирование комментария для его детального отображения
-            queryset = super().get_queryset().filter(post_id=post.pk).select_related("author")
-            # Аннотирование полями для лайков
+            # select_related автора
+            queryset = queryset.filter(post_id=post.pk).select_related("author")
+            # Аннотирование полем с флагом 'user_has_liked'
             queryset = self.annotate_queryset(queryset)
 
-        queryset = queryset.annotate(child_count=Count("child_comments", distinct=True))
+        if self.action in ["list", "thread", "retrieve"]:
+            queryset = queryset.annotate(child_count=Count("child_comments", distinct=True))
 
         return queryset
 
@@ -613,7 +627,7 @@ class CommentViewSet(
                 description="Информация о теге успешно получена.",
                 response=TagSerializer,
             ),
-            404: create_new_not_found_response('"LowercaseTag"'),
+            404: create_new_not_found_response("LowercaseTag"),
         },
     ),
 )

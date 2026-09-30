@@ -47,7 +47,9 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, View, ABC):
         в случае отсутствия объекта (DoesNotExist).
         """
         try:
-            liked_object = self.model.objects.get(pk=kwargs[self.pk_url_kwarg])
+            liked_object, user_has_liked = perform_toggle_like(
+                request.user, self.model.objects.all(), kwargs[self.pk_url_kwarg], source="web"
+            )
         except self.model.DoesNotExist:
             response = HttpResponse(status=404)
             response["HX-Trigger"] = json.dumps({"reloadPage": True})
@@ -55,8 +57,6 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, View, ABC):
             messages.error(self.request, "Ресурс был удален.")
 
             return response
-
-        user_has_liked, likes_count = perform_toggle_like(request.user, liked_object, source="web")
 
         if not user_has_liked:
             message_text = "Лайк удален."

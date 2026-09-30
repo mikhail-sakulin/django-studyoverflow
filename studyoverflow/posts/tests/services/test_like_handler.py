@@ -1,6 +1,9 @@
+import pytest
+
 from posts.services.like_handler import perform_toggle_like
 
 
+@pytest.mark.django_db
 class TestPerformToggleLike:
     """Тестирование сервисной функции переключения лайков."""
 
@@ -10,6 +13,10 @@ class TestPerformToggleLike:
         obj = mocker.MagicMock()
         obj.likes_count = 1
         source = "web"
+        pk = 1
+
+        queryset = mocker.MagicMock()
+        queryset.select_for_update.return_value.get.return_value = obj
 
         # Мокается новый созданный лайк
         fake_like = mocker.MagicMock()
@@ -17,10 +24,13 @@ class TestPerformToggleLike:
 
         mock_log = mocker.patch("posts.services.like_handler.log_like_event")
 
-        created, likes_count = perform_toggle_like(user=user, obj=obj, source=source)
+        returned_obj, created = perform_toggle_like(
+            user=user, queryset=queryset, pk=pk, source=source
+        )
 
         assert created is True
-        assert likes_count == 1
+        assert returned_obj is obj
+        assert returned_obj.likes_count == 1
 
         fake_like.delete.assert_not_called()
 
@@ -38,6 +48,10 @@ class TestPerformToggleLike:
         obj = mocker.MagicMock()
         obj.likes_count = 0
         source = "api"
+        pk = 1
+
+        queryset = mocker.MagicMock()
+        queryset.select_for_update.return_value.get.return_value = obj
 
         # Мокается уже существующий лайк
         fake_like = mocker.MagicMock()
@@ -45,10 +59,13 @@ class TestPerformToggleLike:
 
         mock_log = mocker.patch("posts.services.like_handler.log_like_event")
 
-        created, likes_count = perform_toggle_like(user=user, obj=obj, source=source)
+        returned_obj, created = perform_toggle_like(
+            user=user, queryset=queryset, pk=pk, source=source
+        )
 
         assert created is False
-        assert likes_count == 0
+        assert returned_obj is obj
+        assert returned_obj.likes_count == 0
 
         fake_like.delete.assert_called_once()
 

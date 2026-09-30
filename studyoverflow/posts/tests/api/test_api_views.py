@@ -386,16 +386,19 @@ class TestLikeMixin:
             "api:posts:posts-like", url_kwargs={"pk": post.pk}, method="post", is_api=True
         )
 
-    def test_toggle_like_success(self, api_client, user_factory, post_factory, mocker):
-        """Успешное переключение лайка (toggle-like)."""
+    def test_toggle_post_like_success(self, api_client, user_factory, post_factory, mocker):
+        """Успешное переключение лайка поста (toggle-like)."""
         user = user_factory()
         post = post_factory()
         api_client.force_authenticate(user=user)
 
+        mock_obj = mocker.MagicMock()
+        mock_obj.likes_count = 1
+
         mock_perform = mocker.patch(
             "posts.api.views.perform_toggle_like",
-            # (liked_now, likes_count)
-            return_value=(True, 1),
+            # (obj, created)
+            return_value=(mock_obj, True),
         )
 
         url = reverse("api:posts:posts-like", kwargs={"pk": post.pk})
@@ -405,10 +408,14 @@ class TestLikeMixin:
         assert response.data["liked_now"] is True
         assert response.data["likes_count_on_object"] == 1
 
-        mock_perform.assert_called_once_with(user, post, source="api")
+        call_args = mock_perform.call_args
+        assert call_args.args[0] == user
+        assert list(call_args.args[1]) == [post]
+        assert call_args.args[2] == str(post.pk)
+        assert call_args.kwargs == {"source": "api"}
 
-    def test_likes_list_success(self, api_client, user_factory, post_factory, like_factory):
-        """Успешное получение списка лайкнувших пользователей (likers-list)."""
+    def test_post_likes_list_success(self, api_client, user_factory, post_factory, like_factory):
+        """Успешное получение списка лайкнувших пост пользователей (likers-list)."""
         user1 = user_factory(username="liker1")
         user2 = user_factory(username="liker2")
         post = post_factory()
@@ -417,6 +424,60 @@ class TestLikeMixin:
         like_factory(user=user2, content_object=post)
 
         url = reverse("api:posts:posts-likes", kwargs={"pk": post.pk})
+        response = api_client.get(url)
+
+        assert response.status_code == 200
+        results = response.data
+
+        assert len(results) == 2
+        usernames = [user["username"] for user in results]
+        assert "liker1" in usernames
+        assert "liker2" in usernames
+
+    def test_toggle_comment_like_success(self, api_client, user_factory, comment_factory, mocker):
+        """Успешное переключение лайка комментария (toggle-like)."""
+        user = user_factory()
+        comment = comment_factory()
+        api_client.force_authenticate(user=user)
+
+        mock_obj = mocker.MagicMock()
+        mock_obj.likes_count = 1
+
+        mock_perform = mocker.patch(
+            "posts.api.views.perform_toggle_like",
+            # (obj, created)
+            return_value=(mock_obj, True),
+        )
+
+        url = reverse(
+            "api:posts:post-comments-like", kwargs={"post_pk": comment.post_id, "pk": comment.pk}
+        )
+        response = api_client.post(url)
+
+        assert response.status_code == 200
+        assert response.data["liked_now"] is True
+        assert response.data["likes_count_on_object"] == 1
+
+        call_args = mock_perform.call_args
+        assert call_args.args[0] == user
+        assert list(call_args.args[1]) == [comment]
+        assert call_args.args[2] == str(comment.pk)
+        assert call_args.kwargs == {"source": "api"}
+
+    def test_comment_likes_list_success(
+        self, api_client, user_factory, post_factory, comment_factory, like_factory
+    ):
+        """Успешное получение списка лайкнувших комментарий пользователей (likers-list)."""
+        user1 = user_factory(username="liker1")
+        user2 = user_factory(username="liker2")
+        comment = comment_factory()
+
+        like_factory(user=user1, content_object=comment)
+        like_factory(user=user2, content_object=comment)
+
+        url = reverse(
+            "api:posts:post-comments-likes", kwargs={"post_pk": comment.post_id, "pk": comment.pk}
+        )
         response = api_client.get(url)
 
         assert response.status_code == 200
