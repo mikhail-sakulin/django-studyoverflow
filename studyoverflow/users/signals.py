@@ -8,7 +8,7 @@ from django.db.models import Q
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from users.services.cache import delete_cache_user
+from users.services.cache import USER_CACHE_IGNORED_FIELDS, delete_cache_user
 from users.services.online import remove_user_offline
 from users.services.permissions import MODERATOR_PERMISSIONS, STAFF_PERMISSIONS
 from users.tasks import delete_all_avatars_files_task
@@ -188,12 +188,15 @@ def log_user_login_failed(sender, credentials, request, **kwargs):
 @receiver(post_save, sender=UserModel)
 def invalidate_user_object_cache_on_save(sender, instance, created, raw, update_fields, **kwargs):
     """
-    Удаляет кэш объекта пользователя при изменении данных пользователя, кроме пароля.
+    Удаляет кэш объекта пользователя при изменении данных пользователя,
+    кроме USER_CACHE_IGNORED_FIELDS.
     """
     if created or raw:
         return
 
-    if update_fields and "password" in update_fields:
+    # Если update_fields передан явно и все переданные поля входят в игнорируемые, то
+    # кещ удалять не нужно.
+    if update_fields is not None and set(update_fields) <= USER_CACHE_IGNORED_FIELDS:
         return
 
     delete_cache_user(instance.username)

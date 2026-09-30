@@ -5,6 +5,10 @@ from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 
 
+# Поля, изменение которых не требует инвалидации кеша объекта пользователя
+USER_CACHE_IGNORED_FIELDS = {"password", "last_login"}
+
+
 def get_user_cache_key(username: str) -> str:
     """Возвращает ключ кэша для объекта пользователя."""
     return f"user_profile_{username.lower()}"
