@@ -179,3 +179,16 @@ footer a:hover {
     color: lightgray;
     text-decoration: none;
 }
+
+/* Header закреплен сверху при скролле, если ширина >= 1200px */
+@media (min-width: 1200px) {
+    #header {
+        position: sticky;
+        top: 0;
+        z-index: 1030;
+    }
+
+    html {
+        scroll-padding-top: 5rem;
+    }
+}
