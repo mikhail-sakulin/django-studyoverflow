@@ -84,7 +84,7 @@ class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMix
 
 
 class PostCreateView(
-    ContextTagMixin, PostAuthorMixin, LoginRequiredMixin, SuccessMessageMixin, CreateView
+    LoginRequiredMixin, ContextTagMixin, PostAuthorMixin, SuccessMessageMixin, CreateView
 ):
     """
     Страница создания нового поста.
@@ -97,8 +97,8 @@ class PostCreateView(
     success_url = reverse_lazy("posts:list")
     success_message = "Пост успешно создан!"
     extra_context = {
-        "section_of_menu_selected": "posts:create"
-    }  # Добавляет выбранный раздел меню в контекст
+        "section_of_menu_selected": "posts:create"  # Добавляет выбранный раздел меню в контекст
+    }
 
     def form_valid(self, form):
         response = super().form_valid(form)
