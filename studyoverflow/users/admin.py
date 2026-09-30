@@ -1,9 +1,15 @@
+from typing import TYPE_CHECKING
+
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 
-from users.models import User
+
+if TYPE_CHECKING:
+    from users.models import User
+else:
+    User = get_user_model()
 
 
 @admin.register(User)
@@ -121,5 +127,4 @@ class UserAdmin(admin.ModelAdmin):
         """
         Проверяет, имеет ли текущий пользователь право блокировать аккаунты.
         """
-        user_model = get_user_model()
-        return user.role in {user_model.Role.ADMIN, user_model.Role.MODERATOR}
+        return user.role in {User.Role.ADMIN, User.Role.MODERATOR}
