@@ -69,14 +69,7 @@ class TestFilenamesAndPaths:
         assert avatar_upload_to(mock_user, "photo.png") == "avatars/uuid.png"
         mock_gen.assert_called_once_with("photo.png")
 
-    @pytest.mark.parametrize(
-        "pk, expected_prefix",
-        [
-            (15, "avatars/15/"),
-            (None, "avatars/tmp/"),
-        ],
-    )
-    def test_user_avatar_upload_path(self, mocker, pk, expected_prefix):
+    def test_user_avatar_upload_path(self, mocker):
         mock_gen = mocker.patch(
             "users.services.avatars.generate_new_filename_with_uuid", return_value="uuid.png"
         )
