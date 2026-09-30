@@ -75,14 +75,14 @@ class UserMyProfileSerializer(UserPublicProfileSerializer):
     Расширяет публичный профиль приватными полями и возможностью загрузки аватара.
     """
 
-    # Поле avatar определяется отдельно для явного указания его как файла в Swagger
-    avatar = serializers.ImageField(write_only=True, required=False, allow_null=True)
-
     class Meta(UserPublicProfileSerializer.Meta):
         fields = UserPublicProfileSerializer.Meta.fields + ["is_social", "avatar"]
         extra_kwargs = {
             "is_blocked": {"default": False},
             "is_social": {"default": False},
+            # "allow_null": True позволяет сбрасывать аватар на дефолтный при отправке null,
+            # в самой модели задано дефолтное значение, а null=False.
+            "avatar": {"write_only": True, "allow_null": True},
         }
         read_only_fields = [
             "id",

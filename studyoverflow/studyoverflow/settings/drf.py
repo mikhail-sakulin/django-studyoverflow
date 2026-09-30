@@ -2,6 +2,8 @@ from .base import DEBUG
 
 
 REST_FRAMEWORK = {
+    # Классы рендеринга, определяют, в каком формате API возвращает данные клиенту,
+    # Browsable API (веб-интерфейс DRF) только если DEBUG == True.
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
@@ -13,7 +15,15 @@ REST_FRAMEWORK = {
         "users.api.authentication.CustomJWTAuthentication",
         "users.api.authentication.CustomSessionAuthentication",
     ],
+    # Класс генерации OpenAPI-схем, используется drf-spectacular
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Классы парсеров по умолчанию, определяют, в каких форматах API может принимать и обрабатывать
+    # входящие данные от клиента. Для api-эндпоинтов с отправкой файлов (например, обновление
+    # профиля пользователя) нужно дополнительно указывать MultiPartParser:
+    # parser_classes=[MultiPartParser, JSONParser].
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
+    ],
 }
 
 # Browsable API (веб-интерфейс DRF) только если DEBUG == True

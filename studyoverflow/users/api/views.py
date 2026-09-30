@@ -239,7 +239,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         return Response({"detail": "Нет активного DRF token."}, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
-        summary="Блокирует JWT refresh токен (blacklist).",
+        summary="Блокирует JWT refresh токен, помещая его в blacklist.",
         request=RefreshJWTBlacklistSerializer,
         responses={
             200: OpenApiResponse(
@@ -297,7 +297,15 @@ class AuthViewSet(viewsets.GenericViewSet):
 
     @extend_schema(
         summary="Удаляет токены пользователя и сессию для текущего клиента.",
-        request=RefreshJWTBlacklistSerializer,
+        request=inline_serializer(
+            name="LogoutAllRequestSerializer",
+            fields={
+                "refresh": serializers.CharField(
+                    required=False,
+                    help_text="JWT refresh токен, который нужно заблокировать.",
+                ),
+            },
+        ),
         responses={
             200: OpenApiResponse(
                 response=DetailSerializer,
@@ -321,13 +329,6 @@ class AuthViewSet(viewsets.GenericViewSet):
         Выход из системы текущего клиента,
         удаляет токены пользователя и сессию для текущего клиента.
         """
-        # Удаление DRF токена, строго перед logout,
-        # чтобы у request был объект user (не AnonymousUser)
-        Token.objects.filter(user=request.user).delete()
-
-        # Удаление текущей сессии
-        logout(request)
-
         # Блокировка переданного JWT refresh токена
         refresh = request.data.get("refresh")
 
@@ -351,6 +352,13 @@ class AuthViewSet(viewsets.GenericViewSet):
                     {"detail": "Ошибка обработки JWT refresh токена."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
+
+        # Удаление DRF токена, строго перед logout,
+        # чтобы у request был объект user (не AnonymousUser)
+        Token.objects.filter(user=request.user).delete()
+
+        # Удаление текущей сессии
+        logout(request)
 
         return Response(
             {
@@ -639,7 +647,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 @extend_schema_view(
     post=extend_schema(
-        summary="Обновление JWT access-токена через refresh токен.",
+        summary="Обновление access и refresh JWT-токенов.",
+        description="Принимает refresh токен и возвращает новую пару токенов: "
+        "access и refresh. В настройках SIMPLE_JWT задано, что старый refresh "
+        "токен помещается в blacklist, а возвращается новая пара токенов.",
         auth=[],
         responses={
             200: TokenRefreshSerializer,
@@ -862,7 +873,6 @@ class UserViewSet(
 
     queryset = User.objects.all()
     lookup_field = "username"
-    parser_classes = [MultiPartParser, JSONParser]
     serializer_class = UserPublicProfileSerializer
 
     def get_queryset(self):
@@ -1009,7 +1019,12 @@ class UserViewSet(
             401: OpenApiUnauthenticated401Response,
         },
     )
-    @action(detail=False, methods=["get", "patch", "delete"], permission_classes=[IsAuthenticated])
+    @action(
+        detail=False,
+        methods=["get", "patch", "delete"],
+        permission_classes=[IsAuthenticated],
+        parser_classes=[MultiPartParser, JSONParser],
+    )
     def me(self, request):
         """
         Профиль текущего пользователя.
