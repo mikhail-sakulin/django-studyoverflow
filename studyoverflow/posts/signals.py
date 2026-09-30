@@ -6,6 +6,7 @@ from django.dispatch import receiver
 
 from posts.models import Comment, Like, LowercaseTag, Post, TaggedPost
 from posts.services.cache import (
+    POST_CACHE_RELEVANT_FIELDS,
     delete_cache_post_detail,
     delete_cache_tags_list,
     delete_cached_posts_by_author,
@@ -201,7 +202,7 @@ def invalidate_tags_cache_on_save_or_delete(sender, raw=False, **kwargs):
 
 
 @receiver(post_save, sender=User)
-def clear_post_cache_on_user_update(sender, instance, created, raw, **kwargs):
+def clear_post_cache_on_user_update(sender, instance, created, raw, update_fields, **kwargs):
     """
     Удаляет кеш постов при изменении данных автора поста, поскольку некоторые данные автора также
     кешируются вместе с данными поста.
@@ -211,6 +212,11 @@ def clear_post_cache_on_user_update(sender, instance, created, raw, **kwargs):
     не сработает.
     """
     if created or raw:
+        return
+
+    # Если update_fields передан явно и в нем них нет полей, влияющих на кеш постов,
+    # кеш постов не удаляется. intersection - пересечение
+    if update_fields is not None and not POST_CACHE_RELEVANT_FIELDS.intersection(update_fields):
         return
 
     delete_cached_posts_by_author(instance.pk)

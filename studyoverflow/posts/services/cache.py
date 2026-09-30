@@ -12,6 +12,19 @@ if TYPE_CHECKING:
     from posts.models import Post
 
 
+# Поля пользователя, изменение которых влияет на кешированные данные постов,
+# при изменении этих данных пользователя кеш постов должен сбрасываться
+POST_CACHE_RELEVANT_FIELDS = {
+    "username",
+    "role",
+    "avatar",
+    "avatar_small_size1",
+    "avatar_small_size2",
+    "avatar_small_size3",
+    "is_blocked",
+}
+
+
 def get_post_cache_key(post_id: int) -> str:
     """Возвращает ключ для кеширования конкретного поста."""
     return f"post_detail_{post_id}"
