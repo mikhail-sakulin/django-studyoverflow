@@ -3,8 +3,8 @@ from datetime import timedelta
 
 import pytest
 from django.core.exceptions import ValidationError
-from django.core.files import File
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db.models.fields.files import FieldFile
 from django.utils import timezone
 from PIL import Image
 
@@ -115,9 +115,12 @@ class TestAvatarFileValidator:
     def validator(self):
         return AvatarFileValidator()
 
-    def test_skip_validation_for_not_uploaded_file(self, validator):
-        """Если аватарка не обновлялась, то валидация пропускается."""
-        file = File(io.BytesIO(b"old file"))
+    def test_skip_validation_for_not_uploaded_file(self, mocker, validator):
+        """Если аватарка не обновлялась (уже сохранена в хранилище), то валидация пропускается."""
+        # Spec настраивает __class__ мока под указанный класс для проверки isinstance, также
+        # мок будет разрешать обращение только к тем атрибутам и методам, которые есть у класса.
+        file = mocker.Mock(spec=FieldFile)
+        file._committed = True
 
         assert validator(file) is None
 
