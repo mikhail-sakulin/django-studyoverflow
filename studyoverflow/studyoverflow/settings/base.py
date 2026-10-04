@@ -54,7 +54,7 @@ ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost"])
 # ----------------------------------------
 
 INSTALLED_APPS = [
-    # Указывается первым, чтобы django runserver работал через ASGI
+    # "daphne" указывается первым, чтобы django runserver работал через ASGI
     # Отключить, если нужно использовать профилирование через Django Debug Toolbar
     "daphne",
     # Django core
@@ -88,8 +88,13 @@ INSTALLED_APPS = [
     # Кастомные приложения проекта
     "navigation.apps.NavigationConfig",
     "posts.apps.PostsConfig",
-    "users.apps.UsersConfig",
     "notifications.apps.NotificationsConfig",
+    # users должно указываться последним, потому что в нём подключается обработчик сигнала
+    # post_migrate (sync_default_groups), который собирает группы Moderators и StaffViewers
+    # из прав других приложений, а права создаются для приложений в порядке INSTALLED_APPS
+    # стандартным Django-обработчиком сигнала post_migrate из "django.contrib.auth".
+    # Если приложение окажется в списке ниже users, группы соберутся без его прав.
+    "users.apps.UsersConfig",
 ]
 
 if DEBUG:
@@ -207,8 +212,16 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # Email, с которого Django шлёт системные уведомления
 SERVER_EMAIL = EMAIL_HOST_USER
 
-# Список администраторов, которые получают письма об ошибках
-ADMINS = [EMAIL_HOST_USER]
+# Список администраторов, которые получают письма об ошибках, может использоваться в:
+# 1) AdminEmailHandler (django.utils.log) - logging-обработчик, который при логировании
+#    ошибок (например, 500 в django.request) шлёт письмо на адреса из ADMINS;
+# 2) Явный вызов django.core.mail.mail_admins().
+#
+# Формат для Django 5.2: список пар (имя, адрес), само имя нигде не используется. В Django 6.0
+# другой формат - задается список адресов [EMAIL_HOST_USER] без имен.
+#
+# В текущей версии проекта не используется.
+ADMINS = [("Admin", EMAIL_HOST_USER)]
 
 
 # ----------------------------------------
