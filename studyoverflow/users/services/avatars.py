@@ -6,7 +6,7 @@ import uuid
 from io import BytesIO
 from typing import TYPE_CHECKING, Type
 
-from botocore.exceptions import BotoCoreError
+from botocore.exceptions import BotoCoreError, ClientError
 from django.contrib.auth import get_user_model
 from django.core.files import File
 from django.core.files.base import ContentFile
@@ -108,7 +108,7 @@ def generate_avatar_small(user: User, size_type: int) -> bool | str:
         )
         return False
 
-    except BotoCoreError as e:
+    except (BotoCoreError, ClientError) as e:
         logger.error(
             f"Пользователь: {user.username}: ошибка при сохранении avatar_small в хранилище.",
             extra={
@@ -194,19 +194,25 @@ def delete_old_avatar_names(old_avatar_names: list[str]) -> None:
     Удаляет старые файлы avatar и avatar_small (миниатюры) пользователя из хранилища.
     """
     for name in old_avatar_names:
-        if name and storage_default.exists(name):
-            try:
-                storage_default.delete(name)
-            except BotoCoreError as e:
-                logger.error(
-                    f"Ошибка при удалении файла '{name}' из хранилища.",
-                    extra={
-                        "file_name": name,
-                        "error": str(e),
-                        "event_type": "avatar_file_delete_error",
-                    },
-                )
-                pass
+        if not name:
+            continue
+        try:
+            # Проверять storage_default.exists(name) не нужно, так как .delete(name)
+            # не вызывает исключения при несуществующем ключе, ответ будет таким же - 204.
+            storage_default.delete(name)
+        # BotoCoreError - ошибки на стороне клиента (библиотеки): проблемы с сетью,
+        # с учетными данными, ошибки конфигурации и валидации параметров.
+        # ClientError - ошибки со стороны S3: хранилище получило запрос и ответило 4xx или 5xx,
+        # например AccessDenied, слишком много запросов, внутренняя ошибка S3 и так далее.
+        except (BotoCoreError, ClientError) as e:
+            logger.error(
+                f"Ошибка при удалении файла '{name}' из хранилища.",
+                extra={
+                    "file_name": name,
+                    "error": str(e),
+                    "event_type": "avatar_file_delete_error",
+                },
+            )
 
 
 def generate_default_avatar_in_different_sizes(user_model: Type[User]) -> None:
@@ -260,7 +266,7 @@ def generate_default_avatar_small(
         )
         return
 
-    except BotoCoreError as e:
+    except (BotoCoreError, ClientError) as e:
         logger.error(
             "Ошибка при сохранении default_avatar_small в хранилище.",
             extra={
