@@ -251,7 +251,7 @@ class UserPasswordChangeSerializer(serializers.ModelSerializer):
         """Хеширует и сохраняет новый пароль."""
         user = self.context["request"].user
         user.set_password(self.validated_data["password_new"])
-        user.save()
+        user.save(update_fields=["password"])
         return user
 
 
@@ -317,7 +317,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     def save(self):
         """Хеширует и сохраняет новый пароль."""
         self.user.set_password(self.validated_data["password_new"])
-        self.user.save()
+        self.user.save(update_fields=["password"])
         return self.user
 
 
