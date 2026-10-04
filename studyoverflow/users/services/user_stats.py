@@ -1,7 +1,7 @@
 from typing import Any, Type
 
 from django.contrib.auth import get_user_model
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Count, F
 from django.db.models.functions import Greatest
 
@@ -30,7 +30,8 @@ def update_user_counter_field(author_id: int, counter_field: str, value_change: 
 
     username = user_model.objects.filter(pk=author_id).values_list("username", flat=True).first()
 
-    delete_cache_user(username)
+    if username:
+        transaction.on_commit(lambda: delete_cache_user(username))
 
 
 def get_counts_map(model: Type[models.Model], group_field: str) -> dict[Any, int]:

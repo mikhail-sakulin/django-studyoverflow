@@ -11,7 +11,7 @@ USER_CACHE_IGNORED_FIELDS = {"password", "last_login"}
 
 def get_user_cache_key(username: str) -> str:
     """Возвращает ключ кэша для объекта пользователя."""
-    return f"user_profile_{username.lower()}"
+    return f"user_profile_{username.upper()}"
 
 
 def get_cached_user(username: str):
@@ -27,7 +27,7 @@ def get_cached_user(username: str):
     user = cache.get(cache_key)
 
     if user is None:
-        user = get_object_or_404(user_model, username=username)
+        user = get_object_or_404(user_model, username__iexact=username)
         # Кеш 10 минут
         cache.set(cache_key, user, timeout=10 * 60)
 

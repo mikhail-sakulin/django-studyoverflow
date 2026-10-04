@@ -260,6 +260,13 @@ class User(AbstractUser):
             models.Index(fields=["-comments_count", "username"]),
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Сохраняется первоначальное значение username для инвалидации кеша объекта пользователя при
+        # необходимости по username при изменении значения поля.
+        # __dict__ не делает запрос в БД при .only()/.defer()
+        self._original_username = self.__dict__.get("username")
+
     def __str__(self):
         """Возвращает строковое представление пользователя."""
         return self.username

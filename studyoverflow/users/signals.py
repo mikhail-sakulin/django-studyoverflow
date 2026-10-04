@@ -51,9 +51,8 @@ def delete_user_avatars_after_user_deleted(sender, instance, **kwargs):
     Использует transaction.on_commit, чтобы файлы удалялись только после
     успешного завершения транзакции БД.
     """
-    transaction.on_commit(
-        lambda: delete_all_avatars_files_task.delay(str(instance.s3_storage_uuid))
-    )
+    storage_uuid = str(instance.s3_storage_uuid)
+    transaction.on_commit(lambda: delete_all_avatars_files_task.delay(storage_uuid))
 
 
 @receiver(user_logged_in)
@@ -199,7 +198,16 @@ def invalidate_user_object_cache_on_save(sender, instance, created, raw, update_
     if update_fields is not None and set(update_fields) <= USER_CACHE_IGNORED_FIELDS:
         return
 
-    delete_cache_user(instance.username)
+    username = instance.username
+    transaction.on_commit(lambda: delete_cache_user(username))
+
+    # При изменении username старый объект пользователя также удаляется из кеша
+    old_username = instance._original_username
+    if old_username and old_username != instance.username:
+        transaction.on_commit(lambda: delete_cache_user(old_username))
+
+    # В случае повторного .save()
+    instance._original_username = instance.username
 
 
 @receiver(post_delete, sender=UserModel)
@@ -207,4 +215,5 @@ def invalidate_user_object_cache_on_delete(sender, instance, **kwargs):
     """
     Удаляет кэш объекта пользователя при его удалении.
     """
-    delete_cache_user(instance.username)
+    username = instance.username
+    transaction.on_commit(lambda: delete_cache_user(username))
