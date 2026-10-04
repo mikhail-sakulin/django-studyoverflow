@@ -99,11 +99,18 @@ class LikeMixin:
         в данный action, либо вызывать метод внутри perform_toggle_like (с передачей callback).
         """
         queryset = self.filter_queryset(self.get_queryset())  # type: ignore[attr-defined]
+        # lookup_url_kwarg - имя параметра в URL, из которого берется значение для поиска
+        # объекта (по умолчанию None, тогда ключ в kwargs совпадает с lookup_field),
+        # lookup_field - имя поля модели, по которому ищется объект (по умолчанию "pk"),
+        # оба параметра задаются во view.
         pk = kwargs[self.lookup_url_kwarg or self.lookup_field]  # type: ignore[attr-defined]
 
         try:
             liked_object, liked_now = perform_toggle_like(request.user, queryset, pk, source="api")
-        except queryset.model.DoesNotExist:  # type: ignore[attr-defined]
+        # ValueError указывается, чтобы возвращалось 404 вместо 500, если имя значение pk в URL
+        # будет неподходящего типа (не сможет быть преобразовано в число через int).
+        # ValueError вызывается в .get(pk="abc")
+        except (queryset.model.DoesNotExist, ValueError):  # type: ignore[attr-defined]
             raise Http404
 
         return Response({"liked_now": liked_now, "likes_count_on_object": liked_object.likes_count})
@@ -308,10 +315,15 @@ class PostViewSet(
         """
         queryset = self.filter_queryset(self.get_queryset())
 
-        post = get_cached_post(
-            post_id=self.kwargs[self.lookup_field],
-            queryset=queryset,
-        )
+        try:
+            post = get_cached_post(
+                post_id=self.kwargs[self.lookup_url_kwarg or self.lookup_field],
+                queryset=queryset,
+            )
+        # ValueError обрабатывается, чтобы возвращалось 404 вместо 500, если значение post_id в
+        # URL будет неподходящего типа (не сможет быть преобразовано в число через int).
+        except ValueError:
+            raise Http404
 
         self.check_object_permissions(self.request, post)
 

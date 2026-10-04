@@ -27,7 +27,8 @@ POST_CACHE_RELEVANT_FIELDS = {
 
 def get_post_cache_key(post_id: int) -> str:
     """Возвращает ключ для кеширования конкретного поста."""
-    return f"post_detail_{post_id}"
+    # используется int, чтобы различные значения из URL ("5", "05" и "+5") давали один ключ
+    return f"post_detail_{int(post_id)}"
 
 
 def get_cached_post(post_id: int, queryset: QuerySet[Post]):
