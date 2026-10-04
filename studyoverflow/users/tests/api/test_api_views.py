@@ -473,7 +473,9 @@ class TestPasswordChangeAPIView:
 class TestPasswordResetAPIView:
     """Тестирование запроса на восстановление пароля."""
 
-    def test_api_password_reset_full_flow(self, mocker, api_client, user_factory):
+    def test_api_password_reset_full_flow(
+        self, django_capture_on_commit_callbacks, api_client, user_factory
+    ):
         """
         Интеграционный тест полного цикла через API:
         Запрос сброса -> Выполнение Celery задачи -> Письмо -> Парсинг -> Смена пароля -> Вход.
@@ -482,15 +484,17 @@ class TestPasswordResetAPIView:
             username="api_reset_user", email="reset@example.com", password="OldPassword123"
         )
 
-        # Мок transaction.on_commit для выполнения Celery задачи немедленно.
-        mocker.patch("users.api.views.transaction.on_commit", side_effect=lambda func: func())
-
         # 1) Запрос сброса пароля
-        response_request = api_client.post(
-            reverse("api:users:auth-password-reset"),
-            data={"email": "reset@example.com"},
-            format="json",
-        )
+
+        # Коллбеки, зарегистрированные через transaction.on_commit, выполнятся при выходе
+        # из блока with.
+        with django_capture_on_commit_callbacks(execute=True):
+            response_request = api_client.post(
+                reverse("api:users:auth-password-reset"),
+                data={"email": "reset@example.com"},
+                format="json",
+            )
+
         assert response_request.status_code == 200
         assert "инструкция" in response_request.data["detail"].lower()
 
@@ -528,17 +532,19 @@ class TestPasswordResetAPIView:
         assert not user.check_password("OldPassword123")
         assert user.check_password("NewStrongPass123")
 
-    def test_password_reset_nonexistent_email(self, mocker, api_client):
+    def test_password_reset_nonexistent_email(self, django_capture_on_commit_callbacks, api_client):
         """
         Если email не существует, все равно возвращается 200 (защита от перебора),
         письмо не отправляется.
         """
         data = {"email": "not_exist@example.com"}
 
-        # Мок transaction.on_commit для выполнения Celery задачи немедленно.
-        mocker.patch("users.api.views.transaction.on_commit", side_effect=lambda func: func())
-
-        response = api_client.post(reverse("api:users:auth-password-reset"), data, format="json")
+        # Коллбеки, зарегистрированные через transaction.on_commit, выполнятся при выходе
+        # из блока with.
+        with django_capture_on_commit_callbacks(execute=True):
+            response = api_client.post(
+                reverse("api:users:auth-password-reset"), data, format="json"
+            )
 
         assert response.status_code == 200
         assert "инструкция" in response.data["detail"].lower()
