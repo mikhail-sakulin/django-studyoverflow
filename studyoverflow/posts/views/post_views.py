@@ -3,6 +3,7 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
+from django.http import Http404
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
@@ -120,11 +121,16 @@ class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
         queryset = queryset or self.get_queryset()
 
         post_id = self.kwargs.get(self.pk_url_kwarg)
+        post_slug = self.kwargs.get(self.slug_url_kwarg)
 
         post = get_cached_post(
             post_id=post_id,
             queryset=queryset,
         )
+
+        # slug из URL должен совпадать с реальным slug поста
+        if post.slug != post_slug:
+            raise Http404("Пост не найден.")
 
         # Добавляет объекту флаг лайка от пользователя
         return self.set_user_has_liked(post)
