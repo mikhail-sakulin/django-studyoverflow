@@ -25,10 +25,11 @@ from drf_spectacular.utils import (
     inline_serializer,
 )
 from rest_framework import mixins, serializers, status, viewsets
+from rest_framework.authentication import BaseAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import (
@@ -111,7 +112,13 @@ class AuthViewSet(viewsets.GenericViewSet):
             401: OpenApiLoginFailed401Response,
         },
     )
-    @action(detail=False, methods=["post"], url_path="session-login")
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="session-login",
+        authentication_classes=[],
+        permission_classes=[AllowAny],
+    )
     def session_login(self, request):
         """
         Аутентификация для создания сессии.
@@ -181,7 +188,13 @@ class AuthViewSet(viewsets.GenericViewSet):
             401: OpenApiLoginFailed401Response,
         },
     )
-    @action(detail=False, methods=["post"], url_path="drf-token-login")
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="drf-token-login",
+        authentication_classes=[],
+        permission_classes=[AllowAny],
+    )
     def drf_token_login(self, request):
         """
         Аутентификация для создания DRF token.
@@ -409,7 +422,9 @@ class AuthViewSet(viewsets.GenericViewSet):
             ),
         },
     )
-    @action(detail=False, methods=["post"])
+    @action(
+        detail=False, methods=["post"], authentication_classes=[], permission_classes=[AllowAny]
+    )
     def register(self, request):
         """
         Регистрация пользователя.
@@ -533,7 +548,13 @@ class AuthViewSet(viewsets.GenericViewSet):
             ),
         },
     )
-    @action(detail=False, methods=["post"], url_path="password-reset")
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="password-reset",
+        authentication_classes=[],
+        permission_classes=[AllowAny],
+    )
     def password_reset(self, request):
         """
         Запрос на восстановление пароля (отправка письма).
@@ -606,7 +627,13 @@ class AuthViewSet(viewsets.GenericViewSet):
             ),
         },
     )
-    @action(detail=False, methods=["post"], url_path="password-reset-confirm")
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="password-reset-confirm",
+        authentication_classes=[],
+        permission_classes=[AllowAny],
+    )
     def password_reset_confirm(self, request):
         """
         Установка нового пароля по токену.
@@ -773,6 +800,12 @@ class GoogleLoginAPI(SocialLoginView):
     - dj-rest-auth - интеграция django-allauth с simplejwt для API, JSON-обертка.
     """
 
+    # При истекшем токене пользователь не должен получать 401 ответ,
+    # для данного эндпоинта аутентификация не нужна.
+    # В базовых классах задается только permission_classes = (AllowAny,),
+    # но не задается authentication_classes = [].
+    authentication_classes: list[type[BaseAuthentication]] = []
+
     # Класс-адаптер для конкретной соцсети (Google), "знает" необходимые google-эндпоинты
     # и формат, в котором Google передает данные пользователя.
     adapter_class = GoogleOAuth2Adapter
@@ -800,6 +833,7 @@ class GitHubLoginAPI(SocialLoginView):
     Документация текущего класса аналогична документации класса GoogleLoginAPI.
     """
 
+    authentication_classes: list[type[BaseAuthentication]] = []
     adapter_class = GitHubOAuth2Adapter
     client_class = OAuth2Client
     callback_url = "http://localhost:3000/oauth-callback/github/"
@@ -813,6 +847,7 @@ class VKLoginAPI(SocialLoginView):
     Документация текущего класса аналогична документации класса GoogleLoginAPI.
     """
 
+    authentication_classes: list[type[BaseAuthentication]] = []
     adapter_class = VKOAuth2Adapter
     client_class = OAuth2Client
     callback_url = "http://localhost:3000/oauth-callback/vk/"
@@ -826,6 +861,7 @@ class YandexLoginAPI(SocialLoginView):
     Документация текущего класса аналогична документации класса GoogleLoginAPI.
     """
 
+    authentication_classes: list[type[BaseAuthentication]] = []
     adapter_class = YandexOAuth2Adapter
     client_class = OAuth2Client
     callback_url = "http://localhost:3000/oauth-callback/yandex/"
