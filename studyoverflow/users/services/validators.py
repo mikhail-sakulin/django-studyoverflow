@@ -2,6 +2,7 @@ from datetime import date
 from typing import Final
 
 import filetype
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files import File
@@ -11,8 +12,6 @@ from django.utils import timezone
 from django.utils.deconstruct import deconstructible
 from django.utils.translation import gettext_lazy
 from PIL import Image
-
-from studyoverflow import settings
 
 
 @deconstructible

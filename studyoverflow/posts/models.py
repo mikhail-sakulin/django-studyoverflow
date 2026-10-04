@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Final
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.indexes import GinIndex
@@ -20,7 +21,6 @@ from posts.services.text_processing import (
     strip_tags_and_whitespace_chars_from_html,
 )
 from posts.services.validators import PostTitleValidator
-from studyoverflow import settings
 
 
 if TYPE_CHECKING:

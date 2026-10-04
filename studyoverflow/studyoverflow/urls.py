@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
@@ -12,7 +13,6 @@ from navigation.views import (
     server_error,
 )
 from posts.sitemaps import PostSitemap
-from studyoverflow import settings
 from users.sitemaps import UserSitemap
 
 
