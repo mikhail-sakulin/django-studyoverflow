@@ -107,7 +107,12 @@ class TestNotificationViewSet:
         assert response.data["unread_count"] == 2
 
     def test_mark_all_read_action(
-        self, api_client, user_factory, notification_post_factory, mocker
+        self,
+        api_client,
+        user_factory,
+        notification_post_factory,
+        mocker,
+        django_capture_on_commit_callbacks,
     ):
         """Пометка всех уведомлений как прочитанных обновляет статус и запускает celery задачу."""
         mock_task = mocker.patch("notifications.api.views.send_channel_notify_event.delay")
@@ -120,9 +125,13 @@ class TestNotificationViewSet:
         n_other = notification_post_factory(user=other_user, is_read=False)
 
         api_client.force_authenticate(user=user)
-        url = reverse("api:notifications:notifications-mark-all-read")
 
-        response = api_client.post(url)
+        # Коллбеки, зарегистрированные через transaction.on_commit, выполнятся при выходе
+        # из блока with.
+        with django_capture_on_commit_callbacks(execute=True):
+            url = reverse("api:notifications:notifications-mark-all-read")
+            response = api_client.post(url)
+
         assert response.status_code == 200
         assert response.data["detail"] == "Все уведомления помечены прочитанными."
 

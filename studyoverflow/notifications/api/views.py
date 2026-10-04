@@ -1,3 +1,4 @@
+from django.db import transaction
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -130,7 +131,8 @@ class NotificationViewSet(
     @action(detail=False, methods=["get"], url_path="unread-count")
     def unread_count(self, request):
         """Возвращает количество непрочитанных уведомлений."""
-        count = self.get_queryset().filter(is_read=False).count()
+        # self.get_queryset() не используется, чтобы на запрос не повлиял GET-параметр is_read
+        count = Notification.objects.filter(user=request.user, is_read=False).count()
         return Response({"unread_count": count})
 
     @extend_schema(
@@ -157,9 +159,12 @@ class NotificationViewSet(
         Помечает все непрочитанные уведомления пользователя прочитанными и создает
         Celery задачу для обновления счетчика непрочитанных уведомлений через Channels WebSocket.
         """
-        self.get_queryset().filter(is_read=False).update(is_read=True)
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
 
-        send_channel_notify_event.delay(user_id=request.user.pk, update_list=False)
+        user_id = request.user.pk
+        transaction.on_commit(
+            lambda: send_channel_notify_event.delay(user_id=user_id, update_list=False)
+        )
 
         return Response({"detail": "Все уведомления помечены прочитанными."})
 
@@ -216,7 +221,7 @@ class NotificationViewSet(
         """
         token = notification_delete_reason.set("self_delete")
         try:
-            self.get_queryset().delete()
+            Notification.objects.filter(user=request.user).delete()
         finally:
             notification_delete_reason.reset(token)
 

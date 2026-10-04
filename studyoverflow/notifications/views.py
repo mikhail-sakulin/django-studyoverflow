@@ -1,4 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.views import View
@@ -64,7 +65,10 @@ class NotificationMarkAllReadView(LoginRequiredRedirectHTMXMixin, View):
     def post(self, request, *args, **kwargs):
         Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
 
-        send_channel_notify_event.delay(user_id=request.user.pk, update_list=False)
+        user_id = request.user.pk
+        transaction.on_commit(
+            lambda: send_channel_notify_event.delay(user_id=user_id, update_list=False)
+        )
 
         return HttpResponse()
 

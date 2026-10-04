@@ -113,7 +113,12 @@ class TestNotificationMarkAllReadView:
         assert_login_required(url_name="notifications:mark_all_read", method="post")
 
     def test_mark_all_read_success_and_triggers_celery(
-        self, client, user_factory, notification_post_factory, mocker
+        self,
+        client,
+        user_factory,
+        notification_post_factory,
+        mocker,
+        django_capture_on_commit_callbacks,
     ):
         """
         Все непрочитанные уведомления пользователя становятся прочитанными,
@@ -129,8 +134,12 @@ class TestNotificationMarkAllReadView:
         n_other = notification_post_factory(user=other_user)
 
         client.force_login(user)
-        url = reverse("notifications:mark_all_read")
-        response = client.post(url)
+
+        # Коллбеки, зарегистрированные через transaction.on_commit, выполнятся при выходе
+        # из блока with.
+        with django_capture_on_commit_callbacks(execute=True):
+            url = reverse("notifications:mark_all_read")
+            response = client.post(url)
 
         assert response.status_code == 200
 
