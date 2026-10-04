@@ -16,7 +16,27 @@ from posts.models import Comment, Like, Post
 
 @pytest.fixture(autouse=True)
 def mock_transaction_on_commit(mocker):
-    """Мок transaction.on_commit, чтобы celery задачи выполнялись сразу в тестах."""
+    """
+    Мок transaction.on_commit, чтобы celery задачи выполнялись сразу в тестах.
+
+    Вместо данной фикстуры с моком в самих тестах можно использовать контекстный менеджер Django
+    django.test.TestCase.captureOnCommitCallbacks, или же фикстуру
+    django_capture_on_commit_callbacks из pytest-django. При текущем моке коллбеки будут
+    вызываться сразу при их регистрации. При использовании контекстного менеджера заданные
+    колбеки (созданные при отработке кода внутри блока with) будут вызываться только после
+    выхода из блока with, имитируя коммит транзакции.
+
+    Пример использования контекстного менеджера внутри теста:
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        func()
+
+    При execute=True коллбеки вызовутся после выхода из блока with.
+
+    При использовании контекстного менеджера у теста должен быть декоратор @pytest.mark.django_db,
+    так как настоящий transaction.on_commit проверяет состояние транзакции через соединение с БД,
+    даже если тест сам не работает с БД.
+    """
     return mocker.patch(
         "notifications.services.notification_handlers.transaction.on_commit",
         side_effect=lambda func: func(),

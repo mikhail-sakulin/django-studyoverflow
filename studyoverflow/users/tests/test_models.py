@@ -91,7 +91,27 @@ class TestUserModelAvatarCeleryTasks:
 
     @pytest.fixture(autouse=True)
     def mock_on_commit(self, mocker):
-        """Фикстура заставляет transaction.on_commit выполнять колбэк немедленно."""
+        """
+        Фикстура заставляет transaction.on_commit выполнять колбэк немедленно.
+
+        Вместо данной фикстуры с моком в самих тестах можно использовать контекстный менеджер Django
+        django.test.TestCase.captureOnCommitCallbacks, или же фикстуру
+        django_capture_on_commit_callbacks из pytest-django. При текущем моке коллбеки будут
+        вызываться сразу при их регистрации. При использовании контекстного менеджера заданные
+        колбеки (созданные при отработке кода внутри блока with) будут вызываться только после
+        выхода из блока with, имитируя коммит транзакции.
+
+        Пример использования контекстного менеджера внутри теста:
+
+        with django_capture_on_commit_callbacks(execute=True) as callbacks:
+            func()
+
+        При execute=True коллбеки вызовутся после выхода из блока with.
+
+        При использовании контекстного менеджера у теста должен быть декоратор
+        @pytest.mark.django_db, так как настоящий transaction.on_commit проверяет состояние
+        транзакции через соединение с БД, даже если тест сам не работает с БД.
+        """
         # Celery задачи создаются через transaction.on_commit(lambda: ...),
         # мок для transaction.on_commit с данным side_effect заставляет запускать celery задачи
         # сразу же. Если их замокать тоже, то можно отслеживать вызов нужных задач.
@@ -119,6 +139,8 @@ class TestUserModelAvatarCeleryTasks:
 
     def test_creation_with_custom_avatar_triggers_celery(self, user_factory, mocker):
         """При создании пользователя с кастомным аватаром запускается задача генерации миниатюр."""
+        # Мокается задача в users.tasks, потому что в users.models она импортируется не
+        # на уровне модуля, а локально в методе.
         mock_task = mocker.patch("users.tasks.generate_and_save_avatars_small.delay")
 
         user_factory(avatar="avatars/5/custom.jpg")
