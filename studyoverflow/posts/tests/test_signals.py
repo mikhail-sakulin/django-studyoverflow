@@ -3,6 +3,42 @@ import pytest
 from posts.models import LowercaseTag
 
 
+@pytest.fixture(autouse=True)
+def mock_transaction_on_commit(mocker):
+    """
+    Выполнение transaction.on_commit в тестах.
+
+    Вместо данной фикстуры с моком в самих тестах можно использовать контекстный менеджер Django
+    django.test.TestCase.captureOnCommitCallbacks, или же фикстуру
+    django_capture_on_commit_callbacks из pytest-django. При текущем моке коллбеки будут
+    вызываться сразу при их регистрации. При использовании контекстного менеджера заданные
+    колбеки (созданные при отработке кода внутри блока with) будут вызываться только после
+    выхода из блока with, имитируя коммит транзакции.
+
+    Пример использования контекстного менеджера внутри теста:
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        func()
+
+    При execute=True коллбеки вызовутся после выхода из блока with.
+
+    При использовании контекстного менеджера у теста должен быть декоратор @pytest.mark.django_db,
+    так как настоящий transaction.on_commit проверяет состояние транзакции через соединение с БД,
+    даже если тест сам не работает с БД.
+    """
+    return mocker.patch("django.db.transaction.on_commit", side_effect=lambda func: func())
+
+
+@pytest.fixture(autouse=True)
+def mock_celery_task_create_notification(mocker):
+    """
+    Поскольку мокается transaction.on_commit, то после создания объектов (пользователя, поста,
+    комментария) через сигналы и слой сервисов уведомлений запускается celery-задача,
+    которая использует redis, поэтому она мокается.
+    """
+    mocker.patch("notifications.services.notification_handlers.create_notification.delay")
+
+
 @pytest.mark.django_db
 class TestUserCountersSignals:
     """Тестирование вызовов сервиса обновления счетчиков пользователя."""

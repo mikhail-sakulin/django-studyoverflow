@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models import F
 from django.db.models.functions import Greatest
 from django.db.models.signals import post_delete, post_save, pre_delete
@@ -116,7 +117,8 @@ def increase_content_object_likes_count(sender, instance, created, raw, **kwargs
 
             # Если лайк поставлен посту, то удаляется кеш поста для показа актуального числа лайков
             if model == Post:
-                delete_cache_post_detail(like.object_id)
+                object_id = like.object_id
+                transaction.on_commit(lambda: delete_cache_post_detail(object_id))
 
 
 @receiver(pre_delete, sender=Like)
@@ -140,7 +142,8 @@ def decrease_content_object_likes_count(sender, instance, **kwargs):
 
         # Если лайк удален у поста, то удаляется кеш поста для показа актуального числа лайков
         if model == Post:
-            delete_cache_post_detail(like.object_id)
+            object_id = like.object_id
+            transaction.on_commit(lambda: delete_cache_post_detail(object_id))
 
 
 @receiver(post_save, sender=Comment)
@@ -159,7 +162,8 @@ def increase_post_comments_count(sender, instance, created, raw, **kwargs):
         Post.objects.filter(pk=comment.post_id).update(comments_count=F("comments_count") + 1)
 
         # Удаляется кеш поста для показа актуального числа комментариев
-        delete_cache_post_detail(comment.post_id)
+        post_id = comment.post_id
+        transaction.on_commit(lambda: delete_cache_post_detail(post_id))
 
 
 @receiver(pre_delete, sender=Comment)
@@ -176,7 +180,8 @@ def decrease_post_comments_count(sender, instance, **kwargs):
     )
 
     # Удаляется кеш поста для показа актуального числа комментариев
-    delete_cache_post_detail(comment.post_id)
+    post_id = comment.post_id
+    transaction.on_commit(lambda: delete_cache_post_detail(post_id))
 
 
 @receiver([post_save, post_delete], sender=Post)
@@ -187,7 +192,8 @@ def invalidate_post_cache_on_save_or_delete(sender, instance, created=False, raw
     if created or raw:
         return
 
-    delete_cache_post_detail(instance.pk)
+    post_id = instance.pk
+    transaction.on_commit(lambda: delete_cache_post_detail(post_id))
 
 
 @receiver([post_save, post_delete], sender=LowercaseTag)
@@ -197,8 +203,7 @@ def invalidate_tags_cache_on_save_or_delete(sender, raw=False, **kwargs):
     """
     if raw:
         return
-
-    delete_cache_tags_list()
+    transaction.on_commit(lambda: delete_cache_tags_list())
 
 
 @receiver(post_save, sender=User)
@@ -219,7 +224,8 @@ def clear_post_cache_on_user_update(sender, instance, created, raw, update_field
     if update_fields is not None and not POST_CACHE_RELEVANT_FIELDS.intersection(update_fields):
         return
 
-    delete_cached_posts_by_author(instance.pk)
+    author_id = instance.pk
+    transaction.on_commit(lambda: delete_cached_posts_by_author(author_id))
 
 
 @receiver(post_save, sender=TaggedPost)
@@ -235,7 +241,7 @@ def increase_tag_posts_count(sender, instance, created, raw, **kwargs):
 
     if created:
         LowercaseTag.objects.filter(pk=instance.tag_id).update(posts_count=F("posts_count") + 1)
-        delete_cache_tags_list()
+        transaction.on_commit(lambda: delete_cache_tags_list())
 
 
 @receiver(post_delete, sender=TaggedPost)
@@ -248,4 +254,4 @@ def decrease_tag_posts_count(sender, instance, **kwargs):
     LowercaseTag.objects.filter(pk=instance.tag_id).update(
         posts_count=Greatest(F("posts_count") - 1, 0)
     )
-    delete_cache_tags_list()
+    transaction.on_commit(lambda: delete_cache_tags_list())
