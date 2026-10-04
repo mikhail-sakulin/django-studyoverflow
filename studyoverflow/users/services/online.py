@@ -1,9 +1,8 @@
 import logging
 
-import redis
+import redis.asyncio
 from django.conf import settings
 from django.core.cache import cache
-from django.core.files.storage import storages
 from django_redis import get_redis_connection
 
 
@@ -11,8 +10,6 @@ from django_redis import get_redis_connection
 _async_redis_client: redis.asyncio.Redis | None = None
 
 logger = logging.getLogger(__name__)
-
-storage_default = storages["default"]
 
 REDIS_KEY_PREFIX = "online_user"
 ONLINE_SET_KEY = "online_users_set"
