@@ -14,6 +14,7 @@ from django.contrib.auth.views import (
     PasswordResetConfirmView,
     PasswordResetDoneView,
     PasswordResetView,
+    RedirectURLMixin,
 )
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.cache import cache
@@ -126,7 +127,7 @@ class UsersListHTMXView(UserHTMXPaginationMixin, UserSortMixin, UserOnlineFilter
         return context
 
 
-class UserRegisterView(SuccessMessageMixin, CreateView):
+class UserRegisterView(RedirectURLMixin, SuccessMessageMixin, CreateView):
     """
     Страница регистрации нового пользователя.
 
@@ -137,7 +138,7 @@ class UserRegisterView(SuccessMessageMixin, CreateView):
 
     form_class = UserRegisterForm
     template_name = "users/register.html"
-    success_url = reverse_lazy("home")
+    next_page = reverse_lazy("home")
     success_message = "Регистрация успешно завершена!"
 
     def form_valid(self, form):
@@ -148,16 +149,10 @@ class UserRegisterView(SuccessMessageMixin, CreateView):
         user_signed_up.send(sender=user.__class__, request=self.request, user=user)
         return response
 
-    def get_success_url(self):
-        """Редирект после регистрации."""
-        # Редирект на next_url, если задан GET-параметр next
-        next_url = self.request.GET.get("next")
-        return next_url or self.success_url
-
     def get_context_data(self, **kwargs):
         """Передает GET-параметр next в шаблон."""
         context = super().get_context_data(**kwargs)
-        context["next"] = self.request.GET.get("next")
+        context["next"] = self.get_redirect_url()
         return context
 
 
