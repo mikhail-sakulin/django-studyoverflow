@@ -1,9 +1,11 @@
 from typing import TYPE_CHECKING
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth import get_user_model
-from django.utils import timezone
+from django.core.exceptions import PermissionDenied
 from django.utils.safestring import mark_safe
+
+from users.services.moderation import block_user_service, unblock_user_service
 
 
 if TYPE_CHECKING:
@@ -84,34 +86,33 @@ class UserAdmin(admin.ModelAdmin):
         "last_seen",
     )
 
-    def get_actions(self, request):
+    def message_user(
+        self, request, message, level=messages.INFO, extra_tags="", fail_silently=False
+    ):
         """
-        Ограничивает доступ к действиям с пользователями
-        в зависимости от роли персонала в админ-панели.
+        Показывает сообщение пользователю в админке.
+
+        Работает как стандартный ModelAdmin.message_user, но для сообщений уровня ERROR добавляет
+        тег "error". Задается, потому что MESSAGE_TAGS в settings.py переопределяет тег ERROR на
+        "danger", а в админке нет стилей для такого класса, ошибки отображались бы зелёными.
         """
-        actions = super().get_actions(request)
+        if level == messages.ERROR:
+            extra_tags = f"{extra_tags} error".strip()
+        super().message_user(request, message, level, extra_tags, fail_silently)
 
-        if not self._can_block_users(request.user):
-            actions.pop("block_users", None)
-            actions.pop("unblock_users", None)
-
-        return actions
-
-    @admin.action(description="Заблокировать выбранных пользователей")
+    @admin.action(description="Заблокировать выбранных пользователей", permissions=["block"])
     def block_users(self, request, queryset):
-        """
-        Блокирует выбранных пользователей.
-        """
-        count = queryset.update(is_blocked=True, blocked_at=timezone.now(), blocked_by=request.user)
-        self.message_user(request, f"Заблокировано {count} пользователей.")
+        """Блокирует выбранных пользователей через сервис."""
+        self._apply_block_service(request, queryset, block_user_service, "Заблокировано")
 
-    @admin.action(description="Разблокировать выбранных пользователей")
+    @admin.action(description="Разблокировать выбранных пользователей", permissions=["block"])
     def unblock_users(self, request, queryset):
-        """
-        Разблокирует выбранных пользователей.
-        """
-        count = queryset.update(is_blocked=False, blocked_at=None, blocked_by=None)
-        self.message_user(request, f"Разблокировано {count} пользователей.")
+        """Разблокирует выбранных пользователей через сервис."""
+        self._apply_block_service(request, queryset, unblock_user_service, "Разблокировано")
+
+    def has_block_permission(self, request) -> bool:
+        """Проверка прав для @admin.action, нужен для permissions=["block"]."""
+        return self._can_block_users(request.user)
 
     @admin.display(description="Аватар (изображение)", ordering="username")
     def user_avatar(self, user: User):
@@ -128,3 +129,32 @@ class UserAdmin(admin.ModelAdmin):
         Проверяет, имеет ли текущий пользователь право блокировать аккаунты.
         """
         return user.role in {User.Role.ADMIN, User.Role.MODERATOR}
+
+    def _apply_block_service(self, request, queryset, service, done_label: str) -> None:
+        """
+        Применяет сервис блокировки/разблокировки к каждому выбранному пользователю при
+        @admin.action block_users и unblock_users.
+
+        Вызов сервиса выполняется для каждого пользователя отдельно, чтобы проверка
+        иерархии ролей (can_moderate), сохранение через save() и логирование
+        отрабатывали так же, как и вне админки. Ошибки по отдельным пользователям
+        не прерывают обработку остальных.
+        """
+        done = 0
+
+        for target in queryset:
+            try:
+                # source="admin" попадает в лог
+                changed, message = service(request.user, target, source="admin")
+            except PermissionDenied as e:
+                self.message_user(request, f"{target.username}: {e}", level=messages.ERROR)
+                continue
+
+            if changed:
+                done += 1
+            else:
+                # Если сервис вернул False, значит пользователь уже в нужном состоянии
+                self.message_user(request, message, level=messages.WARNING)
+
+        if done:
+            self.message_user(request, f"{done_label} пользователей: {done}.")
