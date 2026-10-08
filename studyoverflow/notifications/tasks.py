@@ -74,11 +74,12 @@ def create_notification(
     # методы отправки в очередь, чтобы задачи сначала проверяли наличие блокировки в Redis.
     base=QueueOnce,
     # Без ключей блокировки блокировка работала бы на имя функции.
-    # keys": ["user_id"] делает блокировку уникальной для конкретных аргументов.
+    # "keys": ["user_id", "update_list", "reason"] делает блокировку уникальной для
+    # конкретных аргументов.
     # graceful=True - игнорирование при запуске дубликата задачи, при graceful=False
     # Celery выбрасывает исключение в коде, где вызывается дубликат,
     # с True исключение не вызывается.
-    once={"keys": ["user_id"], "graceful": True},
+    once={"keys": ["user_id", "update_list", "reason"], "graceful": True},
     ignore_result=True,
     acks_late=True,
     reject_on_worker_lost=True,
