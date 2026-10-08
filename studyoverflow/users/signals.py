@@ -115,6 +115,9 @@ def log_user_logout(sender, request, user, **kwargs):
 
     Логирует выход пользователя из системы с сохранением данных пользователя.
     """
+    if user is None:
+        return
+
     source = getattr(request, "source_for_logging", "unknown") if request else "unknown"
 
     logger.info(
@@ -137,6 +140,9 @@ def remove_user_offline_when_logged_out(sender, request, user, **kwargs):
 
     Удаляет информацию о присутствии пользователя (online status) из Redis.
     """
+    if user is None:
+        return
+
     remove_user_offline(user.pk)
 
 
