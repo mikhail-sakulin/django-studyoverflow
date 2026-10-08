@@ -271,11 +271,16 @@ def download_and_set_avatar(user_id: int, avatar_url: str) -> None:
         for validator in user._meta.get_field("avatar").validators:
             validator(file_to_save)
 
-        user.avatar.save(
-            file_to_save.name,
-            file_to_save,
-            save=True,
-        )
+        # После работы с сетью (длительная операция) из БД снова берется
+        # актуальный аватар для повторной проверки.
+        user.refresh_from_db(fields=["avatar"])
+        # Если пользователь успел загрузить свой аватар, он не меняется.
+        if user.avatar and user.avatar.name != default_avatar:
+            return
+
+        # save=False, потому что при save=True не будет задано update_fields=["avatar"]
+        user.avatar.save(file_to_save.name, file_to_save, save=False)
+        user.save(update_fields=["avatar"])
 
     except ValidationError as e:
         logger.info(
