@@ -27,7 +27,10 @@ class IContainsILike(Lookup):
         rhs, rhs_params = self.process_rhs(compiler, connection)
 
         if rhs_params:
-            rhs_params[0] = f"%{rhs_params[0]}%"
+            # Добавляет экранирующий символ "\": заменяет \ на \\, % на \% и _ на \_, чтобы
+            # введенные для поиска символы не воспринимались PostgreSQL как спецсимволы.
+            escaped = connection.ops.prep_for_like_query(rhs_params[0])
+            rhs_params[0] = f"%{escaped}%"
 
         # SQL-синтаксис для PostgreSQL
         return f"{lhs} ILIKE {rhs}", lhs_params + rhs_params
