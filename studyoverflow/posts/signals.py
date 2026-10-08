@@ -255,3 +255,17 @@ def decrease_tag_posts_count(sender, instance, **kwargs):
         posts_count=Greatest(F("posts_count") - 1, 0)
     )
     transaction.on_commit(lambda: delete_cache_tags_list())
+
+
+@receiver([post_save, post_delete], sender=TaggedPost)
+def invalidate_post_cache_on_tags_change(sender, instance, raw=False, **kwargs):
+    """
+    Обработчик сигнала, срабатывающий после удаления связи "тег-пост".
+
+    Сбрасывает кеш поста при изменении связи "тег-пост".
+    """
+    if raw:
+        return
+
+    post_id = instance.object_id
+    transaction.on_commit(lambda: delete_cache_post_detail(post_id))

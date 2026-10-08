@@ -188,26 +188,28 @@ class TestPostCacheSignals:
 
     def test_post_cache_invalidation_on_update_and_delete(self, post_factory, mocker):
         """
-        При создании поста кэш не сбрасывается.
-
-        При обновлении и удалении поста вызывается сервис удаления кэша.
+        При создании, обновлении и удалении поста вызывается сервис удаления кеша.
         """
         mock_delete_cache = mocker.patch("posts.signals.delete_cache_post_detail")
 
-        # 1) Создание поста (created=True) — кэш не сбрасывается
-        post = post_factory()
-        mock_delete_cache.assert_not_called()
+        # 1) Создание поста (created=True) — кеш поста сбрасывается 1 раз при
+        # создании каждой связи тег-пост (1 раз для 1 тега)
+        post = post_factory(tags=["some_tag_1"])
+        mock_delete_cache.assert_called_once_with(post.pk)
 
-        # 2) Обновление поста (created=False) — кэш сбрасывается
+        # 2) Обновление поста (created=False) — кеш сбрасывается
+        mock_delete_cache.reset_mock()
         post.title = "Обновленный заголовок"
         post.save()
         mock_delete_cache.assert_called_once_with(post.pk)
 
-        # 3) Удаление поста — кэш сбрасывается
+        # 3) Удаление поста — кеш сбрасывается 2 раза (удаление поста + удаление связи тег-пост)
         mock_delete_cache.reset_mock()
         post_id = post.pk
         post.delete()
-        mock_delete_cache.assert_called_once_with(post_id)
+
+        assert mock_delete_cache.call_count == 2
+        mock_delete_cache.assert_has_calls([mocker.call(post_id), mocker.call(post_id)])
 
 
 @pytest.mark.django_db
