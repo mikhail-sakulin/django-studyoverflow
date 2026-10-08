@@ -9,10 +9,11 @@ from users.services.online import is_user_online
 from users.services.permissions import can_moderate
 
 
-register = template.Library()
-
 if TYPE_CHECKING:
     from users.models import User
+
+
+register = template.Library()
 
 UserModel = get_user_model()
 
