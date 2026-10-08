@@ -3,6 +3,7 @@ from allauth.account.models import EmailAddress
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.shortcuts import redirect
 from django.utils import timezone
@@ -56,12 +57,12 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         Логика:
         - Сохраняет email из формы уточнения данных, если не удалось сразу создать пользователя
           по полученным от провайдера данным.
-        - Вызывает стандартный метод сохранения.
         - Устанавливает флаг is_social для пользователя.
         - Определяет OAuth-провайдера.
         - Вызывает соответствующий провайдеру SOCIAL_HANDLER
           для обработки first_name, last_name и avatar_url.
-        - Сохраняет обновлённого пользователя.
+        - Очищает поля, не прошедшие валидаторы модели.
+        - Вызывает стандартный метод allauth, который сохраняет пользователя.
         - Если получен avatar_url — запускает асинхронную Celery задачу для загрузки аватара.
 
         Загрузка аватара выполняется через Celery после выполнения транзакции.
@@ -88,10 +89,12 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
                     EmailAddress(email=new_email, verified=False, primary=True)
                 ]
 
-        user = super().save_user(request, sociallogin, form)
-
+        # sociallogin.user существует как python-объект, но еще не сохранен в БД
+        user = sociallogin.user
         user.is_social = True
 
+        # Получение url аватара от соцсети для запуска соответствующей Celery-задачи
+        # после сохранения пользователя.
         avatar_url = None
 
         provider = sociallogin.account.provider
@@ -101,7 +104,11 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         if handler:
             avatar_url = handler(user, data)
 
-        user.save()
+        # Валидация необязательных полей пользователя, установка стандартных значений для полей,
+        # которые не прошли валидацию. Валидируются данные от соцсети.
+        self._clear_invalid_fields(user, ("first_name", "last_name", "bio", "date_birth"))
+
+        user = super().save_user(request, sociallogin, form)
 
         if avatar_url:
             transaction.on_commit(lambda: download_and_set_avatar.delay(user.pk, avatar_url))
@@ -130,6 +137,27 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
 
             messages.error(request, error_message)
             raise ImmediateHttpResponse(redirect("home"))
+
+    @staticmethod
+    def _clear_invalid_fields(user, field_names: tuple[str, ...]) -> None:
+        """
+        Очищает необязательные поля пользователя, не прошедшие валидаторы модели.
+
+        Username и email обрабатывает сам allauth. Данные от соцсетей идут в обход кастомных
+        валидаторов, при user.save() валидаторы полей не вызываются. Поля (кроме username и email)
+        нужно валидировать вручную. Невалидные поля задаются стандартными значениями.
+
+        Метод подходит только для необязательных полей (blank=True).
+        """
+        for field_name in field_names:
+            field = user._meta.get_field(field_name)
+            try:
+                # Проверяются только валидаторы поля. Пустые значения Django пропускает сам.
+                field.run_validators(getattr(user, field_name))
+            except ValidationError:
+                # Field.get_default() возвращает "" для текстового поля без default и с null=False
+                # и None для любого поля с null=True без default, иначе вернется default.
+                setattr(user, field_name, field.get_default())
 
 
 class AllauthMessageAdapter(DefaultAccountAdapter):
