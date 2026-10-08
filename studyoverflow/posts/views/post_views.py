@@ -118,7 +118,8 @@ class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
 
     def get_object(self, queryset=None):
         """Возвращает объект поста с кешированием."""
-        queryset = queryset or self.get_queryset()
+        if queryset is None:
+            queryset = self.get_queryset()
 
         post_id = self.kwargs.get(self.pk_url_kwarg)
         post_slug = self.kwargs.get(self.slug_url_kwarg)
