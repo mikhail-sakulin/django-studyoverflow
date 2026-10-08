@@ -35,9 +35,7 @@ from posts.api.serializers import (
     TagSerializer,
 )
 from posts.mixins import (
-    CommentSortMixin,
     CommentTreeQuerysetMixin,
-    LikeAnnotationsMixin,
     PostAnnotateQuerysetMixin,
     PostFilterSortMixin,
 )
@@ -300,7 +298,7 @@ class PostViewSet(
         if self.action in ["create", "like"]:
             return [IsAuthenticated()]
 
-        if self.action in ["update", "partial_update", "destroy"]:
+        if self.action in ["partial_update", "destroy"]:
             return [
                 IsAuthenticated(),
                 IsAuthorOrModeratorPermission(moderate_permission=self.moderator_permission_name),
@@ -313,6 +311,13 @@ class PostViewSet(
         Возвращает объект поста с кешированием и добавляет
         пользовательский флаг user_has_liked.
         """
+        if self.action in ("partial_update",):
+            # При частичном обновлении patch поста кеш поста не используется, объект берется из БД
+            # через стандартный метод GenericAPIView.get_object.
+            post = super().get_object()
+            # Добавляет объекту флаг лайка от пользователя
+            return self.set_user_has_liked(post)
+
         queryset = self.filter_queryset(self.get_queryset())
 
         try:
@@ -471,8 +476,6 @@ class PostViewSet(
     ),
 )
 class CommentViewSet(
-    LikeAnnotationsMixin,
-    CommentSortMixin,
     CommentTreeQuerysetMixin,
     LikeMixin,
     ModelViewSet,

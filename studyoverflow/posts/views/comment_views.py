@@ -9,7 +9,6 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 from posts.forms import CommentCreateForm, CommentUpdateForm
 from posts.mixins import (
     CommentGetMethodMixin,
-    CommentSortMixin,
     CommentTreeQuerysetMixin,
     HTMXHandle404CommentMixin,
     HTMXMessageMixin,
@@ -25,7 +24,7 @@ from users.mixins import IsAuthorOrModeratorMixin
 logger = logging.getLogger(__name__)
 
 
-class CommentListView(LikeAnnotationsMixin, CommentSortMixin, CommentTreeQuerysetMixin, ListView):
+class CommentListView(CommentTreeQuerysetMixin, ListView):
     """
     Страница со списком комментариев к посту с аннотациями и сортировкой.
     """
@@ -91,7 +90,9 @@ class CommentRootCreateView(
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
         if not hasattr(self, "_cached_post"):
-            self._cached_post = get_object_or_404(Post, id=self.kwargs.get("post_pk"))
+            self._cached_post = get_object_or_404(
+                Post, id=self.kwargs.get("post_pk"), slug=self.kwargs.get("post_slug")
+            )
         kwargs["post"] = self._cached_post
         return kwargs
 
@@ -231,7 +232,12 @@ class CommentUpdateView(
     moderator_permission_name = "posts.moderate_comment"
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related("author", "post")
+        queryset = (
+            super()
+            .get_queryset()
+            .filter(post_id=self.kwargs["post_pk"], post__slug=self.kwargs["post_slug"])
+            .select_related("author", "post")
+        )
         queryset = self.annotate_queryset(queryset)
         return queryset
 
@@ -294,6 +300,13 @@ class CommentDeleteView(
     model = Comment
     pk_url_kwarg = "comment_pk"
     moderator_permission_name = "posts.moderate_comment"
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .filter(post_id=self.kwargs["post_pk"], post__slug=self.kwargs["post_slug"])
+        )
 
     def form_valid(self, form):
         comment = self.object

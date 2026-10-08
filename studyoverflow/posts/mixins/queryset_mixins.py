@@ -7,6 +7,7 @@ from django.db.models import Exists, OuterRef, Prefetch, Q, QuerySet
 from django.http import HttpRequest
 
 from posts.models import Comment, Like, Post
+from posts.services.text_processing import normalize_tag_name
 
 
 class LikeAnnotationsMixin:
@@ -125,7 +126,9 @@ class PostFilterSortMixin:
         tags = request.GET.get("tags", "").strip()
         tag_match = request.GET.get("tag_match", "any")
         if tags:
-            tag_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+            tag_list = [
+                name for name in (normalize_tag_name(tag) for tag in tags.split(",")) if name
+            ]
             if tag_list:
                 if tag_match == "any":
                     queryset = queryset.filter(tags__name__in=tag_list)
@@ -170,7 +173,7 @@ class PostFilterSortMixin:
         if order == "desc":
             ordering_field = f"-{ordering_field}"
 
-        queryset = queryset.order_by(ordering_field, "-time_create")
+        queryset = queryset.order_by(ordering_field, "-time_create", "-id")
 
         return queryset
 
@@ -202,18 +205,18 @@ class CommentSortMixin:
         if order == "desc":
             field = f"-{field}"
 
-        queryset = queryset.order_by(field, "-time_create")
+        queryset = queryset.order_by(field, "-time_create", "-id")
 
         return queryset
 
 
-class CommentTreeQuerysetMixin:
+class CommentTreeQuerysetMixin(CommentSortMixin, LikeAnnotationsMixin):
     """
     Миксин для построения queryset комментариев с вложенностью, аннотациями и сортировкой.
 
-    Требует реализации:
-    - annotate_queryset(queryset)
-    - sort_comments(queryset)
+    Использует из других миксинов:
+    - annotate_queryset(queryset)  # LikeAnnotationsMixin
+    - sort_comments(queryset)  # CommentSortMixin
     """
 
     def get_comment_tree_queryset(
@@ -259,7 +262,7 @@ class CommentTreeQuerysetMixin:
                 # поля автора reply_to комментария
                 *[f"reply_to__author__{f}" for f in user_fields],
             )
-            .order_by("time_create")
+            .order_by("time_create", "id")
         )
 
         if root_id:
@@ -286,7 +289,7 @@ class CommentTreeQuerysetMixin:
             )
             # prefetch_related для обратного доступа ForeignKey через related_name
             .prefetch_related(Prefetch("child_comments", queryset=child_queryset))
-            .order_by("-time_create")
+            .order_by("-time_create", "-id")
         )
 
         queryset = self.annotate_queryset(queryset)  # type: ignore[attr-defined]
