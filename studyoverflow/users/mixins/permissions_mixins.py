@@ -13,26 +13,29 @@ class IsAuthorOrModeratorMixin:
     Доступ разрешён, если выполняется одно из условий:
     - Пользователь является автором объекта
     - Пользователь имеет permission на модерацию объекта
+
+    При использовании во views данный миксин должен указываться после LoginRequiredMixin,
+    тогда анонимные пользователи получат редирект на логин, а не 403.
     """
 
     moderator_permission_name: Optional[str] = None
     request: HttpRequest
 
-    def has_permission(self, obj):
+    def can_modify_object(self, obj):
         return is_author_or_moderator(
             user=self.request.user, obj=obj, permission_required=self.moderator_permission_name
         )
 
-    def dispatch(self, request, *args, **kwargs):
+    def get_object(self, queryset=None) -> None:
         """
         Проверяет права пользователя перед выполнением действия.
         """
-        obj = self.get_object()  # type: ignore[attr-defined]
+        obj = super().get_object(queryset)  # type: ignore
 
-        if not self.has_permission(obj):
+        if not self.can_modify_object(obj):
             raise PermissionDenied("Недостаточно прав для выполнения этого действия.")
 
-        return super().dispatch(request, *args, **kwargs)  # type: ignore[misc]
+        return obj
 
 
 class SocialUserPasswordChangeForbiddenMixin:
