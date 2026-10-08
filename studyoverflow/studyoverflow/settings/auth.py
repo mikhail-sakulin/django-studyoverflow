@@ -16,7 +16,7 @@ AUTH_USER_MODEL = "users.User"
 # ----------------------------------------
 
 # URL страницы для логина
-LOGIN_URL = "/users/login/"
+LOGIN_URL = "users:login"
 
 # URL для редиректа после успешного логина
 LOGIN_REDIRECT_URL = "home"
