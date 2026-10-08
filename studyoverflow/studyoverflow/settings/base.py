@@ -201,7 +201,7 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 # Параметры SMTP
 EMAIL_HOST = env("EMAIL_HOST")
-EMAIL_PORT = env("EMAIL_PORT")
+EMAIL_PORT = env.int("EMAIL_PORT")
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL")
@@ -278,3 +278,13 @@ if NGINX_SSL_ENABLED:
     # Список доверенных доменов, с которых бекенду разрешено принимать небезопасные
     # HTTP-запросы (POST, PUT, DELETE и PATCH) при запросе по протоколу https.
     CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+
+    # Настройки HSTS - механизма, при котором сервер сообщает браузеру, что сайт должен
+    # открываться только по HTTPS, даже если введен HTTP.
+    #
+    # Время в секундах, сколько браузер должен помнить, что сайт доступен только по HTTPS,
+    # браузер обновляет свой параметр при каждом ответе, но строго по HTTPS, пока не прошел
+    # заданный период, сайт по HTTP будет недоступен из браузера, браузер сам подставит HTTPS.
+    SECURE_HSTS_SECONDS = 3600
+    # Правило распространяется на все поддомены (в том числе www)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
