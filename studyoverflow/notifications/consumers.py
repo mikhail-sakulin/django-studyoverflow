@@ -3,10 +3,14 @@ WebSocket-консьюмеры.
 """
 
 import json
+import logging
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from users.services.online import async_set_user_online
+
+
+logger = logging.getLogger(__name__)
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):
@@ -53,7 +57,31 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         Клиент может присылать heartbeat, чтобы сказать, что он онлайн.
         """
         if text_data:
-            data = json.loads(text_data)
+            # Невалидное сообщение от клиента обрабатывается, чтобы клиент не был отключен из-за
+            # ошибки обработки сообщения, и логируется.
+            try:
+                data = json.loads(text_data)
+            except json.JSONDecodeError:
+                logger.warning(
+                    "Невалидный JSON в WebSocket-сообщении.",
+                    extra={
+                        "user_id": self.scope["user"].pk,
+                        "event_type": "ws_invalid_json",
+                        "payload_preview": text_data[:100],
+                    },
+                )
+                return
+
+            if not isinstance(data, dict):
+                logger.warning(
+                    "WebSocket-сообщение не является JSON-объектом.",
+                    extra={
+                        "user_id": self.scope["user"].pk,
+                        "event_type": "ws_invalid_payload",
+                        "payload_type": type(data).__name__,
+                    },
+                )
+                return
 
             if data.get("type") == "heartbeat":
                 await async_set_user_online(self.scope["user"].pk)
