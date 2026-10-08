@@ -118,6 +118,13 @@ class UserMyProfileSerializer(UserPublicProfileSerializer):
                 raise serializers.ValidationError(e.messages)
         return value
 
+    def update(self, instance, validated_data):
+        """Сохраняет только переданные поля, не перезаписывая поля-счётчики и поле last_seen."""
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save(update_fields=list(validated_data))
+        return instance
+
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     """
@@ -200,13 +207,13 @@ class UserListSerializer(serializers.ModelSerializer):
 
     def get_online_status(self, user) -> bool:
         """
-        Определяет статус онлайн на основе списка ID, полученного из контекста из Redis во ViewSet.
+        Определяет статус онлайн на основе множества ID, переданного
+        в context сериализатора в UserViewSet.
         """
-        online_ids = self.context.get("online_ids", set())
-        return user.id in online_ids
+        return user.id in self.context["online_ids"]
 
 
-class UserPasswordChangeSerializer(serializers.ModelSerializer):
+class UserPasswordChangeSerializer(serializers.Serializer):
     """
     Сериализатор для смены пароля авторизованного пользователя.
 
@@ -222,10 +229,6 @@ class UserPasswordChangeSerializer(serializers.ModelSerializer):
     password_new_confirm = serializers.CharField(
         required=True, write_only=True, style={"input_type": "password"}
     )
-
-    class Meta:
-        model = User
-        fields = ["password_old", "password_new", "password_new_confirm"]
 
     def validate_password_old(self, value):
         """Проверка правильности введенного старого пароля."""

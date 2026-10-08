@@ -1,7 +1,7 @@
 import re
 
 import pytest
-from django.contrib.auth import get_user_model
+from django.contrib.auth import HASH_SESSION_KEY, SESSION_KEY, get_user_model
 from django.core import mail
 from django.core.cache import cache
 from django.db import connection
@@ -9,7 +9,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from users.services.cache import get_user_cache_key
 
@@ -246,28 +246,6 @@ class TestJWTTokenLogoutAPIView:
         assert response.status_code == 400
         assert response.data["detail"] == "Передан неверный или просроченный JWT refresh токен."
 
-    def test_unexpected_exception(self, api_client, user_factory, mocker):
-        """Непредвиденная ошибка обработки refresh токена возвращает 500."""
-        user = user_factory()
-
-        api_client.force_authenticate(user=user)
-
-        mocker.patch(
-            "users.api.views.RefreshToken.blacklist",
-            side_effect=Exception(),
-        )
-
-        refresh = str(RefreshToken.for_user(user))
-
-        response = api_client.post(
-            reverse("api:users:auth-jwt-token-logout"),
-            {"refresh": refresh},
-            format="json",
-        )
-
-        assert response.status_code == 500
-        assert response.data["detail"] == "Ошибка обработки JWT refresh токена."
-
 
 @pytest.mark.django_db
 class TestLogoutAllMethodsAPIView:
@@ -468,6 +446,130 @@ class TestPasswordChangeAPIView:
         assert response.status_code == 403
         assert "социальные сети" in response.data["detail"]
 
+    def test_password_change_with_drf_token_revokes_tokens_and_issues_new_drf_token(
+        self,
+        api_client,
+        user_factory,
+    ):
+        """
+        При аутентификации DRF-токеном старые токены отзываются (DRF удаляется, refresh JWT
+        помещается в blacklist), в ответе возвращается только новый DRF-токен.
+        """
+        user = user_factory(password="OldPass123")
+        old_drf_token = Token.objects.create(user=user)
+        old_refresh_token = RefreshToken.for_user(user)
+        api_client.force_authenticate(user=user, token=old_drf_token)
+
+        data = {
+            "password_old": "OldPass123",
+            "password_new": "NewStrongPass123",
+            "password_new_confirm": "NewStrongPass123",
+        }
+        response = api_client.post(reverse("api:users:auth-password-change"), data, format="json")
+
+        assert response.status_code == 200
+        assert "access" not in response.data
+        assert "refresh" not in response.data
+
+        new_drf_token = Token.objects.get(user=user)
+        assert response.data["drf_token"] == new_drf_token.key
+        assert new_drf_token.key != old_drf_token.key
+
+        with pytest.raises(TokenError):
+            old_refresh_token.check_blacklist()
+
+    def test_password_change_with_jwt_revokes_tokens_and_issues_new_jwt_pair(
+        self,
+        api_client,
+        user_factory,
+    ):
+        """
+        При JWT-аутентификации старые токены отзываются, в ответе возвращается
+        новая пара access и refresh токенов, при этом DRF-токен не создается.
+        """
+        user = user_factory(password="OldPass123")
+        Token.objects.create(user=user)
+        old_refresh_token = RefreshToken.for_user(user)
+        api_client.force_authenticate(user=user, token=AccessToken.for_user(user))
+
+        data = {
+            "password_old": "OldPass123",
+            "password_new": "NewStrongPass123",
+            "password_new_confirm": "NewStrongPass123",
+        }
+        response = api_client.post(reverse("api:users:auth-password-change"), data, format="json")
+
+        assert response.status_code == 200
+        assert "drf_token" not in response.data
+
+        # Проверка отсутствия DRF-токена и невалидности старого refresh JWT-токена
+        assert not Token.objects.filter(user=user).exists()
+        with pytest.raises(TokenError):
+            old_refresh_token.check_blacklist()
+
+        # Проверка, что новая пара access и refresh токенов валидна
+        new_refresh_token = RefreshToken(response.data["refresh"])
+        AccessToken(response.data["access"])
+        assert str(new_refresh_token) != str(old_refresh_token)
+
+    def test_password_change_with_session_revokes_tokens_and_keeps_session(
+        self,
+        api_client,
+        user_factory,
+    ):
+        """
+        При аутентификации через сессию старые токены отзываются, новые токены не выдаются,
+        сессия обновляется и остается активной.
+        """
+        user = user_factory(password="OldPass123")
+        Token.objects.create(user=user)
+        old_refresh_token = RefreshToken.for_user(user)
+        # Аутентификация через сессию
+        api_client.force_login(user)
+
+        data = {
+            "password_old": "OldPass123",
+            "password_new": "NewStrongPass123",
+            "password_new_confirm": "NewStrongPass123",
+        }
+        response = api_client.post(reverse("api:users:auth-password-change"), data, format="json")
+
+        assert response.status_code == 200
+        assert response.data == {"detail": "Пароль успешно изменен."}
+
+        # Проверка отсутствия DRF-токена и невалидности старого refresh JWT-токена
+        assert not Token.objects.filter(user=user).exists()
+        with pytest.raises(TokenError):
+            old_refresh_token.check_blacklist()
+
+        # Пользователь остался аутентифицированным через сессию
+        user.refresh_from_db()
+        assert api_client.session[SESSION_KEY] == str(user.pk)
+        assert api_client.session[HASH_SESSION_KEY] == user.get_session_auth_hash()
+
+    def test_password_change_validation_error_does_not_revoke_tokens(
+        self,
+        api_client,
+        user_factory,
+    ):
+        """При ошибке валидации (неверный старый пароль) токены не отзываются."""
+        user = user_factory(password="OldPass123")
+        drf_token = Token.objects.create(user=user)
+        refresh_token = RefreshToken.for_user(user)
+        api_client.force_authenticate(user=user, token=drf_token)
+
+        data = {
+            "password_old": "WrongOld456",
+            "password_new": "NewStrongPass123",
+            "password_new_confirm": "NewStrongPass123",
+        }
+        response = api_client.post(reverse("api:users:auth-password-change"), data, format="json")
+
+        assert response.status_code == 400
+        # DRF- и refresh JWT-токен существуют и валидные
+        assert Token.objects.filter(user=user).exists()
+        refresh_token.check_blacklist()
+
 
 @pytest.mark.django_db
 class TestPasswordResetAPIView:
@@ -483,6 +585,8 @@ class TestPasswordResetAPIView:
         user = user_factory(
             username="api_reset_user", email="reset@example.com", password="OldPassword123"
         )
+        Token.objects.create(user=user)
+        old_refresh_token = RefreshToken.for_user(user)
 
         # 1) Запрос сброса пароля
 
@@ -531,6 +635,12 @@ class TestPasswordResetAPIView:
 
         assert not user.check_password("OldPassword123")
         assert user.check_password("NewStrongPass123")
+
+        # 5) Все ранее выданные API-токены отозваны
+        # Проверка отсутствия DRF-токена и невалидности старого refresh JWT-токена
+        assert not Token.objects.filter(user=user).exists()
+        with pytest.raises(TokenError):
+            old_refresh_token.check_blacklist()
 
     def test_password_reset_nonexistent_email(self, django_capture_on_commit_callbacks, api_client):
         """

@@ -2,12 +2,15 @@ import re
 
 import pytest
 from allauth.account.signals import user_signed_up
-from django.contrib.auth import get_user_model
+from django.contrib.auth import HASH_SESSION_KEY, SESSION_KEY, get_user_model
 from django.core import mail
 from django.core.cache import cache
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from rest_framework.authtoken.models import Token
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from users.services.cache import get_user_cache_key
 
@@ -405,10 +408,15 @@ class TestUserPasswordChangeView:
         assert_login_required(url_name="users:password_change", method="get")
 
     def test_password_change_logging_and_success_message(self, client, user_factory, mocker):
-        """Смена пароля создает кастомный лог и выводит сообщение."""
+        """
+        Смена пароля создает кастомный лог и выводит сообщение. Также отзываются DRF-токен и
+        refresh JWT-токены, сессия обновляется и остается активной.
+        """
         mock_logger = mocker.patch("users.views.logger.info")
 
         user = user_factory(username="password_changer", password="StrongPassword123")
+        Token.objects.create(user=user)  # DRF-токен
+        old_refresh_token = RefreshToken.for_user(user)
         client.force_login(user)
 
         response = client.post(
@@ -425,6 +433,15 @@ class TestUserPasswordChangeView:
         mock_logger.assert_called_once()
         assert "успешно сменил пароль" in mock_logger.call_args[0][0]
         assert mock_logger.call_args[1]["extra"]["event_type"] == "user_password_change_success"
+
+        # Сессия активна
+        user.refresh_from_db()
+        assert client.session[SESSION_KEY] == str(user.pk)
+        assert client.session[HASH_SESSION_KEY] == user.get_session_auth_hash()
+        # DRF-токен удален, refresh JWT-токены помещены в blacklist
+        assert not Token.objects.filter(user=user).exists()
+        with pytest.raises(TokenError):
+            old_refresh_token.check_blacklist()
 
     def test_password_change_forbidden_for_social_user(self, client, user_factory):
         """Пользователям с регистрацией через соцсеть смена пароля запрещена."""
@@ -461,6 +478,8 @@ class TestPasswordResetViews:
         user = user_factory(
             username="reset_user", email="reset@example.com", password="OldPassword123"
         )
+        Token.objects.create(user=user)  # DRF-токен
+        old_refresh_token = RefreshToken.for_user(user)  # refresh JWT-токен
 
         # 1) Запрос сброса пароля
         response_post_email = client.post(
@@ -509,6 +528,12 @@ class TestPasswordResetViews:
 
         assert not user.check_password("OldPassword123")
         assert user.check_password("NewPassword123")
+
+        # 6) Все ранее выданные API-токены отозваны
+        # Проверка отсутствия DRF-токена и невалидности старого refresh JWT-токена
+        assert not Token.objects.filter(user=user).exists()
+        with pytest.raises(TokenError):
+            old_refresh_token.check_blacklist()
 
 
 @pytest.mark.django_db

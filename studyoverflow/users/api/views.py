@@ -37,7 +37,7 @@ from rest_framework_simplejwt.serializers import (
     TokenRefreshSerializer,
     TokenVerifySerializer,
 )
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 
 from navigation.api.serializers import DetailSerializer
@@ -63,6 +63,7 @@ from users.api.serializers import (
     UserRegisterSerializer,
 )
 from users.mixins import UserOnlineFilterMixin, UserSortMixin
+from users.services.api_tokens import revoke_user_api_tokens
 from users.services.cache import get_cached_user
 from users.services.moderation import block_user_service, unblock_user_service
 from users.tasks import send_password_reset_email_task
@@ -91,7 +92,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         """
         Выбор сериализатора в зависимости от действия.
         """
-        serializers = {
+        serializer_classes = {
             "session_login": UserMyProfileSerializer,
             "drf_token_login": UserMyProfileSerializer,
             "register": UserRegisterSerializer,
@@ -100,7 +101,7 @@ class AuthViewSet(viewsets.GenericViewSet):
             "password_reset_confirm": PasswordResetConfirmSerializer,
         }
 
-        return serializers.get(self.action, self.serializer_class)
+        return serializer_classes.get(self.action, self.serializer_class)
 
     @extend_schema(
         summary="Аутентификация для создания сессии.",
@@ -298,16 +299,6 @@ class AuthViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        except Exception as error:
-            logger.error(
-                f"Ошибка обработки JWT refresh токена: {error}.",
-                extra={"error": str(error), "refresh_token": refresh},
-            )
-            return Response(
-                {"detail": "Ошибка обработки JWT refresh токена."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
     @extend_schema(
         summary="Удаляет токены пользователя и сессию для текущего клиента.",
         request=inline_serializer(
@@ -341,6 +332,10 @@ class AuthViewSet(viewsets.GenericViewSet):
         """
         Выход из системы текущего клиента,
         удаляет токены пользователя и сессию для текущего клиента.
+
+        Сессия и переданный refresh JWT-токен удаляются только для текущего клиента (одного
+        устройства). DRF-токен удаляется для всех устройств, потому что он создается один
+        для пользователя для любого устройства.
         """
         # Блокировка переданного JWT refresh токена
         refresh = request.data.get("refresh")
@@ -354,16 +349,6 @@ class AuthViewSet(viewsets.GenericViewSet):
                 return Response(
                     {"detail": "Передан неверный или просроченный JWT refresh токен."},
                     status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            except Exception as error:
-                logger.error(
-                    f"Ошибка обработки JWT refresh токена: {error}.",
-                    extra={"error": str(error), "refresh_token": refresh},
-                )
-                return Response(
-                    {"detail": "Ошибка обработки JWT refresh токена."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
         # Удаление DRF токена, строго перед logout,
@@ -445,11 +430,15 @@ class AuthViewSet(viewsets.GenericViewSet):
         request=UserPasswordChangeSerializer,
         responses={
             200: OpenApiResponse(
-                description="Пароль успешно изменен.",
+                description="Пароль успешно изменен. Новые токены выдаются только того типа, "
+                "которым аутентифицирован клиент.",
                 response=inline_serializer(
                     name="PasswordChangeSuccessSerializer",
                     fields={
                         "detail": serializers.CharField(default="Пароль успешно изменен."),
+                        "drf_token": serializers.CharField(required=False),
+                        "access": serializers.CharField(required=False),
+                        "refresh": serializers.CharField(required=False),
                     },
                 ),
             ),
@@ -496,13 +485,36 @@ class AuthViewSet(viewsets.GenericViewSet):
         Смена пароля текущего авторизованного пользователя.
         """
         serializer = self.get_serializer(data=request.data)
-
         serializer.is_valid(raise_exception=True)
 
-        user = serializer.save()
+        # До отзыва токенов сохраняется способ аутентификации пользователя, при DRF-токене
+        # или при JWT-токене это будет python-объект соответствующей для токена модели,
+        # при сессии request.auth будет равен None, так как сессия передается через Cookie,
+        # а не Bearer/Token заголовок.
+        auth = request.auth
 
-        # Обновление сессии, чтобы пользователя не разлогинило из системы после смены пароля
-        update_session_auth_hash(request, user)
+        # Смена пароля и отзыв токенов выполняются в одной транзакции
+        with transaction.atomic():
+            user = serializer.save()
+
+            # Отзывает все DRF-токены и refresh JWT-токены пользователя
+            revoke_user_api_tokens(user)
+
+            # Обновление сессии, чтобы пользователя не разлогинило из системы после смены пароля,
+            # если он был аутентифицирован через сессию.
+            if auth is None:
+                update_session_auth_hash(request, user)
+
+        data = {"detail": "Пароль успешно изменен."}
+
+        if isinstance(auth, Token):
+            data["drf_token"] = Token.objects.create(user=user).key
+        # Класс задается в настройках SIMPLE_JWT в "AUTH_TOKEN_CLASSES", при смене
+        # класса в настройках здесь класс тоже нужно будет менять.
+        elif isinstance(auth, AccessToken):
+            refresh = RefreshToken.for_user(user)
+            data["refresh"] = str(refresh)
+            data["access"] = str(refresh.access_token)
 
         logger.info(
             f"Пользователь {user.username} успешно сменил пароль.",
@@ -514,7 +526,7 @@ class AuthViewSet(viewsets.GenericViewSet):
             },
         )
 
-        return Response({"detail": "Пароль успешно изменен."}, status=status.HTTP_200_OK)
+        return Response(data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Запрос на восстановление пароля.",
@@ -641,7 +653,12 @@ class AuthViewSet(viewsets.GenericViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        user = serializer.save()
+        # Смена пароля и отзыв токенов выполняются в одной транзакции
+        with transaction.atomic():
+            user = serializer.save()
+
+            # Отзывает все DRF-токены и refresh JWT-токены пользователя
+            revoke_user_api_tokens(user)
 
         logger.info(
             f"Пользователь {user.username} успешно восстановил пароль через email.",
@@ -868,6 +885,17 @@ class YandexLoginAPI(SocialLoginView):
 
 
 @extend_schema_view(
+    list=extend_schema(
+        summary="Список пользователей.",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="Список пользователей успешно получен.",
+                response=UserListSerializer(many=True),
+            ),
+            404: PaginationErrorOpenApiResponse,
+        },
+    ),
     retrieve=extend_schema(
         summary="Просмотр профиля конкретного пользователя.",
         description="Возвращает профиль пользователя по его уникальному username. "
@@ -889,7 +917,7 @@ class YandexLoginAPI(SocialLoginView):
             ),
             404: UserNotFoundOpenApiResponse,
         },
-    )
+    ),
 )
 class UserViewSet(
     UserSortMixin,
@@ -929,7 +957,7 @@ class UserViewSet(
 
         Использует подмену публичного профиля пользователя на личный при просмотре своего аккаунта.
         """
-        serializers = {
+        serializer_classes = {
             "list": UserListSerializer,
             "retrieve": UserPublicProfileSerializer,
             "me": UserMyProfileSerializer,
@@ -942,11 +970,27 @@ class UserViewSet(
         if self.action == "retrieve":
             if (
                 self.request.user.is_authenticated
-                and self.kwargs.get("username") == self.request.user.username
+                and self.kwargs.get("username").lower() == self.request.user.username.lower()
             ):
                 return UserMyProfileSerializer
 
-        return serializers.get(self.action, self.serializer_class)
+        return serializer_classes.get(self.action, self.serializer_class)
+
+    def get_serializer_context(self):
+        """
+        Добавляет множество с ID пользователей, которые онлайн, в контекст сериализатора
+        при действии list.
+        """
+        context = super().get_serializer_context()
+
+        # drf-spectacular строит схему на фейковом view без реального запроса
+        if getattr(self, "swagger_fake_view", False):
+            return context
+
+        if self.action == "list":
+            context["online_ids"] = set(self.get_online_ids())
+
+        return context
 
     def get_object(self):
         """
@@ -964,37 +1008,6 @@ class UserViewSet(
             return obj
 
         return super().get_object()
-
-    @extend_schema(
-        summary="Список пользователей.",
-        auth=[],
-        responses={
-            200: OpenApiResponse(
-                description="Список пользователей успешно получен.",
-                response=UserListSerializer(many=True),
-            ),
-            404: PaginationErrorOpenApiResponse,
-        },
-    )
-    def list(self, request, *args, **kwargs):  # noqa: A003
-        """
-        Список пользователей.
-        """
-        online_ids = set(self.get_online_ids())
-
-        queryset = self.get_queryset()
-        page = self.paginate_queryset(queryset)
-
-        serializer = self.get_serializer(
-            page,
-            many=True,
-            context={
-                **self.get_serializer_context(),
-                "online_ids": online_ids,
-            },
-        )
-
-        return self.get_paginated_response(serializer.data)
 
     @extend_schema(
         methods=["get"],

@@ -29,16 +29,18 @@ class UserOnlineFilterMixin:
         if online == "any":
             return queryset
 
-        self.online_ids = get_cached_online_user_ids()
+        online_ids = self.get_online_ids()
 
         if online == "online":
-            return queryset.filter(id__in=self.online_ids)
+            return queryset.filter(id__in=online_ids)
 
-        return queryset.exclude(id__in=self.online_ids)
+        return queryset.exclude(id__in=online_ids)
 
     def get_online_ids(self):
         """Возвращает список ID пользователей, находящихся онлайн."""
-        return getattr(self, "online_ids", get_cached_online_user_ids())
+        if not hasattr(self, "_online_ids"):
+            self._online_ids = get_cached_online_user_ids()
+        return self._online_ids
 
 
 class UserSortMixin:
@@ -101,7 +103,7 @@ class UserHTMXPaginationMixin:
     # специальное значение: вернуть всех, начиная с offset
     limit_all = -1
 
-    def paginate_queryset(self, queryset):
+    def apply_pagination(self, queryset):
         """
         Применяет offset-limit пагинацию к queryset.
 
