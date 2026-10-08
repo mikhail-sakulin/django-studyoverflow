@@ -87,7 +87,7 @@ class TestNotificationMarkReadView:
         url = reverse("notifications:mark_read", kwargs={"pk": notification.pk})
         response = client.post(url)
 
-        assert response.status_code == 403
+        assert response.status_code == 404
         notification.refresh_from_db()
         assert notification.is_read is False
 
@@ -189,7 +189,7 @@ class TestNotificationDeleteView:
         url = reverse("notifications:delete", kwargs={"pk": notification.pk})
         response = client.post(url)
 
-        assert response.status_code == 403
+        assert response.status_code == 404
         assert Notification.objects.filter(pk=notification.pk).exists() is True
 
     def test_delete_notification_success(self, client, user_factory, notification_post_factory):
