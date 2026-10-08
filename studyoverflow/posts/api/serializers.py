@@ -93,13 +93,24 @@ class PostSerializer(serializers.ModelSerializer):
                 },
             },
             "content": {
-                "write_only": True,
                 "error_messages": {
                     "max_length": f"Длина контента не должна превышать "
                     f"{Post.MAX_CONTENT_LENGTH} символов."
                 },
             },
         }
+
+    def to_representation(self, instance):
+        """
+        Поле content возвращается в ответе только тем, для кого флаг can_edit_or_delete == True,
+        содержит исходный текст в Markdown-синтаксисе, используется при редактировании.
+        """
+        data = super().to_representation(instance)
+
+        if not data.get("can_edit_or_delete"):
+            data.pop("content", None)
+
+        return data
 
     @extend_schema_field(serializers.DateTimeField(allow_null=True))
     def get_time_update(self, post) -> str | None:
@@ -159,7 +170,6 @@ class CommentBaseSerializer(serializers.ModelSerializer):
     author = AuthorSerializer(read_only=True)
     time_update = serializers.SerializerMethodField()
     content = serializers.CharField(
-        write_only=True,
         required=True,
         max_length=Comment.MAX_CONTENT_LENGTH,
         error_messages={
@@ -217,6 +227,18 @@ class CommentBaseSerializer(serializers.ModelSerializer):
             "user_has_liked",
             "can_edit_or_delete",
         )
+
+    def to_representation(self, instance):
+        """
+        Поле content возвращается в ответе только тем, для кого флаг can_edit_or_delete == True,
+        содержит исходный текст в Markdown-синтаксисе, используется при редактировании.
+        """
+        data = super().to_representation(instance)
+
+        if not data.get("can_edit_or_delete"):
+            data.pop("content", None)
+
+        return data
 
     def __init__(self, *args, **kwargs):
         """Блокирует возможность изменения parent_comment или reply_to при редактировании."""
