@@ -278,12 +278,20 @@ class Post(models.Model):
         # Проверка, что поле 'content' было задано (не было исключено через .only() / .defer()),
         # чтобы далее не грузить поле из БД при обращении "self.content".
         content_loaded = "content" in self.__dict__
+        update_fields = kwargs.get("update_fields")
 
         if not self.pk or (content_loaded and self.content != self._original_content):
             self.rendered_content = render_markdown_safe(self.content)
             self.search_content = strip_tags_and_whitespace_chars_from_html(self.rendered_content)
+            # Если content задан в update_fields, то производные поля также должны быть сохранены
+            if update_fields is not None and "content" in update_fields:
+                kwargs["update_fields"] = {*update_fields, "rendered_content", "search_content"}
 
         super().save(*args, **kwargs)
+
+        # После сохранения нового content обновляется поле _original_content
+        if content_loaded and (update_fields is None or "content" in update_fields):
+            self._original_content = self.content
 
     def get_absolute_url(self):
         """Возвращает уникальный URL для поста на основе pk и slug."""
@@ -433,11 +441,19 @@ class Comment(models.Model):
         # Проверка, что поле 'content' было задано (не было исключено через .only() / .defer()),
         # чтобы далее не грузить поле из БД при обращении "self.content".
         content_loaded = "content" in self.__dict__
+        update_fields = kwargs.get("update_fields")
 
         if not self.pk or (content_loaded and self.content != self._original_content):
             self.rendered_content = render_markdown_safe(self.content)
+            # Если content задан в update_fields, то производные поля также должны быть сохранены
+            if update_fields is not None and "content" in update_fields:
+                kwargs["update_fields"] = {*update_fields, "rendered_content"}
 
         super().save(*args, **kwargs)
+
+        # После сохранения нового content обновляется поле _original_content
+        if content_loaded and (update_fields is None or "content" in update_fields):
+            self._original_content = self.content
 
     def get_absolute_url(self):
         """Возвращает уникальный URL комментария (страница поста с якорем на комментарий)."""
