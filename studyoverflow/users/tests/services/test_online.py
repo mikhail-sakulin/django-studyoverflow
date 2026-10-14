@@ -1,4 +1,6 @@
+import fakeredis
 import pytest
+from django.core.cache import cache
 
 from users.services.online import (
     ONLINE_SET_KEY,
@@ -14,41 +16,25 @@ from users.services.online import (
 )
 
 
-@pytest.fixture
-def mock_redis_conn(mocker):
-    """Мок Redis-соединения с настроенным контекстным менеджером pipeline()."""
-    mock_conn = mocker.MagicMock()
-    mock_pipe = mocker.MagicMock()
-    mock_conn.pipeline.return_value.__enter__.return_value = mock_pipe
-
-    mocker.patch("users.services.online.get_redis_connection", return_value=mock_conn)
-
-    return mock_conn, mock_pipe
+@pytest.fixture(autouse=True)
+def clear_cache():
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture
-def mock_async_redis_conn(mocker):
+def fake_async_redis(mocker):
     """
-    Мок асинхронного Redis-соединения с настроенным асинхронным контекстным менеджером pipeline().
+    Подменяет асинхронный клиент Redis через fakeredis и возвращает его.
+
+    Это Fake подмена (полноценная рабочая реализация) через Python-объект.
+
+    Фикстура для замены синхронного клиента Redis задается в conftest.py корня Django-проекта.
     """
-    # MagicMock, а не AsyncMock, поскольку mock_conn.pipeline() должен возвращать
-    # объект-контекстный менеджер, а не корутину, mock_conn.pipeline должен быть MagicMock.
-    mock_conn = mocker.MagicMock()
-
-    # В pipeline set() и sadd() синхронные (только ставят команду в очередь
-    # и возвращают pipeline), асинхронный только execute(), поэтому mock_pipe - MagicMock.
-    mock_pipe = mocker.MagicMock()
-    mock_pipe.execute = mocker.AsyncMock()
-
-    # AsyncMock эмулирует __aenter__ и __aexit__
-    mock_context_manager = mocker.AsyncMock()
-    mock_context_manager.__aenter__.return_value = mock_pipe
-
-    mock_conn.pipeline.return_value = mock_context_manager
-
-    mocker.patch("users.services.online.get_async_redis", return_value=mock_conn)
-
-    return mock_conn, mock_pipe
+    client = fakeredis.FakeAsyncRedis(server=fakeredis.FakeServer())
+    mocker.patch("users.services.online.get_async_redis", return_value=client)
+    return client
 
 
 @pytest.fixture(autouse=True)
@@ -73,117 +59,77 @@ def test_get_user_key_for_redis():
     assert key == f"{REDIS_KEY_PREFIX}:{user_id}"
 
 
-def test_set_user_online(mock_redis_conn):
+def test_set_user_online(fake_redis):
     """Проверяет отправку данных в Redis при установке онлайн-статуса."""
-    _, mock_pipe = mock_redis_conn
+    set_user_online(5)
 
-    user_id = 5
-    set_user_online(user_id)
-
-    mock_pipe.set.assert_called_once_with(f"{REDIS_KEY_PREFIX}:{user_id}", "1", ex=ONLINE_TTL)
-    mock_pipe.sadd.assert_called_once_with(ONLINE_SET_KEY, user_id)
-    mock_pipe.execute.assert_called_once()
+    key = get_user_key_for_redis(5)
+    assert fake_redis.exists(key) == 1
+    assert 0 < fake_redis.ttl(key) <= ONLINE_TTL
+    assert fake_redis.sismember(ONLINE_SET_KEY, 5)
 
 
 @pytest.mark.asyncio
-async def test_async_set_user_online(mock_async_redis_conn):
+async def test_async_set_user_online(fake_async_redis):
     """Проверяет асинхронную отправку данных в Redis при установке онлайн-статуса."""
-    _, mock_pipe = mock_async_redis_conn
+    await async_set_user_online(5)
 
-    user_id = 5
-    await async_set_user_online(user_id)
+    key = get_user_key_for_redis(5)
+    ttl = await fake_async_redis.ttl(key)
+    assert await fake_async_redis.exists(key) == 1
+    assert 0 < ttl <= ONLINE_TTL
+    assert await fake_async_redis.sismember(ONLINE_SET_KEY, str(5))
 
-    mock_pipe.set.assert_called_once_with(f"{REDIS_KEY_PREFIX}:{user_id}", "1", ex=ONLINE_TTL)
-    mock_pipe.sadd.assert_called_once_with(ONLINE_SET_KEY, user_id)
-    mock_pipe.execute.assert_called_once()
 
-
-@pytest.mark.parametrize(
-    ("exists_return", "expected"),
-    [
-        (1, True),
-        (0, False),
-    ],
-)
-def test_is_user_online(mock_redis_conn, exists_return, expected):
+def test_is_user_online(fake_redis):
     """Проверяет онлайн- и офлайн-статус пользователя."""
-    mock_conn, _ = mock_redis_conn
-    mock_conn.exists.return_value = exists_return
-
-    user_id = 5
-    assert is_user_online(user_id) is expected
-    mock_conn.exists.assert_called_once_with(f"{REDIS_KEY_PREFIX}:{user_id}")
+    assert is_user_online(5) is False
+    set_user_online(5)
+    assert is_user_online(5) is True
 
 
-def test_remove_user_offline(mock_redis_conn):
+def test_remove_user_offline(fake_redis):
     """Проверяет удаление ключа из Redis при уходе пользователя в офлайн."""
-    _, mock_pipe = mock_redis_conn
+    set_user_online(5)
 
-    user_id = 5
-    remove_user_offline(user_id)
+    remove_user_offline(5)
 
-    mock_pipe.delete.assert_called_once_with(f"{REDIS_KEY_PREFIX}:{user_id}")
-    mock_pipe.srem.assert_called_once_with(ONLINE_SET_KEY, user_id)
-    mock_pipe.execute.assert_called_once()
+    assert is_user_online(5) is False
+    assert not fake_redis.sismember(ONLINE_SET_KEY, str(5))
 
 
 class TestGetOnlineUserIds:
-    def test_get_online_user_ids_no_users(self, mock_redis_conn):
-        """Если множество онлайн-пользователей пусто - выход из тестируемой функции."""
-        mock_conn, _ = mock_redis_conn
-        mock_conn.smembers.return_value = []
-
+    def test_get_online_user_ids_no_users(self, fake_redis):
+        """Если пользователей онлайн не, то множество онлайн-пользователей пусто."""
         assert get_online_user_ids() == []
-        mock_conn.pipeline.assert_not_called()
 
-    def test_get_online_user_ids_filters_expired(self, mock_redis_conn):
+    def test_get_online_user_ids_filters_expired(self, fake_redis):
         """Проверяет фильтрацию и удаление просроченных сессий пользователей."""
-        mock_conn, mock_pipe = mock_redis_conn
-        mock_conn.smembers.return_value = [b"10", b"20"]
-        mock_pipe.execute.return_value = [True, False]
+        set_user_online(10)
+        set_user_online(20)
+        # TTL-ключ пользователя 20 истек, а id остался во множестве
+        fake_redis.delete(get_user_key_for_redis(20))
 
-        active_ids = get_online_user_ids()
+        assert get_online_user_ids() == [10]
+        assert {int(i) for i in fake_redis.smembers(ONLINE_SET_KEY)} == {10}
 
-        assert active_ids == [10]
-        mock_conn.srem.assert_called_once_with("online_users_set", 20)
+    def test_get_online_user_ids_no_expired(self):
+        """Если просроченных записей во множестве нет — возвращаются все."""
+        set_user_online(10)
+        set_user_online(20)
 
-    def test_get_online_user_ids_no_expired(self, mock_redis_conn):
-        """Если просроченных записей нет — srem не вызывается"""
-        mock_conn, mock_pipe = mock_redis_conn
-        mock_conn.smembers.return_value = [b"10", b"20"]
-        mock_pipe.execute.return_value = [True, True]
-
-        active_ids = get_online_user_ids()
-
-        assert active_ids == [10, 20]
-        mock_conn.srem.assert_not_called()
+        assert sorted(get_online_user_ids()) == [10, 20]
 
 
-class TestGetCachedOnlineUserIds:
-    def test_get_cached_online_user_ids_cache_miss(self, mocker):
-        """Проверяет поведение при отсутствии множества пользователей онлайн в кеше."""
-        mock_get_online = mocker.patch(
-            "users.services.online.get_online_user_ids", return_value=[10, 15]
-        )
-        mock_cache = mocker.patch("users.services.online.cache")
-        mock_cache.get.return_value = None
+def test_cached_online_user_ids_are_cached(fake_redis):
+    """Проверяет кеширование множество онлайн-пользователей."""
+    set_user_online(1)
+    assert get_cached_online_user_ids() == [1]
 
-        result = get_cached_online_user_ids()
+    set_user_online(2)
+    # Ответ из кеша, кеш не обновлялся
+    assert get_cached_online_user_ids() == [1]
 
-        assert result == [10, 15]
-        mock_get_online.assert_called_once()
-        mock_cache.get.assert_called_once_with("cached_online_users_set")
-        mock_cache.set.assert_called_once_with("cached_online_users_set", [10, 15], timeout=5)
-
-    def test_get_cached_online_user_ids_cache_hit(self, mocker):
-        """Проверяет поведение при наличии множества пользователей онлайн в кеше."""
-        mock_get_online = mocker.patch("users.services.online.get_online_user_ids")
-        mock_cache = mocker.patch("users.services.online.cache")
-        mock_cache.get.return_value = [5]
-
-        result = get_cached_online_user_ids()
-
-        assert result == [5]
-        mock_cache.get.assert_called_once_with("cached_online_users_set")
-        mock_get_online.assert_not_called()
-        mock_cache.set.assert_not_called()
+    cache.clear()
+    # Кеш после обновления, данные обновлены
+    assert sorted(get_cached_online_user_ids()) == [1, 2]
