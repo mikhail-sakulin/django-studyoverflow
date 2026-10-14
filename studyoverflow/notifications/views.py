@@ -1,6 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views import View
 from django.views.generic import ListView, TemplateView
@@ -77,9 +77,6 @@ class NotificationDeleteView(LoginRequiredRedirectHTMXMixin, View):
 
     def post(self, request, *args, **kwargs):
         notification = get_object_or_404(Notification, pk=kwargs["pk"], user=request.user)
-
-        if notification.user != request.user:
-            return HttpResponseForbidden("Not allowed")  # 403
 
         # Устанавливается переменная контекста для текущего запроса.
         # Она используется обработчиком сигнала post_delete как флаг, что инициатором

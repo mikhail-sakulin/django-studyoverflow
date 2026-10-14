@@ -76,8 +76,10 @@ class TestNotificationMarkReadView:
             is_api=False,
         )
 
-    def test_forbidden_for_other_user(self, client, user_factory, notification_post_factory):
-        """Попытка прочитать чужое уведомление возвращает 403 Forbidden."""
+    def test_returns_not_found_for_other_user(
+        self, client, user_factory, notification_post_factory
+    ):
+        """Попытка прочитать чужое уведомление возвращает 404."""
         owner = user_factory()
         other_user = user_factory()
 
@@ -178,8 +180,10 @@ class TestNotificationDeleteView:
             is_api=False,
         )
 
-    def test_forbidden_for_other_user(self, client, user_factory, notification_post_factory):
-        """Удаление чужого уведомления запрещено, возвращается 403."""
+    def test_returns_not_found_for_other_user(
+        self, client, user_factory, notification_post_factory
+    ):
+        """Удаление чужого уведомления запрещено, возвращается 404."""
         owner = user_factory()
         other_user = user_factory()
 
