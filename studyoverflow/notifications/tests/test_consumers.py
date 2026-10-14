@@ -7,6 +7,7 @@ from channels.routing import URLRouter
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth.models import AnonymousUser
 
+from notifications.consumers import NotificationConsumer
 from notifications.routing import websocket_urlpatterns
 
 
@@ -36,6 +37,17 @@ def communicator_factory():
 @pytest.fixture(autouse=True)
 def mock_async_set_online(mocker):
     return mocker.patch("notifications.consumers.async_set_user_online")
+
+
+@pytest.fixture
+def mock_session_alive(mocker):
+    """
+    Подменяет метод NotificationConsumer._session_is_alive на AsyncMock,
+    всегда возвращающий True при await (сессия считается активной).
+    """
+    return mocker.patch.object(
+        NotificationConsumer, "_session_is_alive", new=mocker.AsyncMock(return_value=True)
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -82,7 +94,7 @@ class TestNotificationConsumer:
         await communicator.disconnect()
 
     async def test_receive_heartbeat_updates_online(
-        self, mock_async_set_online, communicator_factory
+        self, mock_async_set_online, communicator_factory, mock_session_alive
     ):
         """Heartbeat обновляет онлайн-статус пользователя."""
         user = SimpleNamespace(pk=1, is_authenticated=True)
@@ -114,6 +126,28 @@ class TestNotificationConsumer:
             pytest.fail("async_set_user_online не был вызван")
 
         mock_async_set_online.assert_called_once_with(1)
+
+        await communicator.disconnect()
+
+    async def test_heartbeat_closes_connection_if_session_dead(
+        self, mock_async_set_online, mock_session_alive, communicator_factory
+    ):
+        """
+        Если сессия удалена, heartbeat закрывает соединение и не обновляет
+        онлайн-статус пользователя.
+        """
+        communicator = communicator_factory(SimpleNamespace(pk=1, is_authenticated=True))
+        connected, _ = await communicator.connect()
+        assert connected is True
+        mock_async_set_online.reset_mock()
+
+        mock_session_alive.return_value = False
+        await communicator.send_json_to({"type": "heartbeat"})
+
+        output = await communicator.receive_output(timeout=1)
+        assert output["type"] == "websocket.close"
+        assert output["code"] == 4401
+        mock_async_set_online.assert_not_called()
 
         await communicator.disconnect()
 
