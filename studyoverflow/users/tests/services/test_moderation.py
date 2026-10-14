@@ -1,8 +1,12 @@
 import pytest
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 
 from users.services.moderation import block_user_service, unblock_user_service
+
+
+User = get_user_model()
 
 
 @pytest.mark.django_db
@@ -15,9 +19,7 @@ class TestUserBlockServices:
             unblock_user_service,
         ],
     )
-    def test_permission_denied(self, user_factory, mocker, service_func):
-        mocker.patch("users.services.moderation.can_moderate", return_value=False)
-
+    def test_permission_denied(self, user_factory, service_func):
         moderator = user_factory()
         target_user = user_factory()
 
@@ -51,13 +53,12 @@ class TestUserBlockServices:
         source,
         service_kwargs,
     ):
-        mocker.patch("users.services.moderation.can_moderate", return_value=True)
         mock_logger = mocker.patch("users.services.moderation.logger.info")
 
         now_mock = timezone.now()
         mocker.patch("users.services.moderation.timezone.now", return_value=now_mock)
 
-        moderator = user_factory(username="mod_user")
+        moderator = user_factory(username="mod_user", role=User.Role.MODERATOR)
         target_user = user_factory(username="target_user", is_blocked=initial_blocked)
 
         if initial_blocked:
@@ -103,10 +104,9 @@ class TestUserBlockServices:
     def test_set_user_block_state_already_in_state(
         self, user_factory, mocker, service_func, initial_blocked, expected_msg
     ):
-        mocker.patch("users.services.moderation.can_moderate", return_value=True)
         mock_logger = mocker.patch("users.services.moderation.logger.info")
 
-        moderator = user_factory()
+        moderator = user_factory(role=User.Role.MODERATOR)
         target_user = user_factory(username="target_user", is_blocked=initial_blocked)
 
         success, message = service_func(moderator, target_user)

@@ -46,7 +46,11 @@ class TestCustomSocialAccountAdapter:
 
         assert "заблокирован" in str(exc.value.detail).lower()
 
-    def test_save_user_triggers_celery_avatar_download(self, mocker):
+    # Используется декоратор, так как on_commit обращается к БД
+    @pytest.mark.django_db
+    def test_save_user_triggers_celery_avatar_download(
+        self, mocker, django_capture_on_commit_callbacks
+    ):
         """
         Проверка, что после сохранения пользователя запускается Celery-задача на загрузку
         его аватара из соцсети.
@@ -71,13 +75,12 @@ class TestCustomSocialAccountAdapter:
             {"google": lambda user, data: "http://example.com/avatar.jpg"},
         )
 
-        # Немедленное выполнение celery задачи
-        mocker.patch("users.adapters.transaction.on_commit", side_effect=lambda func: func())
-
         mock_task = mocker.patch("users.adapters.download_and_set_avatar.delay")
 
         mock_request = mocker.Mock()
-        result = adapter.save_user(mock_request, mock_sociallogin)
+
+        with django_capture_on_commit_callbacks(execute=True):
+            result = adapter.save_user(mock_request, mock_sociallogin)
 
         assert result is mock_user
         assert mock_user.is_social is True

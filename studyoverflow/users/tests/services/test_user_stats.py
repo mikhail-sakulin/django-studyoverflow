@@ -1,5 +1,6 @@
 import pytest
 
+from posts.models import Comment, Post
 from users.services.user_stats import get_counts_map, get_reputation_map, update_user_counter_field
 
 
@@ -42,47 +43,69 @@ class TestUpdateUserCounterField:
         assert other.posts_count == 5
 
 
+@pytest.mark.django_db
 class TestGetCountsMap:
 
-    def test_returns_correct_counts_mapping_ignoring_none(self, mocker):
-        """Проверяет сборку словаря агрегации и обработку пустого group_field."""
-        mock_model = mocker.MagicMock()
-        mock_model.objects.values.return_value.annotate.return_value = [
-            {"author_id": 42, "count": 12},
-            {"author_id": 100, "count": 1},
-            {"author_id": None, "count": 5},
-        ]
+    def test_returns_correct_counts_posts_mapping(self, user_factory, post_factory):
+        """Проверяет сборку словаря агрегации для постов."""
+        author_1, author_2 = user_factory(), user_factory()
+        post_factory.create_batch(2, author=author_1)
+        post_factory(author=author_2)
 
-        result = get_counts_map(mock_model, "author_id")
+        assert get_counts_map(Post, "author_id") == {author_1.pk: 2, author_2.pk: 1}
 
-        assert result == {42: 12, 100: 1}
-        mock_model.objects.values.assert_called_once_with("author_id")
+        author_1.refresh_from_db()
+        author_2.refresh_from_db()
+        assert (author_1.posts_count, author_2.posts_count) == (2, 1)
+
+    def test_returns_correct_counts_comments_mapping(
+        self, user_factory, post_factory, comment_factory
+    ):
+        """Проверяет сборку словаря агрегации для комментариев."""
+        post = post_factory()
+        commenter = user_factory()
+        comment_factory.create_batch(3, post=post, author=commenter)
+
+        assert get_counts_map(Comment, "author_id") == {commenter.pk: 3}
+
+        post.refresh_from_db()
+        assert post.comments_count == 3
+
+    def test_empty_table(self):
+        """Проверяет работу при пустой таблице."""
+        assert get_counts_map(Comment, "author_id") == {}
 
 
+@pytest.mark.django_db
 class TestGetReputationMap:
 
-    def test_merges_post_and_comment_likes_correctly(self, mocker):
+    def test_merges_post_and_comment_likes_correctly(
+        self, user_factory, post_factory, comment_factory, like_factory
+    ):
         """Проверяет суммирование лайков из постов и комментариев для каждого автора."""
-        mock_post_model = mocker.MagicMock()
-        mock_comment_model = mocker.MagicMock()
+        author_a, author_b = user_factory(), user_factory()
+        liker_1, liker_2 = user_factory(), user_factory()
 
-        # Лайки за посты
-        mock_post_model.objects.values.return_value.annotate.return_value = [
-            {"author_id": 1, "total_likes": 10},
-            {"author_id": 2, "total_likes": 5},
-            {"author_id": None, "total_likes": 99},
-        ]
-        # Лайки за комментарии
-        mock_comment_model.objects.values.return_value.annotate.return_value = [
-            {"author_id": 2, "total_likes": 3},
-            {"author_id": 3, "total_likes": 15},
-            {"author_id": None, "total_likes": 50},
-        ]
+        post_a = post_factory(author=author_a)
+        comment_b = comment_factory(post=post_a, author=author_b)
+        like_factory(user=liker_1, content_object=post_a)
+        like_factory(user=liker_2, content_object=post_a)
+        like_factory(user=liker_1, content_object=comment_b)
 
-        result = get_reputation_map(mock_post_model, mock_comment_model)
+        result = get_reputation_map(Post, Comment)
 
-        assert result == {
-            1: 10,
-            2: 8,
-            3: 15,
-        }
+        assert result == {author_a.pk: 2, author_b.pk: 1}
+
+        # Проверка значений в БД.
+        # reputation - денормализованное поле-счетчик, изменяется через сигналы, значения
+        # синхронизируются через периодические Celery-задачи.
+        author_a.refresh_from_db()
+        author_b.refresh_from_db()
+        assert (author_a.reputation, author_b.reputation) == (2, 1)
+
+    def test_author_without_likes_has_zero(self, user_factory, post_factory):
+        """Для автора, у которого нет лайков, возвращается 0."""
+        author = user_factory()
+        post_factory(author=author)
+
+        assert get_reputation_map(Post, Comment) == {author.pk: 0}
