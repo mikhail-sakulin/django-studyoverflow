@@ -14,7 +14,10 @@ from django.contrib.auth import (
     login,
     logout,
     update_session_auth_hash,
+    user_logged_in,
+    user_logged_out,
 )
+from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -30,8 +33,9 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.serializers import (
     TokenObtainPairSerializer,
     TokenRefreshSerializer,
@@ -210,6 +214,7 @@ class AuthViewSet(viewsets.GenericViewSet):
 
         if user:
             token, created = Token.objects.get_or_create(user=user)
+            user_logged_in.send(sender=User, request=request, user=user)
 
             serializer = self.get_serializer(user)
 
@@ -245,8 +250,12 @@ class AuthViewSet(viewsets.GenericViewSet):
         """
         token = getattr(request.user, "auth_token", None)
 
+        user = request.user
+
         if token:
             token.delete()
+            user_logged_out.send(sender=User, request=request, user=user)
+            request.user = AnonymousUser()
 
             return Response({"detail": "DRF token удален."}, status=status.HTTP_200_OK)
 
@@ -264,9 +273,6 @@ class AuthViewSet(viewsets.GenericViewSet):
                 description="Не передан или передан невалидный refresh токен.",
             ),
             401: OpenApiUnauthenticated401Response,
-            500: OpenApiResponse(
-                response=DetailSerializer, description="Ошибка обработки JWT refresh токена."
-            ),
         },
     )
     @action(
@@ -286,18 +292,23 @@ class AuthViewSet(viewsets.GenericViewSet):
                 {"detail": "Не передан refresh токен."}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        user = request.user
+
         try:
             token = RefreshToken(refresh)
             token.blacklist()
-            return Response(
-                {"detail": "JWT refresh токен теперь заблокирован."}, status=status.HTTP_200_OK
-            )
 
         except TokenError:
             return Response(
                 {"detail": "Передан неверный или просроченный JWT refresh токен."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        user_logged_out.send(sender=User, request=request, user=user)
+        request.user = AnonymousUser()
+        return Response(
+            {"detail": "JWT refresh токен теперь заблокирован."}, status=status.HTTP_200_OK
+        )
 
     @extend_schema(
         summary="Удаляет токены пользователя и сессию для текущего клиента.",
@@ -320,9 +331,6 @@ class AuthViewSet(viewsets.GenericViewSet):
                 description="Передан неверный или просроченный refresh токен.",
             ),
             401: OpenApiUnauthenticated401Response,
-            500: OpenApiResponse(
-                response=DetailSerializer, description="Ошибка обработки JWT refresh токена."
-            ),
         },
     )
     @action(
@@ -686,7 +694,22 @@ class AuthViewSet(viewsets.GenericViewSet):
     )
 )
 class CustomTokenObtainPairView(TokenObtainPairView):
-    pass
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Получение JWT-токенов с отправкой сигнала user_logged_in при успешной аутентификации.
+
+        Повторяет TokenViewBase.post из SimpleJWT, добавляя вызов сигнала после валидации.
+        """
+        serializer = self.get_serializer(data=request.data)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as e:
+            raise InvalidToken(e.args[0]) from e
+
+        user_logged_in.send(sender=User, request=request, user=serializer.user)
+
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 
 @extend_schema_view(
@@ -996,8 +1019,8 @@ class UserViewSet(
         """
         Переопределяется для использования кеша профиля пользователя из сервиса.
         """
-        # Если в URL передан username (retrieve, block, unblock)
-        if self.lookup_field in self.kwargs:
+        # Для retrieve используется кеш объекта пользователя
+        if self.action in ("retrieve",):
             username = self.kwargs[self.lookup_field]
 
             # Пользователь из кеша
@@ -1007,6 +1030,9 @@ class UserViewSet(
             self.check_object_permissions(self.request, obj)
             return obj
 
+        # Для block и unblock кеш объекта пользователя не используется.
+        # Username в URL нужно указывать с учетом регистра.
+        # Action me метод get_object не использует.
         return super().get_object()
 
     @extend_schema(

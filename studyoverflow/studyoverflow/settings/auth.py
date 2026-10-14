@@ -145,7 +145,9 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=14),  # Время жизни refresh token
     "ROTATE_REFRESH_TOKENS": True,  # Выдавать новый refresh при обновлении
     "BLACKLIST_AFTER_ROTATION": True,  # Добавлять старый refresh в blacklist
-    "UPDATE_LAST_LOGIN": True,  # Обновлять user.last_login при логине
+    # last_login обновляется стандартным обработчиком сигнала user_logged_in,
+    # который отправляется вручную в CustomTokenObtainPairView
+    "UPDATE_LAST_LOGIN": False,  # Обновлять user.last_login при логине
     "ALGORITHM": "HS256",  # Алгоритм подписи JWT
     "SIGNING_KEY": SECRET_KEY,  # Секретный ключ для подписи
     "VERIFYING_KEY": "",  # Публичный ключ при алгоритмах RS256 или ES256
