@@ -271,10 +271,23 @@ if NGINX_SSL_ENABLED:
     # Эта настройка говорит Django верить заголовку HTTP_X_FORWARDED_PROTO в запросе, чтобы Django
     # понимал, что клиент отправляет запросы по https.
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # Флаг заставляет Django перенаправлять все HTTP-запросы на HTTPS.
+    #
+    # Упрощенно SecurityMiddleware проверяет:
+    #   if settings.SECURE_SSL_REDIRECT and not request.is_secure():
+    #     # 301 redirect на https://...
+    # request.is_secure() смотрит на SECURE_PROXY_SSL_HEADER (заголовок HTTP_X_FORWARDED_PROTO)
+    # и проверяет, что там указан https.
+    #
+    # Nginx сам отвечает на HTTP-запросы редиректом 301 на HTTPS и до Django их не пропускает при
+    # NGINX_SSL_ENABLED, но дополнительная защита устанавливается на уровне Django.
+    SECURE_SSL_REDIRECT = True
+
     # Добавляет флаг Secure к куке с сессией (sessionid), куку можно передать только по https.
     SESSION_COOKIE_SECURE = True
     # Добавляет флаг Secure к куке с CSRF-токеном (csrftoken), куку можно передать только по https.
     CSRF_COOKIE_SECURE = True
+
     # Список доверенных доменов, с которых бекенду разрешено принимать небезопасные
     # HTTP-запросы (POST, PUT, DELETE и PATCH) при запросе по протоколу https.
     CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
