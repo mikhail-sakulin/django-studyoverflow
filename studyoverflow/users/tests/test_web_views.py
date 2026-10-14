@@ -13,6 +13,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from users.services.cache import get_user_cache_key
+from users.services.online import is_user_online
 
 
 User = get_user_model()
@@ -24,21 +25,6 @@ def clear_cache():
     cache.clear()
     yield
     cache.clear()
-
-
-@pytest.fixture()
-def mock_redis_conn(mocker):
-    """
-    Автоматически мокает подключение к Redis во всех тестах.
-
-    Прописывается отдельный мок в этом модуле, несмотря на глобальный мок, чтобы задавать,
-    какие значения должны будут вернуться в тестах этого модуля.
-
-    Часто нужен в тестах, поскольку в OnlineStatusMiddleware, если пользователь аутентифицирован,
-    есть обращение к сервисной функции set_user_online, в которой есть прямое обращение к Redis.
-    """
-    mock_conn = mocker.patch("users.services.online.get_redis_connection")
-    return mock_conn
 
 
 @pytest.mark.django_db
@@ -313,18 +299,19 @@ class TestAuthorProfileView:
         assert response.status_code == 302
         assert response.url == reverse("users:my_profile")
 
-    def test_view_other_author_profile_and_caching(self, client, user_factory, mock_redis_conn):
+    def test_view_other_author_profile_and_caching(self, client, user_factory):
         """Просмотр чужого профиля доступен, и данные пользователя кешируются."""
-        mock_redis_conn.return_value.exists.return_value = 0
-
         me = user_factory(username="user_me")
         other = user_factory(username="other_author")
         client.force_login(me)
 
+        # Пользователь other не онлайн
+        assert is_user_online(other.pk) is False
+
         url = reverse("users:profile", kwargs={"username": "other_author"})
         response = client.get(url)
 
-        # Проверка статуса онлайн в профиле (моком выше задано, что other_author не в сети)
+        # Проверка статуса онлайн в профиле
         assert "был в сети" in response.content.decode("utf-8")
 
         assert response.status_code == 200
@@ -343,25 +330,17 @@ class TestUserProfileUpdateView:
     def test_unauthenticated_user_cannot_get_update_profile_page(self, assert_login_required):
         assert_login_required(url_name="users:my_profile", method="get")
 
-    def test_authenticated_user_can_load_and_submit_update_profile(
-        self, client, user_factory, mock_redis_conn
-    ):
+    def test_authenticated_user_can_load_and_submit_update_profile(self, client, user_factory):
         """
-        Авторизованный пользователь может просматривать профиль с онлайн-статусом
-        и обновлять свои данные.
+        Авторизованный пользователь может просматривать свой профиль и обновлять свои данные.
         """
-        mock_redis_conn.return_value.exists.return_value = 1
-
         user = user_factory(username="user_test", email="old@example.com")
         client.force_login(user)
 
         url = reverse("users:my_profile")
 
-        assert client.get(url).status_code == 200
-
         response_get = client.get(url)
         assert response_get.status_code == 200
-        # Проверка статуса онлайн в профиле (моком выше задано, что статус онлайн положительный)
         assert "Сейчас в сети" in response_get.content.decode("utf-8")
 
         form_data = {
@@ -472,8 +451,7 @@ class TestPasswordResetViews:
     def test_password_reset_full_flow(self, client, user_factory):
         """
         Интеграционный тест полного цикла сброса пароля:
-        Запрос сброса -> Получение письма -> Переход по ссылке ->
-        -> Смена пароля -> Вход с новым паролем.
+        Запрос сброса -> Получение письма -> Переход по ссылке -> Смена пароля.
         """
         user = user_factory(
             username="reset_user", email="reset@example.com", password="OldPassword123"
@@ -590,11 +568,6 @@ class TestModeratorActions:
         """
         При наличии права users.block_user вызывается сервис блокировки и возвращается сообщение.
         """
-        mock_service = mocker.patch(
-            "users.views.block_user_service",
-            return_value=(True, "Пользователь заблокирован."),
-        )
-
         moderator = user_factory(username="real_moder", role=User.Role.MODERATOR)
         client.force_login(moderator)
 
@@ -605,37 +578,62 @@ class TestModeratorActions:
         )
 
         assert response.status_code == 200
-        mock_service.assert_called_once_with(
-            moderator=moderator, target_user=user_for_block, source="web"
-        )
+
+        user_for_block.refresh_from_db()
+        assert user_for_block.is_blocked is True
+        assert user_for_block.blocked_by == moderator
+        assert user_for_block.blocked_at is not None
 
         messages = list(response.context["messages"])
         assert len(messages) == 1
-        assert str(messages[0]) == "Пользователь заблокирован."
+        assert "заблокирован" in str(messages[0])
 
     def test_unblock_user_success(self, client, user_factory, mocker):
         """
         При наличии права users.block_user вызывается сервис блокировки и возвращается сообщение.
         """
-        mock_service = mocker.patch(
-            "users.views.unblock_user_service",
-            return_value=(True, "Пользователь разблокирован."),
-        )
-
         moderator = user_factory(username="real_moder", role=User.Role.MODERATOR)
         client.force_login(moderator)
 
-        user_for_unblock = user_factory(username="user_for_unblock")
+        user_for_unblock = user_factory(username="user_for_unblock", is_blocked=True)
 
         response = client.post(
             reverse("users:unblock_user", kwargs={"user_id": user_for_unblock.pk}), follow=True
         )
 
         assert response.status_code == 200
-        mock_service.assert_called_once_with(
-            moderator=moderator, target_user=user_for_unblock, source="web"
-        )
+
+        user_for_unblock.refresh_from_db()
+        assert user_for_unblock.is_blocked is False
+        assert user_for_unblock.blocked_by is None
+        assert user_for_unblock.blocked_at is None
 
         messages = list(response.context["messages"])
         assert len(messages) == 1
-        assert str(messages[0]) == "Пользователь разблокирован."
+        assert "разблокирован" in str(messages[0])
+
+    @pytest.mark.parametrize(
+        "actor_role, target_role",
+        [
+            # нет права users.block_user
+            (User.Role.USER, User.Role.USER),
+            # роль цели выше
+            (User.Role.MODERATOR, User.Role.ADMIN),
+            # равная роль
+            (User.Role.MODERATOR, User.Role.MODERATOR),
+        ],
+    )
+    def test_block_forbidden(self, client, user_factory, actor_role, target_role):
+        """
+        Блокировка пользователя запрещена (403), если у инициатора нет права block_user или
+        роль цели выше либо равна роли инициатора. Статус цели не меняется.
+        """
+        actor = user_factory(username="actor", role=actor_role)
+        target = user_factory(username="target", role=target_role)
+        client.force_login(actor)
+
+        response = client.post(reverse("users:block_user", kwargs={"user_id": target.pk}))
+
+        assert response.status_code == 403
+        target.refresh_from_db()
+        assert target.is_blocked is False

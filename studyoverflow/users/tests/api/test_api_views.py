@@ -18,18 +18,6 @@ User = get_user_model()
 
 
 @pytest.fixture(autouse=True)
-def mock_redis_conn(mocker):
-    """
-    Автоматически мокает подключение к Redis во всех тестах.
-
-    Часто нужен в тестах, поскольку в OnlineStatusMiddleware, если пользователь аутентифицирован,
-    есть обращение к сервисной функции set_user_online, в которой есть прямое обращение к Redis.
-    """
-    mock_conn = mocker.patch("users.services.online.get_redis_connection")
-    return mock_conn
-
-
-@pytest.fixture()
 def clear_cache():
     """Очищает кеш до и после теста."""
     cache.clear()
@@ -273,6 +261,8 @@ class TestLogoutAllMethodsAPIView:
         user = user_factory()
         Token.objects.create(user=user)
         refresh = RefreshToken.for_user(user)
+        # До запроса JWT-токен не в blacklist
+        refresh.check_blacklist()
 
         api_client.force_login(user)
 
@@ -283,7 +273,8 @@ class TestLogoutAllMethodsAPIView:
         assert not Token.objects.filter(user=user).exists()
         assert not api_client.session.session_key
         with pytest.raises(TokenError):
-            RefreshToken(refresh).check_blacklist()
+            # После запроса JWT-токен в blacklist
+            refresh.check_blacklist()
 
     def test_invalid_refresh_returns_400(self, api_client, user_factory):
         """Невалидный refresh токен возвращает 400."""
@@ -847,33 +838,22 @@ class TestUserViewSetModeration:
         )
 
     def test_block_user_success(self, api_client, user_factory, mocker):
-        """Успешная блокировка пользователя."""
+        """Успешная блокировка пользователя модератором."""
         moderator = user_factory(role=User.Role.MODERATOR)
         target = user_factory(is_blocked=False)
 
         api_client.force_authenticate(user=moderator)
 
-        mock_block_service = mocker.patch(
-            "users.api.views.block_user_service",
-            return_value=(True, "Пользователь успешно заблокирован."),
-        )
-        mocker.patch(
-            "users.api.permissions.CanBlockUserPermission.has_permission", return_value=True
-        )
-        mocker.patch(
-            "users.api.permissions.CanBlockUserPermission.has_object_permission", return_value=True
-        )
-
         url = reverse("api:users:users-block", kwargs={"username": target.username})
         response = api_client.post(url)
 
         assert response.status_code == 200
-        assert response.data["message"] == "Пользователь успешно заблокирован."
-        mock_block_service.assert_called_once()
+        assert response.data["is_blocked"] is True
 
-        args, kwargs = mock_block_service.call_args
-        assert kwargs["moderator"] == moderator
-        assert kwargs["target_user"] == target
+        target.refresh_from_db()
+        assert target.is_blocked is True
+        assert target.blocked_by == moderator
+        assert target.blocked_at is not None
 
     def test_block_user_already_blocked(self, api_client, user_factory, mocker):
         """Если пользователь уже заблокирован, возвращается 400."""
@@ -882,22 +862,10 @@ class TestUserViewSetModeration:
 
         api_client.force_authenticate(user=moderator)
 
-        mocker.patch(
-            "users.api.views.block_user_service",
-            return_value=(False, "Пользователь уже заблокирован."),
-        )
-        mocker.patch(
-            "users.api.permissions.CanBlockUserPermission.has_permission", return_value=True
-        )
-        mocker.patch(
-            "users.api.permissions.CanBlockUserPermission.has_object_permission", return_value=True
-        )
-
         url = reverse("api:users:users-block", kwargs={"username": target.username})
         response = api_client.post(url)
 
         assert response.status_code == 400
-        assert response.data["message"] == "Пользователь уже заблокирован."
 
     def test_unblock_user_success(self, api_client, user_factory, mocker):
         """Успешная разблокировка пользователя."""
@@ -906,24 +874,41 @@ class TestUserViewSetModeration:
 
         api_client.force_authenticate(user=moderator)
 
-        mock_unblock_service = mocker.patch(
-            "users.api.views.unblock_user_service",
-            return_value=(True, "Пользователь успешно разблокирован."),
-        )
-        mocker.patch(
-            "users.api.permissions.CanBlockUserPermission.has_permission", return_value=True
-        )
-        mocker.patch(
-            "users.api.permissions.CanBlockUserPermission.has_object_permission", return_value=True
-        )
-
         url = reverse("api:users:users-unblock", kwargs={"username": target.username})
         response = api_client.post(url)
 
         assert response.status_code == 200
-        assert response.data["message"] == "Пользователь успешно разблокирован."
-        mock_unblock_service.assert_called_once()
+        assert response.data["is_blocked"] is False
 
-        args, kwargs = mock_unblock_service.call_args
-        assert kwargs["moderator"] == moderator
-        assert kwargs["target_user"] == target
+        target.refresh_from_db()
+        assert target.is_blocked is False
+        assert target.blocked_at is None
+        assert target.blocked_by is None
+
+    @pytest.mark.parametrize(
+        "actor_role, target_role",
+        [
+            # нет права users.block_user
+            (User.Role.USER, User.Role.USER),
+            # роль цели выше
+            (User.Role.MODERATOR, User.Role.ADMIN),
+            # равная роль
+            (User.Role.MODERATOR, User.Role.MODERATOR),
+        ],
+    )
+    def test_block_forbidden(self, api_client, user_factory, actor_role, target_role):
+        """
+        Блокировка пользователя запрещена (403), если у инициатора нет права block_user или
+        роль цели выше либо равна роли инициатора. Статус цели не меняется.
+        """
+        actor = user_factory(role=actor_role)
+        target = user_factory(role=target_role)
+        api_client.force_authenticate(user=actor)
+
+        response = api_client.post(
+            reverse("api:users:users-block", kwargs={"username": target.username})
+        )
+
+        assert response.status_code == 403
+        target.refresh_from_db()
+        assert target.is_blocked is False
