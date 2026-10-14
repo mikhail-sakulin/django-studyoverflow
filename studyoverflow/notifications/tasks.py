@@ -79,7 +79,9 @@ def create_notification(
     # graceful=True - игнорирование при запуске дубликата задачи, при graceful=False
     # Celery выбрасывает исключение в коде, где вызывается дубликат,
     # с True исключение не вызывается.
-    once={"keys": ["user_id", "update_list", "reason"], "graceful": True},
+    # timeout - TTL (время жизни) ключа-блокировки задачи в Redis в секундах,
+    # ключ ставится при постановке задачи в очередь.
+    once={"keys": ["user_id", "update_list", "reason"], "graceful": True, "timeout": 60},
     ignore_result=True,
     acks_late=True,
     reject_on_worker_lost=True,
