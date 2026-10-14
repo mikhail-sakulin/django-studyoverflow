@@ -5,7 +5,7 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
-from posts.models import Comment, LowercaseTag, Post
+from posts.models import Comment, Like, LowercaseTag, Post
 from posts.services.cache import get_post_cache_key, get_tags_cache_key
 
 
@@ -133,22 +133,37 @@ class TestPostViewSet:
         # Пост находится в кеше
         assert cache.get(cache_key) is not None
 
-    def test_create_post_success(self, api_client, user_factory, mocker):
-        """Авторизованный пользователь успешно создает пост, вызывается логгер."""
+    def test_create_post_with_normalized_tags_success(self, api_client, user_factory, mocker):
+        """
+        Авторизованный пользователь успешно создает пост, теги нормализуются, вызывается логгер.
+        """
         user = user_factory()
         api_client.force_authenticate(user=user)
         mock_log = mocker.patch("posts.api.views.log_post_event")
 
         url = reverse("api:posts:posts-list")
-        data = {"title": "New API Post", "content": "API Content", "tags": ["drf", "api"]}
+        data = {"title": "New API Post", "content": "API Content", "tags": ["DRF", "Api"]}
 
         response = api_client.post(url, data, format="json")
 
         assert response.status_code == 201
         assert response.data["title"] == "New API Post"
+        assert set(response.data["tags"]) == {"drf", "api"}
+        assert set(Post.objects.get(pk=response.data["id"]).tags.names()) == {"drf", "api"}
         assert Post.objects.filter(title="New API Post", author=user).exists()
-
         mock_log.assert_called_once_with("post_create", mocker.ANY, user, source="api")
+
+    def test_update_post_tags(self, api_client, post_factory):
+        """PATCH с тегами заменяет теги поста, новые теги нормализуются."""
+        post = post_factory(tags=["old_tag"])
+        api_client.force_authenticate(user=post.author)
+        url = reverse("api:posts:posts-detail", kwargs={"pk": post.pk})
+
+        response = api_client.patch(url, {"tags": ["DRF", " Api "]}, format="json")
+
+        assert response.status_code == 200
+        assert set(response.data["tags"]) == {"drf", "api"}
+        assert set(post.tags.names()) == {"drf", "api"}
 
     def test_update_post_unauthenticated(self, assert_login_required, post_factory):
         """Для редактирования поста требуется авторизация, иначе возвращается 401."""
@@ -167,6 +182,7 @@ class TestPostViewSet:
     def test_update_post_permissions(self, api_client, user_factory, post_factory):
         """Редактировать пост может автор, другой пользователь не модератор - не может."""
         post = post_factory(title="Old title")
+        post_content = post.content
         other_user = user_factory()
         url = reverse("api:posts:posts-detail", kwargs={"pk": post.pk})
 
@@ -180,6 +196,8 @@ class TestPostViewSet:
         response = api_client.patch(url, {"title": "Updated title"}, format="json")
         assert response.status_code == 200
         assert response.data["title"] == "Updated title"
+        # Поле content не изменилось
+        assert response.data["content"] == post_content
 
     def test_delete_post_permissions(self, api_client, user_factory, post_factory):
         """Удалить пост может автор, другой пользователь не модератор - не может."""
@@ -248,7 +266,8 @@ class TestCommentViewSet:
         Проверка возврата древовидной структуры комментариев поста, кастомных полей пагинации
         (parents_comments_count, all_comments_count) и работы сортировки (CommentSortMixin).
         """
-        post = post_factory(comments_count=3)
+        post = post_factory()
+        # Родительские комментарии
         root_comment1 = comment_factory(post=post, likes_count=5)
         root_comment2 = comment_factory(post=post, likes_count=10)
 
@@ -262,8 +281,7 @@ class TestCommentViewSet:
 
         assert response.status_code == 200
         assert response.data["parents_comments_count"] == 2
-        # Всего комментариев 3 + 3 = 6, из-за post = post_factory(comments_count=3)
-        assert response.data["all_comments_count"] == 6
+        assert response.data["all_comments_count"] == 3
         assert len(response.data["results"]) == 2
 
         # Проверка порядка корневых комментариев
@@ -338,7 +356,7 @@ class TestCommentViewSet:
         assert api_client.delete(url).status_code == 204
         assert not Comment.objects.filter(pk=comment.pk).exists()
 
-    def test_moderator_can_update_and_delete_post(
+    def test_moderator_can_update_and_delete_comment(
         self, api_client, user_factory, comment_factory, mocker
     ):
         """
@@ -386,20 +404,13 @@ class TestLikeMixin:
             "api:posts:posts-like", url_kwargs={"pk": post.pk}, method="post", is_api=True
         )
 
-    def test_toggle_post_like_success(self, api_client, user_factory, post_factory, mocker):
+    def test_toggle_post_like_adds_and_removes_success(
+        self, api_client, user_factory, post_factory, mocker
+    ):
         """Успешное переключение лайка поста (toggle-like)."""
         user = user_factory()
         post = post_factory()
         api_client.force_authenticate(user=user)
-
-        mock_obj = mocker.MagicMock()
-        mock_obj.likes_count = 1
-
-        mock_perform = mocker.patch(
-            "posts.api.views.perform_toggle_like",
-            # (obj, created)
-            return_value=(mock_obj, True),
-        )
 
         url = reverse("api:posts:posts-like", kwargs={"pk": post.pk})
         response = api_client.post(url)
@@ -407,12 +418,12 @@ class TestLikeMixin:
         assert response.status_code == 200
         assert response.data["liked_now"] is True
         assert response.data["likes_count_on_object"] == 1
+        assert Like.objects.is_liked(user, post)
 
-        call_args = mock_perform.call_args
-        assert call_args.args[0] == user
-        assert list(call_args.args[1]) == [post]
-        assert call_args.args[2] == str(post.pk)
-        assert call_args.kwargs == {"source": "api"}
+        response = api_client.post(url)
+        assert response.data["liked_now"] is False
+        assert response.data["likes_count_on_object"] == 0
+        assert not Like.objects.is_liked(user, post)
 
     def test_post_likes_list_success(self, api_client, user_factory, post_factory, like_factory):
         """Успешное получение списка лайкнувших пост пользователей (likers-list)."""
@@ -434,35 +445,22 @@ class TestLikeMixin:
         assert "liker1" in usernames
         assert "liker2" in usernames
 
-    def test_toggle_comment_like_success(self, api_client, user_factory, comment_factory, mocker):
+    def test_toggle_comment_like_adds_and_removes_success(
+        self, api_client, user_factory, comment_factory, mocker
+    ):
         """Успешное переключение лайка комментария (toggle-like)."""
         user = user_factory()
         comment = comment_factory()
         api_client.force_authenticate(user=user)
-
-        mock_obj = mocker.MagicMock()
-        mock_obj.likes_count = 1
-
-        mock_perform = mocker.patch(
-            "posts.api.views.perform_toggle_like",
-            # (obj, created)
-            return_value=(mock_obj, True),
-        )
-
         url = reverse(
             "api:posts:post-comments-like", kwargs={"post_pk": comment.post_id, "pk": comment.pk}
         )
-        response = api_client.post(url)
 
-        assert response.status_code == 200
-        assert response.data["liked_now"] is True
-        assert response.data["likes_count_on_object"] == 1
+        assert api_client.post(url).data == {"liked_now": True, "likes_count_on_object": 1}
+        assert Like.objects.is_liked(user, comment)
 
-        call_args = mock_perform.call_args
-        assert call_args.args[0] == user
-        assert list(call_args.args[1]) == [comment]
-        assert call_args.args[2] == str(comment.pk)
-        assert call_args.kwargs == {"source": "api"}
+        assert api_client.post(url).data == {"liked_now": False, "likes_count_on_object": 0}
+        assert not Like.objects.is_liked(user, comment)
 
     def test_comment_likes_list_success(
         self, api_client, user_factory, post_factory, comment_factory, like_factory

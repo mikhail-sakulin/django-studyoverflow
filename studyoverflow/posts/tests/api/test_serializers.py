@@ -63,34 +63,6 @@ class TestPostSerializer:
         mock_validate.assert_called_once_with(["Django "])
         assert result == ["django"]
 
-    def test_create_assigns_tags(self, mocker):
-        """Метод create корректно извлекает теги и устанавливает их."""
-        serializer = PostSerializer()
-        mock_post = mocker.Mock()
-        mock_super_create = mocker.patch(
-            "rest_framework.serializers.ModelSerializer.create", return_value=mock_post
-        )
-
-        serializer.create({"title": "Новый пост", "tags": ["python", "django"]})
-
-        # Теги удалены из kwargs
-        mock_super_create.assert_called_once_with({"title": "Новый пост"})
-        # Теги присвоены через .set()
-        mock_post.tags.set.assert_called_once_with(["python", "django"])
-
-    def test_update_assigns_tags(self, mocker):
-        """Метод update корректно обновляет теги, если они переданы."""
-        serializer = PostSerializer()
-        mock_instance = mocker.Mock()
-        mock_super_update = mocker.patch(
-            "rest_framework.serializers.ModelSerializer.update", return_value=mock_instance
-        )
-
-        serializer.update(mock_instance, {"title": "Обновлено", "tags": ["drf"]})
-
-        mock_super_update.assert_called_once_with(mock_instance, {"title": "Обновлено"})
-        mock_instance.tags.set.assert_called_once_with(["drf"])
-
 
 class TestPostFilterSerializer:
     """Тестирование сериализатора для валидации GET-параметров фильтрации списка постов."""
