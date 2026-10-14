@@ -1,8 +1,14 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.shortcuts import redirect
+from redis.exceptions import RedisError
 
 from users.services.online import set_user_online
+
+
+logger = logging.getLogger(__name__)
 
 
 class OnlineStatusMiddleware:
@@ -25,15 +31,35 @@ class OnlineStatusMiddleware:
         """
         Обработка входящего запроса / исходящего ответа.
 
-        После обработки запроса обновляет онлайн статус в Redis,
-        если пользователь аутентифицирован.
+        Обновляет онлайн-статус пользователя в Redis до обработки запроса. Если пользователь
+        аутентифицировался именно в этом запросе, обновляет онлайн-статус пользователя уже после
+        обработки запроса.
         """
+        was_authenticated = request.user.is_authenticated
+        if was_authenticated:
+            self._mark_online(request.user.pk)
+
         response = self.get_response(request)
 
-        if request.user.is_authenticated and request.user.pk:
-            set_user_online(request.user.pk)
+        if not was_authenticated and request.user.is_authenticated:
+            self._mark_online(request.user.pk)
 
         return response
+
+    @staticmethod
+    def _mark_online(user_id: int) -> None:
+        """
+        Задает пользователю онлайн-статус в Redis с обработкой исключения при недоступности Redis.
+
+        При недоступности Redis запрос не должен падать, событие логируется.
+        """
+        try:
+            set_user_online(user_id)
+        except RedisError:
+            logger.warning(
+                "Не удалось обновить онлайн-статус: Redis недоступен.",
+                extra={"user_id": user_id, "event_type": "online_status_redis_error"},
+            )
 
 
 class BlockedUserMiddleware:

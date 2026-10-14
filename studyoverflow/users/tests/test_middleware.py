@@ -7,6 +7,7 @@ from django.test import RequestFactory
 from django.urls import reverse
 
 from users.middleware import BlockedUserMiddleware, OnlineStatusMiddleware
+from users.services.online import get_online_user_ids, is_user_online
 
 
 @pytest.fixture
@@ -22,33 +23,31 @@ def request_factory():
 
 
 class TestOnlineStatusMiddleware:
-    def test_authenticated_user_calls_set_online(self, request_factory, mocker, get_response):
-        """Если пользователь аутентифицирован, вызывается обновление статуса в Redis."""
+    def test_authenticated_user_calls_set_online(self, request_factory, get_response):
+        """Если пользователь аутентифицирован, вызывается обновление онлайн-статуса в Redis."""
         middleware = OnlineStatusMiddleware(get_response)
         request = request_factory.get("/")
 
         # Stub для объекта пользователя
         request.user = SimpleNamespace(is_authenticated=True, pk=5)
 
-        mock_set_online = mocker.patch("users.middleware.set_user_online")
+        assert is_user_online(5) is False
 
         response = middleware(request)
 
         assert response.status_code == 200
-        mock_set_online.assert_called_once_with(5)
+        assert is_user_online(5) is True
 
-    def test_anonymous_user_ignores_set_online(self, request_factory, mocker, get_response):
-        """Для анонимных пользователей функция обновления статуса не вызывается."""
+    def test_anonymous_user_ignores_set_online(self, request_factory, get_response):
+        """Для анонимных пользователей онлайн-статус не выставляется."""
         middleware = OnlineStatusMiddleware(get_response)
         request = request_factory.get("/")
         request.user = AnonymousUser()
 
-        mock_set_online = mocker.patch("users.middleware.set_user_online")
-
         response = middleware(request)
 
         assert response.status_code == 200
-        mock_set_online.assert_not_called()
+        assert get_online_user_ids() == []
 
 
 class TestBlockedUserMiddleware:
