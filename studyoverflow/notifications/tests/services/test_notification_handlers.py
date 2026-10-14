@@ -1,7 +1,6 @@
 import pytest
-from django.contrib.contenttypes.models import ContentType
 
-from notifications.models import NotificationType
+from notifications.models import Notification, NotificationType
 from notifications.services.notification_handlers import (
     handle_notification_comment_like,
     handle_notification_comment_on_post_created,
@@ -11,47 +10,6 @@ from notifications.services.notification_handlers import (
     handle_notification_user_created,
     handle_send_channel_notify_event,
 )
-from posts.models import Comment, Like, Post
-
-
-@pytest.fixture(autouse=True)
-def mock_transaction_on_commit(mocker):
-    """
-    Мок transaction.on_commit, чтобы celery задачи выполнялись сразу в тестах.
-
-    Вместо данной фикстуры с моком в самих тестах можно использовать контекстный менеджер Django
-    django.test.TestCase.captureOnCommitCallbacks, или же фикстуру
-    django_capture_on_commit_callbacks из pytest-django. При текущем моке коллбеки будут
-    вызываться сразу при их регистрации. При использовании контекстного менеджера заданные
-    колбеки (созданные при отработке кода внутри блока with) будут вызываться только после
-    выхода из блока with, имитируя коммит транзакции.
-
-    Пример использования контекстного менеджера внутри теста:
-
-    with django_capture_on_commit_callbacks(execute=True) as callbacks:
-        func()
-
-    При execute=True коллбеки вызовутся после выхода из блока with.
-
-    При использовании контекстного менеджера у теста должен быть декоратор @pytest.mark.django_db,
-    так как настоящий transaction.on_commit проверяет состояние транзакции через соединение с БД,
-    даже если тест сам не работает с БД.
-    """
-    return mocker.patch(
-        "notifications.services.notification_handlers.transaction.on_commit",
-        side_effect=lambda func: func(),
-    )
-
-
-@pytest.fixture(autouse=True)
-def mock_celery_task_create_notification(mocker):
-    """
-    Поскольку мокается transaction.on_commit, то celery-задачи будут выполняться.
-
-    После создания объектов (пользователя, поста, комментария) через сигналы и слой сервисов
-    уведомлений запускается celery-задача, которая использует redis, поэтому она мокается.
-    """
-    mocker.patch("notifications.services.notification_handlers.create_notification.delay")
 
 
 @pytest.mark.django_db
@@ -59,204 +17,198 @@ class TestNotificationHandlers:
     """Тестирование обработчиков создания уведомлений и запуска celery задач."""
 
     def test_handle_send_channel_notify_event(
-        self, user_factory, notification_post_factory, mocker
+        self, django_capture_on_commit_callbacks, notification_post_factory, mock_notify_dispatch
     ):
         """
-        Проверка создания celery-задачи для отправки обновления счетчика непрочитанных уведомлений.
+        Проверка создания Celery-задачи для отправки обновления счетчика непрочитанных уведомлений.
         """
-        # Мок celery-задачи, которая будет вызываться в тесте
-        mock_task = mocker.patch(
-            "notifications.services.notification_handlers.send_channel_notify_event.apply_async"
-        )
+        notification = notification_post_factory()
+        mock_notify_dispatch.reset_mock()
 
-        user = user_factory()
+        with django_capture_on_commit_callbacks(execute=True):
+            handle_send_channel_notify_event(notification)
 
-        notification = notification_post_factory(user=user)
-
-        mock_task.reset_mock()
-
-        handle_send_channel_notify_event(notification)
-
-        mock_task.assert_called_once_with(
-            kwargs={"user_id": user.pk, "update_list": True, "reason": "update"}
+        mock_notify_dispatch.assert_called_once_with(
+            (),
+            {
+                "user_id": notification.user_id,
+                "update_list": True,
+                "reason": "update",
+            },
         )
 
     def test_handle_notification_post_like_other_user(
-        self, user_factory, post_factory, like_factory, mocker
+        self, django_capture_on_commit_callbacks, user_factory, post_factory, like_factory
     ):
         """
-        Проверка создания celery-задачи для создания уведомления о
-        лайке поста другим пользователем.
+        Проверка создания уведомления о лайке поста другим пользователем.
         """
-        author = user_factory(username="author_user")
+        author = user_factory()
         liker = user_factory(username="liker_user")
-        post = post_factory(author=author, title="Python Django Backend")
-
+        post = post_factory(author=author, title="Мой пост")
         like = like_factory(content_object=post, user=liker)
 
-        mock_delay = mocker.patch(
-            "notifications.services.notification_handlers.create_notification.delay"
-        )
+        with django_capture_on_commit_callbacks(execute=True):
+            handle_notification_post_like(like)
 
-        handle_notification_post_like(like)
-
-        mock_delay.assert_called_once_with(
-            user_id=author.pk,
-            actor_id=liker.pk,
-            message=mocker.ANY,
-            notification_type=NotificationType.LIKE_POST,
-            content_type_id=ContentType.objects.get_for_model(Like).pk,
-            object_id=like.pk,
-        )
+        n = Notification.objects.get(user=author, notification_type=NotificationType.LIKE_POST)
+        assert n.user == author
+        assert n.actor == liker
+        assert n.content_object == like
+        assert n.message == 'Пользователь liker_user лайкнул ваш пост "Мой пост".'
 
     def test_handle_notification_post_like_self(
-        self, user_factory, post_factory, like_factory, mocker
+        self, django_capture_on_commit_callbacks, user_factory, post_factory, like_factory
     ):
         """
-        Проверка создания celery-задачи для создания уведомления о лайке собственного поста.
+        Проверка создания уведомления о лайке собственного поста.
         """
         author = user_factory()
-        post = post_factory(author=author, title="Self post test")
+        post = post_factory(author=author, title="Мой пост")
         like = like_factory(content_object=post, user=author)
 
-        mock_delay = mocker.patch(
-            "notifications.services.notification_handlers.create_notification.delay"
-        )
+        with django_capture_on_commit_callbacks(execute=True):
+            handle_notification_post_like(like)
 
-        handle_notification_post_like(like)
-
-        mock_delay.assert_called_once_with(
-            user_id=author.pk,
-            actor_id=author.pk,
-            message=mocker.ANY,
-            notification_type=NotificationType.LIKE_POST,
-            content_type_id=ContentType.objects.get_for_model(Like).pk,
-            object_id=like.pk,
-        )
+        n = Notification.objects.get(user=author, notification_type=NotificationType.LIKE_POST)
+        assert n.user == author
+        assert n.actor == author
+        assert n.message == 'Вы лайкнули свой пост "Мой пост".'
 
     def test_handle_notification_comment_like_other_user(
-        self, user_factory, post_factory, comment_factory, like_factory, mocker
+        self, django_capture_on_commit_callbacks, user_factory, comment_factory, like_factory
     ):
-        """Проверка создания celery-задачи для создания уведомления о лайке комментария."""
-        author = user_factory(username="comment_author")
-        liker = user_factory(username="comment_liker")
-        post = post_factory()
-        comment = comment_factory(post=post, author=author, content="Comment text")
+        """Проверка создания уведомления о лайке комментария."""
+        author = user_factory()
+        liker = user_factory(username="liker_user")
+        comment = comment_factory(author=author, content="New Comment")
         like = like_factory(content_object=comment, user=liker)
 
-        mock_delay = mocker.patch(
-            "notifications.services.notification_handlers.create_notification.delay"
-        )
+        with django_capture_on_commit_callbacks(execute=True):
+            handle_notification_comment_like(like)
 
-        handle_notification_comment_like(like)
+        n = Notification.objects.get(user=author, notification_type=NotificationType.LIKE_COMMENT)
+        assert n.user == author
+        assert n.actor == liker
+        assert n.message == 'Пользователь liker_user лайкнул ваш комментарий "New Comment".'
 
-        mock_delay.assert_called_once_with(
-            user_id=author.pk,
-            actor_id=liker.pk,
-            message=mocker.ANY,
-            notification_type=NotificationType.LIKE_COMMENT,
-            content_type_id=ContentType.objects.get_for_model(Like).pk,
-            object_id=like.pk,
-        )
-
-    def test_handle_notification_post_created(self, user_factory, post_factory, mocker):
-        """Проверка создания celery-задачи для создания уведомления о создании нового поста."""
+    def test_handle_notification_comment_like_by_self(
+        self, django_capture_on_commit_callbacks, user_factory, comment_factory, like_factory
+    ):
+        """
+        Проверка создания уведомления о лайке собственного комментария.
+        """
         author = user_factory()
-        post = post_factory(author=author, title="New Test Post")
+        comment = comment_factory(author=author, content="New Comment")
+        like = like_factory(content_object=comment, user=author)
 
-        mock_delay = mocker.patch(
-            "notifications.services.notification_handlers.create_notification.delay"
-        )
+        with django_capture_on_commit_callbacks(execute=True):
+            handle_notification_comment_like(like)
 
-        handle_notification_post_created(post)
+        n = Notification.objects.get(user=author, notification_type=NotificationType.LIKE_COMMENT)
+        assert n.message == 'Вы лайкнули свой комментарий "New Comment".'
 
-        mock_delay.assert_called_once_with(
-            user_id=author.pk,
-            actor_id=author.pk,
-            message=mocker.ANY,
-            notification_type=NotificationType.POST,
-            content_type_id=ContentType.objects.get_for_model(Post).pk,
-            object_id=post.pk,
-        )
+    def test_handle_notification_post_created(
+        self, django_capture_on_commit_callbacks, user_factory, post_factory
+    ):
+        """Проверка создания уведомления о создании нового поста."""
+        author = user_factory()
+        post = post_factory(author=author, title="Мой пост")
+
+        with django_capture_on_commit_callbacks(execute=True):
+            handle_notification_post_created(post)
+
+        n = Notification.objects.get(user=author, notification_type=NotificationType.POST)
+        assert n.user == author
+        assert n.actor == author
+        assert n.content_object == post
+        assert n.message == 'Вы опубликовали новый пост "Мой пост".'
 
     def test_handle_notification_comment_on_post_created_other(
-        self, user_factory, post_factory, comment_factory, mocker
+        self, django_capture_on_commit_callbacks, user_factory, post_factory, comment_factory
     ):
-        """Проверка создания celery-задачи для создания уведомления о комментарии к посту."""
-        post_author = user_factory(username="post_owner")
+        """Проверка создания уведомления о комментарии к посту."""
+        post_author = user_factory()
         commenter = user_factory(username="commenter_user")
-        post = post_factory(author=post_author, title="Main Post Title")
-        comment = comment_factory(post=post, author=commenter, content="Cool post insight")
+        post = post_factory(author=post_author, title="Мой пост")
+        comment = comment_factory(post=post, author=commenter, content="Привет")
 
-        mock_delay = mocker.patch(
-            "notifications.services.notification_handlers.create_notification.delay"
+        with django_capture_on_commit_callbacks(execute=True):
+            handle_notification_comment_on_post_created(comment)
+
+        n = Notification.objects.get(user=post_author, notification_type=NotificationType.COMMENT)
+        assert n.user == post_author
+        assert n.actor == commenter
+        assert n.content_object == comment
+        assert n.message == (
+            'Пользователь commenter_user оставил комментарий "Привет" к вашему посту "Мой пост".'
         )
 
-        handle_notification_comment_on_post_created(comment)
+    def test_comment_on_own_post(
+        self, django_capture_on_commit_callbacks, user_factory, post_factory, comment_factory
+    ):
+        author = user_factory()
+        post = post_factory(author=author, title="Мой пост")
+        comment = comment_factory(post=post, author=author, content="Привет")
 
-        mock_delay.assert_called_once_with(
-            user_id=post_author.pk,
-            actor_id=commenter.pk,
-            message=mocker.ANY,
-            notification_type=NotificationType.COMMENT,
-            content_type_id=ContentType.objects.get_for_model(Comment).pk,
-            object_id=comment.pk,
-        )
+        with django_capture_on_commit_callbacks(execute=True):
+            handle_notification_comment_on_post_created(comment)
+
+        n = Notification.objects.get(user=author, notification_type=NotificationType.COMMENT)
+        assert n.message == 'Вы оставили комментарий "Привет" к вашему посту "Мой пост".'
 
     def test_handle_notification_reply_to_comment_created_other(
-        self, user_factory, post_factory, comment_factory, mocker
+        self, django_capture_on_commit_callbacks, user_factory, post_factory, comment_factory
     ):
         """
-        Проверка создания celery-задачи для создания уведомления об ответе на
-        комментарий от другого пользователя.
+        Проверка создания уведомления об ответе на комментарий от другого пользователя.
         """
-        parent_author = user_factory(username="parent_owner")
+        parent_author = user_factory()
         replier = user_factory(username="replier_user")
         post = post_factory()
-        parent_comment = comment_factory(
-            post=post, author=parent_author, content="Initial comment message"
-        )
-        reply_comment = comment_factory(
-            post=post,
-            parent_comment=parent_comment,
-            reply_to=parent_comment,
-            author=replier,
-            content="Reply response text",
+        parent = comment_factory(post=post, author=parent_author, content="Вопрос")
+        reply = comment_factory(
+            post=post, author=replier, parent_comment=parent, reply_to=parent, content="Ответ"
         )
 
-        mock_delay = mocker.patch(
-            "notifications.services.notification_handlers.create_notification.delay"
+        with django_capture_on_commit_callbacks(execute=True):
+            handle_notification_reply_to_comment_created(reply)
+
+        n = Notification.objects.get(user=parent_author, notification_type=NotificationType.REPLY)
+        assert n.user == parent_author
+        assert n.actor == replier
+        assert n.content_object == reply
+        assert n.message == 'Пользователь replier_user ответил "Ответ" на ваш комментарий "Вопрос".'
+
+    def test_reply_to_own_comment(
+        self, django_capture_on_commit_callbacks, user_factory, post_factory, comment_factory
+    ):
+        author = user_factory()
+        post = post_factory()
+        parent = comment_factory(post=post, author=author, content="Вопрос")
+        reply = comment_factory(
+            post=post, author=author, parent_comment=parent, reply_to=parent, content="Ответ"
         )
 
-        handle_notification_reply_to_comment_created(reply_comment)
+        with django_capture_on_commit_callbacks(execute=True):
+            handle_notification_reply_to_comment_created(reply)
 
-        mock_delay.assert_called_once_with(
-            user_id=parent_author.pk,
-            actor_id=replier.pk,
-            message=mocker.ANY,
-            notification_type=NotificationType.REPLY,
-            content_type_id=ContentType.objects.get_for_model(Comment).pk,
-            object_id=reply_comment.pk,
-        )
+        n = Notification.objects.get(user=author, notification_type=NotificationType.REPLY)
+        assert n.message == 'Вы ответили "Ответ" на ваш комментарий "Вопрос".'
 
-    def test_handle_notification_user_created(self, user_factory, mocker):
+    def test_handle_notification_user_created(
+        self, user_factory, django_capture_on_commit_callbacks
+    ):
         """
-        Проверка создания celery-задачи для создания приветственного уведомления об
-        успешной регистрации пользователя.
+        Проверка создания приветственного уведомления об успешной регистрации пользователя.
         """
         user = user_factory()
 
-        mock_delay = mocker.patch(
-            "notifications.services.notification_handlers.create_notification.delay"
-        )
+        with django_capture_on_commit_callbacks(execute=True):
+            handle_notification_user_created(user)
 
-        handle_notification_user_created(user)
-
-        mock_delay.assert_called_once_with(
-            user_id=user.pk,
-            actor_id=user.pk,
-            message=mocker.ANY,
-            notification_type=NotificationType.REGISTER,
-            content_type_id=ContentType.objects.get_for_model(type(user)).pk,
-            object_id=user.pk,
-        )
+        n = Notification.objects.get(user=user, notification_type=NotificationType.REGISTER)
+        assert n.user == user
+        assert n.actor == user
+        assert n.content_object == user
+        assert n.message == "Вы успешно зарегистрировались!"
