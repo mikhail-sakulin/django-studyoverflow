@@ -1,7 +1,28 @@
+import io
+import uuid
+
 import pytest
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.urls import reverse
+from PIL import Image
 
 from users.models import User
+
+
+def put_avatar(folder_uuid: str, name: str = "avatar.png") -> str:
+    """
+    Сохраняет в default_storage (InMemoryStorage для тестов) тестовое PNG-изображение 300x300
+    по пути avatars/<folder_uuid>/<name> и возвращает имя файла в хранилище.
+    """
+    buffer = io.BytesIO()
+    Image.new("RGB", (300, 300), "red").save(buffer, format="PNG")
+    return default_storage.save(f"avatars/{folder_uuid}/{name}", ContentFile(buffer.getvalue()))
+
+
+def small_avatar_names(user: User) -> list[str]:
+    """Возвращает пути к файлам миниатюр аватара пользователя в хранилище."""
+    return [getattr(user, field_name).name for field_name in User.get_small_avatar_fields()]
 
 
 @pytest.mark.django_db
@@ -87,113 +108,135 @@ class TestUserModelMethods:
 
 @pytest.mark.django_db
 class TestUserModelAvatarCeleryTasks:
-    """Тестирование логики запуска Celery задач при работе с полями avatar."""
+    """
+    Тестирование логики обработки аватара при работе с моделью пользователя.
 
-    @pytest.fixture(autouse=True)
-    def mock_on_commit(self, mocker):
-        """Фикстура заставляет transaction.on_commit выполнять колбэк немедленно."""
-        # Celery задачи создаются через transaction.on_commit(lambda: ...),
-        # мок для transaction.on_commit с данным side_effect заставляет запускать celery задачи
-        # сразу же. Если их замокать тоже, то можно отслеживать вызов нужных задач.
-        #
-        # В func передается lamba: ..., которая передана в on_commit.
-        #
-        # При тестировании с @pytest.mark.django_db (или с TestCase) транзакция откатывается
-        # после тестов, а не завершается, поэтому при реальном transaction.on_commit
-        # задача никогда бы не создалась.
-        return mocker.patch("users.models.transaction.on_commit", side_effect=lambda func: func())
+    В настройках тестирования задано CELERY_TASK_ALWAYS_EAGER = True, поэтому Celery-задачи в
+    тестах выполняются синхронно (сразу), но только после коммита транзакции — в тестах
+    нужно эмулировать через django_capture_on_commit_callbacks.
+    """
 
-    @pytest.fixture(autouse=True)
-    def mock_handle_notification_user_created(self, mocker):
-        # Мокается сервис создания уведомления, который вызовется при создании пользователя.
-        #
-        # Из-за фикстуры mock_on_commit celery задачи выполняются сразу, при создании пользователя
-        # срабатывает сигнал, который вызывает создание приветственного уведомления, на это
-        # срабатывает сигнал создания уведомления для обновления счетчика уведомлений у
-        # пользователя (сигнал создает таску), где задействован уже Redis,
-        # при отсутствии которого в тесте будет ошибка.
-        #
-        # В других тестах, где создается пользователь, все нормально, поскольку
-        # не мокается transaction.on_commit.
-        mocker.patch("notifications.signals.handle_notification_user_created")
-
-    def test_creation_with_custom_avatar_triggers_celery(self, user_factory, mocker):
-        """При создании пользователя с кастомным аватаром запускается задача генерации миниатюр."""
-        mock_task = mocker.patch("users.tasks.generate_and_save_avatars_small.delay")
-
-        user_factory(avatar="avatars/5/custom.jpg")
-
-        mock_task.assert_called_once()
-
-    def test_update_avatar_triggers_celery_chain(self, user_factory, mocker):
-        """При обновлении аватара запускается цепочка (chain) Celery задач."""
-        # Создается пользователь без запуска celery задачи
-        mocker.patch("users.tasks.generate_and_save_avatars_small.delay")
-        user = user_factory(avatar="avatars/5/old.jpg")
-
-        mocker.patch(
-            "users.models.get_old_avatar_names",
-            return_value=("avatars/5/old.jpg", ["avatars/5/old_small.jpg"]),
-        )
-        # Мокается цепочка celery задач
-        mock_chain = mocker.patch("users.models.chain")
-
-        user.avatar = "avatars/5/new.jpg"
-        user.save()
-
-        mock_chain.assert_called_once()
-        # Проверка, что цепочка задач запущена и отправлена в брокер сообщений
-        # на выполнение (аналог .delay()) (при тестировании задачи выполняются сразу, брокера нет)
-        mock_chain.return_value.apply_async.assert_called_once()
-
-    def test_delete_avatar_resets_to_default_and_triggers_delete_task(self, user_factory, mocker):
+    def test_creation_with_custom_avatar_generates_thumbnails(
+        self, user_factory, django_capture_on_commit_callbacks
+    ):
         """
-        Удаление аватара сбрасывает поля на дефолтные и запускает Celery задачу
-        удаления старых файлов.
+        При создании пользователя с кастомным аватаром после коммита транзакции
+        генерируются все миниатюры, их файлы появляются в хранилище.
         """
-        mocker.patch("users.tasks.generate_and_save_avatars_small.delay")
-        user = user_factory(
-            avatar="avatars/5/custom.jpg", avatar_small_size1="avatars/5/custom_small1.jpg"
-        )
+        avatar = put_avatar(str(uuid.uuid4()))
 
-        mocker.patch(
-            "users.models.get_old_avatar_names",
-            return_value=(
-                "avatars/5/custom.jpg",
-                [
-                    "avatars/5/custom.jpg",
-                    "avatars/5/custom_small1.jpg",
-                ],
-            ),
-        )
-        mock_delete_task = mocker.patch("users.tasks.delete_old_avatars_from_s3_storage.delay")
+        with django_capture_on_commit_callbacks(execute=True):
+            user = user_factory(avatar=avatar)
 
-        user.avatar = None
-        user.save()
+        user.refresh_from_db()
+        avatar_small_names = small_avatar_names(user)
 
+        # Аватар и миниатюры созданы и лежат в хранилище
+        assert default_storage.exists(user.avatar.name)
+        assert all(default_storage.exists(name) for name in avatar_small_names)
+
+    def test_replacing_avatar_generates_new_thumbnails_and_deletes_old_files(
+        self, user_factory, django_capture_on_commit_callbacks
+    ):
+        """
+        При замене аватара генерируются новые миниатюры, файлы предыдущего аватара
+        удаляются из хранилища.
+        """
+        folder = str(uuid.uuid4())
+        old = put_avatar(folder, "old.png")
+
+        # Создание пользователя с кастомным аватаром, миниатюры создаются
+        with django_capture_on_commit_callbacks(execute=True):
+            user = user_factory(avatar=old)
+
+        user.refresh_from_db()
+        assert default_storage.exists(user.avatar.name)
+        old_small_names = small_avatar_names(user)
+        assert all(default_storage.exists(name) for name in old_small_names)
+
+        new = put_avatar(folder, "new.png")
+
+        # Обновление аватара и миниатюр
+        with django_capture_on_commit_callbacks(execute=True):
+            user.avatar = new
+            user.save()
+
+        user.refresh_from_db()
+        new_small_names = small_avatar_names(user)
+
+        # Проверка, что аватар и все миниатюры обновились (имена новые) и их файлы лежат в хранилище
+        assert user.avatar.name == new
+        assert not (set(new_small_names) & set(old_small_names))
+        assert default_storage.exists(user.avatar.name)
+        assert all(default_storage.exists(name) for name in new_small_names)
+
+        # Старый аватар и его миниатюры удалены из хранилища
+        assert not default_storage.exists(old)
+        assert not any(default_storage.exists(name) for name in old_small_names)
+
+    def test_resetting_avatar_restores_defaults_and_deletes_files(
+        self, user_factory, django_capture_on_commit_callbacks
+    ):
+        """
+        Удаление аватара сбрасывает аватар и миниатюры на дефолтные значения
+        и удаляет старый файл из хранилища.
+        """
+        old = put_avatar(str(uuid.uuid4()))
+
+        # Создание пользователя с кастомным аватаром, миниатюры создаются
+        with django_capture_on_commit_callbacks(execute=True):
+            user = user_factory(avatar=old)
+
+        # Аватар и его миниатюры сохранены в хранилище
+        user.refresh_from_db()
+        old_small_names = small_avatar_names(user)
+        assert default_storage.exists(user.avatar.name)
+        assert all(default_storage.exists(name) for name in old_small_names)
+
+        # Удаление аватара задает стандартные значения для него и миниатюр, старые файлы
+        # удаляются из хранилища
+        with django_capture_on_commit_callbacks(execute=True):
+            user.avatar = None
+            user.save()
+
+        user.refresh_from_db()
+
+        # После сброса аватара заданы стандартные значения, старые файлы удалены из хранилища
         assert user.avatar.name == User.DEFAULT_AVATAR_FILENAME
         assert user.avatar_small_size1.name == User.DEFAULT_AVATAR_SMALL_SIZE1_FILENAME
-        mock_delete_task.assert_called_once_with(
-            user.pk,
-            [
-                "avatars/5/custom.jpg",
-                "avatars/5/custom_small1.jpg",
-            ],
-        )
+        assert user.avatar_small_size2.name == User.DEFAULT_AVATAR_SMALL_SIZE2_FILENAME
+        assert user.avatar_small_size3.name == User.DEFAULT_AVATAR_SMALL_SIZE3_FILENAME
 
-    def test_save_without_avatar_change_does_not_trigger_celery(self, user_factory, mocker):
-        """Сохранение профиля без изменения аватара не вызывает задачи Celery."""
-        mocker.patch("users.tasks.generate_and_save_avatars_small.delay")
-        user = user_factory(avatar="avatars/custom.jpg")
+        assert not default_storage.exists(old)
+        assert not any(default_storage.exists(name) for name in old_small_names)
 
-        # Моки Celery задач
-        mock_chain = mocker.patch("users.models.chain")
-        mock_delete_task = mocker.patch("users.tasks.delete_old_avatars_from_s3_storage.delay")
-        mock_generate_task = mocker.patch("users.tasks.generate_and_save_avatars_small.delay")
+    def test_save_without_avatar_change_does_not_touch_files(
+        self, user_factory, django_capture_on_commit_callbacks
+    ):
+        """
+        Сохранение профиля без изменения аватара не затрагивает файлы в хранилище
+        и не запускает генерацию миниатюр.
+        """
+        avatar = put_avatar(str(uuid.uuid4()))
 
-        user.first_name = "Иван"
-        user.save()
+        with django_capture_on_commit_callbacks(execute=True):
+            user = user_factory(avatar=avatar)
 
-        mock_chain.assert_not_called()
-        mock_delete_task.assert_not_called()
-        mock_generate_task.assert_not_called()
+        user.refresh_from_db()
+        old_small_names = small_avatar_names(user)
+        assert default_storage.exists(user.avatar.name)
+        assert all(default_storage.exists(name) for name in old_small_names)
+
+        with django_capture_on_commit_callbacks(execute=True):
+            user.first_name = "Иван"
+            user.save()
+
+        # После обновления пользователя без изменения аватара, аватар и его миниатюры не меняются
+        user.refresh_from_db()
+        new_small_names = small_avatar_names(user)
+
+        assert user.avatar.name == avatar
+        assert default_storage.exists(avatar)
+        # миниатюры не обновлялись
+        assert old_small_names == new_small_names
+        assert all(default_storage.exists(name) for name in new_small_names)

@@ -6,7 +6,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from posts.models import Post
-from posts.services import get_post_cache_key, get_tags_cache_key
+from posts.services.cache import get_post_cache_key, get_tags_cache_key
 
 
 User = get_user_model()
@@ -208,6 +208,7 @@ class TestPostUpdateView:
         """Модератор с правом posts.moderate_post может редактировать чужой пост."""
         moderator = user_factory(role=User.Role.MODERATOR)
         post = post_factory()
+        old_slug = post.slug
 
         mock_log = mocker.patch("posts.views.post_views.log_post_event")
 
@@ -215,25 +216,38 @@ class TestPostUpdateView:
         url = reverse("posts:edit", kwargs={"pk": post.pk, "slug": post.slug})
 
         response = client.post(
-            url, {"title": "Moderated title", "content": post.content, "tags": post.tags}
+            url, {"title": "Moderated title", "content": "**new** text", "tags": "a, b"}
         )
 
         assert response.status_code == 302
         post.refresh_from_db()
         assert post.title == "Moderated title"
+        assert post.content == "**new** text"
+        assert "<strong>new</strong>" in post.rendered_content
+        assert "new text" in post.search_content
+        assert "<" not in post.search_content
+        assert set(post.tags.names()) == {"a", "b"}
+        assert post.slug == old_slug
         mock_log.assert_called_once_with("post_update", post, moderator, source="web")
 
     def test_successful_edit(self, client, user_factory, post_factory, mocker):
         """Автор успешно редактирует пост, изменения сохраняются, событие логируется."""
         post = post_factory(title="Old title Post")
+        old_slug = post.slug
         client.force_login(post.author)
         mock_log = mocker.patch("posts.views.post_views.log_post_event")
 
         url = reverse("posts:edit", kwargs={"pk": post.pk, "slug": post.slug})
-        client.post(url, {"title": "New title Post", "content": post.content, "tags": post.tags})
+        client.post(url, {"title": "New title Post", "content": "**new** text", "tags": "a, b"})
 
         post.refresh_from_db()
         assert post.title == "New title Post"
+        assert post.content == "**new** text"
+        assert "<strong>new</strong>" in post.rendered_content
+        assert "new text" in post.search_content
+        assert "<" not in post.search_content
+        assert set(post.tags.names()) == {"a", "b"}
+        assert post.slug == old_slug
         mock_log.assert_called_once_with("post_update", post, post.author, source="web")
 
 

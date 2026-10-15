@@ -46,7 +46,11 @@ class TestCustomSocialAccountAdapter:
 
         assert "заблокирован" in str(exc.value.detail).lower()
 
-    def test_save_user_triggers_celery_avatar_download(self, mocker):
+    # Используется декоратор, так как on_commit обращается к БД
+    @pytest.mark.django_db
+    def test_save_user_triggers_celery_avatar_download(
+        self, mocker, django_capture_on_commit_callbacks
+    ):
         """
         Проверка, что после сохранения пользователя запускается Celery-задача на загрузку
         его аватара из соцсети.
@@ -55,10 +59,15 @@ class TestCustomSocialAccountAdapter:
 
         mock_user = mocker.MagicMock(is_social=False, pk=1)
         mock_sociallogin = mocker.MagicMock()
+        # Адаптер работает с sociallogin.user
+        mock_sociallogin.user = mock_user
         mock_sociallogin.account.provider = "google"
         mock_sociallogin.account.extra_data = {}
 
-        mocker.patch("users.adapters.DefaultSocialAccountAdapter.save_user", return_value=mock_user)
+        mock_super_save = mocker.patch(
+            "users.adapters.DefaultSocialAccountAdapter.save_user", return_value=mock_user
+        )
+        mocker.patch.object(CustomSocialAccountAdapter, "_clear_invalid_fields")
 
         # Объект словаря не заменяется на Mock, но его ключи и значения перезаписываются.
         mocker.patch.dict(
@@ -66,13 +75,14 @@ class TestCustomSocialAccountAdapter:
             {"google": lambda user, data: "http://example.com/avatar.jpg"},
         )
 
-        # Немедленное выполнение celery задачи
-        mocker.patch("users.adapters.transaction.on_commit", side_effect=lambda func: func())
-
         mock_task = mocker.patch("users.adapters.download_and_set_avatar.delay")
 
-        adapter.save_user(mocker.Mock(), mock_sociallogin)
+        mock_request = mocker.Mock()
 
+        with django_capture_on_commit_callbacks(execute=True):
+            result = adapter.save_user(mock_request, mock_sociallogin)
+
+        assert result is mock_user
         assert mock_user.is_social is True
-        mock_user.save.assert_called_once()
+        mock_super_save.assert_called_once_with(mock_request, mock_sociallogin, None)
         mock_task.assert_called_once_with(mock_user.pk, "http://example.com/avatar.jpg")

@@ -56,8 +56,14 @@ class TestUserActivityMiddleware:
         mock_logger.info.assert_called_once_with(
             "Отправлен запрос к ресурсу.",
             extra={
-                "user_id": None,
-                "username": None,
+                "before_response": {
+                    "user_id": None,
+                    "username": None,
+                },
+                "after_response": {
+                    "user_id": None,
+                    "username": None,
+                },
                 "method": "GET",
                 "path": "/some-page/",
                 "event_type": "request",
@@ -81,8 +87,14 @@ class TestUserActivityMiddleware:
         mock_logger.info.assert_called_once_with(
             "Отправлен запрос к ресурсу.",
             extra={
-                "user_id": 1,
-                "username": "test_user",
+                "before_response": {
+                    "user_id": 1,
+                    "username": "test_user",
+                },
+                "after_response": {
+                    "user_id": 1,
+                    "username": "test_user",
+                },
                 "method": "GET",
                 "path": "/api/v1/posts/",
                 "event_type": "request",

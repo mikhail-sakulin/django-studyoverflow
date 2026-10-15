@@ -20,16 +20,16 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='user',
             name='first_name',
-            field=models.CharField(blank=True, max_length=50, validators=[users.services.PersonalNameValidator()], verbose_name='Имя'),
+            field=models.CharField(blank=True, max_length=50, validators=[users.services.validators.PersonalNameValidator()], verbose_name='Имя'),
         ),
         migrations.AlterField(
             model_name='user',
             name='last_name',
-            field=models.CharField(blank=True, max_length=50, validators=[users.services.PersonalNameValidator()], verbose_name='Фамилия'),
+            field=models.CharField(blank=True, max_length=50, validators=[users.services.validators.PersonalNameValidator()], verbose_name='Фамилия'),
         ),
         migrations.AlterField(
             model_name='user',
             name='username',
-            field=models.CharField(error_messages={'unique': 'A user with that username already exists.'}, help_text="Имя пользователя должно быть не менее 4 символов и состоять только из латинских букв, цифр, символов '_' и '-'.", max_length=30, unique=True, validators=[users.services.CustomUsernameValidator()], verbose_name='Имя пользователя'),
+            field=models.CharField(error_messages={'unique': 'A user with that username already exists.'}, help_text="Имя пользователя должно быть не менее 4 символов и состоять только из латинских букв, цифр, символов '_' и '-'.", max_length=30, unique=True, validators=[users.services.validators.CustomUsernameValidator()], verbose_name='Имя пользователя'),
         ),
     ]

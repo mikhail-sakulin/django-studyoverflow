@@ -62,7 +62,7 @@ class TestUserRegisterForm:
         form.is_valid()
 
         assert "is-invalid" in form.fields["password1"].widget.attrs["class"]
-        assert "is-invalid" in form.fields["password1"].widget.attrs["class"]
+        assert "is-invalid" in form.fields["password2"].widget.attrs["class"]
 
     def test_email_uniqueness_validation(self, user_factory):
         """Форма проверяет уникальность email."""

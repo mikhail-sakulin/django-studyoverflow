@@ -1,7 +1,7 @@
 import re
 
 import pytest
-from django.contrib.auth import get_user_model
+from django.contrib.auth import HASH_SESSION_KEY, SESSION_KEY, get_user_model
 from django.core import mail
 from django.core.cache import cache
 from django.db import connection
@@ -9,27 +9,15 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
-from users.services import get_user_cache_key
+from users.services.cache import get_user_cache_key
 
 
 User = get_user_model()
 
 
 @pytest.fixture(autouse=True)
-def mock_redis_conn(mocker):
-    """
-    Автоматически мокает подключение к Redis во всех тестах.
-
-    Часто нужен в тестах, поскольку в OnlineStatusMiddleware, если пользователь аутентифицирован,
-    есть обращение к сервисной функции set_user_online, в которой есть прямое обращение к Redis.
-    """
-    mock_conn = mocker.patch("users.services.online.get_redis_connection")
-    return mock_conn
-
-
-@pytest.fixture()
 def clear_cache():
     """Очищает кеш до и после теста."""
     cache.clear()
@@ -246,28 +234,6 @@ class TestJWTTokenLogoutAPIView:
         assert response.status_code == 400
         assert response.data["detail"] == "Передан неверный или просроченный JWT refresh токен."
 
-    def test_unexpected_exception(self, api_client, user_factory, mocker):
-        """Непредвиденная ошибка обработки refresh токена возвращает 500."""
-        user = user_factory()
-
-        api_client.force_authenticate(user=user)
-
-        mocker.patch(
-            "users.api.views.RefreshToken.blacklist",
-            side_effect=Exception(),
-        )
-
-        refresh = str(RefreshToken.for_user(user))
-
-        response = api_client.post(
-            reverse("api:users:auth-jwt-token-logout"),
-            {"refresh": refresh},
-            format="json",
-        )
-
-        assert response.status_code == 500
-        assert response.data["detail"] == "Ошибка обработки JWT refresh токена."
-
 
 @pytest.mark.django_db
 class TestLogoutAllMethodsAPIView:
@@ -295,6 +261,8 @@ class TestLogoutAllMethodsAPIView:
         user = user_factory()
         Token.objects.create(user=user)
         refresh = RefreshToken.for_user(user)
+        # До запроса JWT-токен не в blacklist
+        refresh.check_blacklist()
 
         api_client.force_login(user)
 
@@ -305,7 +273,8 @@ class TestLogoutAllMethodsAPIView:
         assert not Token.objects.filter(user=user).exists()
         assert not api_client.session.session_key
         with pytest.raises(TokenError):
-            RefreshToken(refresh).check_blacklist()
+            # После запроса JWT-токен в blacklist
+            refresh.check_blacklist()
 
     def test_invalid_refresh_returns_400(self, api_client, user_factory):
         """Невалидный refresh токен возвращает 400."""
@@ -468,12 +437,138 @@ class TestPasswordChangeAPIView:
         assert response.status_code == 403
         assert "социальные сети" in response.data["detail"]
 
+    def test_password_change_with_drf_token_revokes_tokens_and_issues_new_drf_token(
+        self,
+        api_client,
+        user_factory,
+    ):
+        """
+        При аутентификации DRF-токеном старые токены отзываются (DRF удаляется, refresh JWT
+        помещается в blacklist), в ответе возвращается только новый DRF-токен.
+        """
+        user = user_factory(password="OldPass123")
+        old_drf_token = Token.objects.create(user=user)
+        old_refresh_token = RefreshToken.for_user(user)
+        api_client.force_authenticate(user=user, token=old_drf_token)
+
+        data = {
+            "password_old": "OldPass123",
+            "password_new": "NewStrongPass123",
+            "password_new_confirm": "NewStrongPass123",
+        }
+        response = api_client.post(reverse("api:users:auth-password-change"), data, format="json")
+
+        assert response.status_code == 200
+        assert "access" not in response.data
+        assert "refresh" not in response.data
+
+        new_drf_token = Token.objects.get(user=user)
+        assert response.data["drf_token"] == new_drf_token.key
+        assert new_drf_token.key != old_drf_token.key
+
+        with pytest.raises(TokenError):
+            old_refresh_token.check_blacklist()
+
+    def test_password_change_with_jwt_revokes_tokens_and_issues_new_jwt_pair(
+        self,
+        api_client,
+        user_factory,
+    ):
+        """
+        При JWT-аутентификации старые токены отзываются, в ответе возвращается
+        новая пара access и refresh токенов, при этом DRF-токен не создается.
+        """
+        user = user_factory(password="OldPass123")
+        Token.objects.create(user=user)
+        old_refresh_token = RefreshToken.for_user(user)
+        api_client.force_authenticate(user=user, token=AccessToken.for_user(user))
+
+        data = {
+            "password_old": "OldPass123",
+            "password_new": "NewStrongPass123",
+            "password_new_confirm": "NewStrongPass123",
+        }
+        response = api_client.post(reverse("api:users:auth-password-change"), data, format="json")
+
+        assert response.status_code == 200
+        assert "drf_token" not in response.data
+
+        # Проверка отсутствия DRF-токена и невалидности старого refresh JWT-токена
+        assert not Token.objects.filter(user=user).exists()
+        with pytest.raises(TokenError):
+            old_refresh_token.check_blacklist()
+
+        # Проверка, что новая пара access и refresh токенов валидна
+        new_refresh_token = RefreshToken(response.data["refresh"])
+        AccessToken(response.data["access"])
+        assert str(new_refresh_token) != str(old_refresh_token)
+
+    def test_password_change_with_session_revokes_tokens_and_keeps_session(
+        self,
+        api_client,
+        user_factory,
+    ):
+        """
+        При аутентификации через сессию старые токены отзываются, новые токены не выдаются,
+        сессия обновляется и остается активной.
+        """
+        user = user_factory(password="OldPass123")
+        Token.objects.create(user=user)
+        old_refresh_token = RefreshToken.for_user(user)
+        # Аутентификация через сессию
+        api_client.force_login(user)
+
+        data = {
+            "password_old": "OldPass123",
+            "password_new": "NewStrongPass123",
+            "password_new_confirm": "NewStrongPass123",
+        }
+        response = api_client.post(reverse("api:users:auth-password-change"), data, format="json")
+
+        assert response.status_code == 200
+        assert response.data == {"detail": "Пароль успешно изменен."}
+
+        # Проверка отсутствия DRF-токена и невалидности старого refresh JWT-токена
+        assert not Token.objects.filter(user=user).exists()
+        with pytest.raises(TokenError):
+            old_refresh_token.check_blacklist()
+
+        # Пользователь остался аутентифицированным через сессию
+        user.refresh_from_db()
+        assert api_client.session[SESSION_KEY] == str(user.pk)
+        assert api_client.session[HASH_SESSION_KEY] == user.get_session_auth_hash()
+
+    def test_password_change_validation_error_does_not_revoke_tokens(
+        self,
+        api_client,
+        user_factory,
+    ):
+        """При ошибке валидации (неверный старый пароль) токены не отзываются."""
+        user = user_factory(password="OldPass123")
+        drf_token = Token.objects.create(user=user)
+        refresh_token = RefreshToken.for_user(user)
+        api_client.force_authenticate(user=user, token=drf_token)
+
+        data = {
+            "password_old": "WrongOld456",
+            "password_new": "NewStrongPass123",
+            "password_new_confirm": "NewStrongPass123",
+        }
+        response = api_client.post(reverse("api:users:auth-password-change"), data, format="json")
+
+        assert response.status_code == 400
+        # DRF- и refresh JWT-токен существуют и валидные
+        assert Token.objects.filter(user=user).exists()
+        refresh_token.check_blacklist()
+
 
 @pytest.mark.django_db
 class TestPasswordResetAPIView:
     """Тестирование запроса на восстановление пароля."""
 
-    def test_api_password_reset_full_flow(self, mocker, api_client, user_factory):
+    def test_api_password_reset_full_flow(
+        self, django_capture_on_commit_callbacks, api_client, user_factory
+    ):
         """
         Интеграционный тест полного цикла через API:
         Запрос сброса -> Выполнение Celery задачи -> Письмо -> Парсинг -> Смена пароля -> Вход.
@@ -481,16 +576,20 @@ class TestPasswordResetAPIView:
         user = user_factory(
             username="api_reset_user", email="reset@example.com", password="OldPassword123"
         )
-
-        # Мок transaction.on_commit для выполнения Celery задачи немедленно.
-        mocker.patch("users.api.views.transaction.on_commit", side_effect=lambda func: func())
+        Token.objects.create(user=user)
+        old_refresh_token = RefreshToken.for_user(user)
 
         # 1) Запрос сброса пароля
-        response_request = api_client.post(
-            reverse("api:users:auth-password-reset"),
-            data={"email": "reset@example.com"},
-            format="json",
-        )
+
+        # Коллбеки, зарегистрированные через transaction.on_commit, выполнятся при выходе
+        # из блока with.
+        with django_capture_on_commit_callbacks(execute=True):
+            response_request = api_client.post(
+                reverse("api:users:auth-password-reset"),
+                data={"email": "reset@example.com"},
+                format="json",
+            )
+
         assert response_request.status_code == 200
         assert "инструкция" in response_request.data["detail"].lower()
 
@@ -528,17 +627,25 @@ class TestPasswordResetAPIView:
         assert not user.check_password("OldPassword123")
         assert user.check_password("NewStrongPass123")
 
-    def test_password_reset_nonexistent_email(self, mocker, api_client):
+        # 5) Все ранее выданные API-токены отозваны
+        # Проверка отсутствия DRF-токена и невалидности старого refresh JWT-токена
+        assert not Token.objects.filter(user=user).exists()
+        with pytest.raises(TokenError):
+            old_refresh_token.check_blacklist()
+
+    def test_password_reset_nonexistent_email(self, django_capture_on_commit_callbacks, api_client):
         """
         Если email не существует, все равно возвращается 200 (защита от перебора),
         письмо не отправляется.
         """
         data = {"email": "not_exist@example.com"}
 
-        # Мок transaction.on_commit для выполнения Celery задачи немедленно.
-        mocker.patch("users.api.views.transaction.on_commit", side_effect=lambda func: func())
-
-        response = api_client.post(reverse("api:users:auth-password-reset"), data, format="json")
+        # Коллбеки, зарегистрированные через transaction.on_commit, выполнятся при выходе
+        # из блока with.
+        with django_capture_on_commit_callbacks(execute=True):
+            response = api_client.post(
+                reverse("api:users:auth-password-reset"), data, format="json"
+            )
 
         assert response.status_code == 200
         assert "инструкция" in response.data["detail"].lower()
@@ -703,32 +810,6 @@ class TestUserViewSetMe:
 
 
 @pytest.mark.django_db
-class TestUserViewSetAvatarFull:
-    """Тестирование получения оригинала аватара."""
-
-    def test_avatar_full_not_found(self, assert_not_found):
-        """Если указан несуществующий пользователь, возвращается 404."""
-        assert_not_found(
-            "api:users:users-avatar-full",
-            url_kwargs={"username": "non_existent_user"},
-            method="get",
-            is_api=True,
-        )
-
-    def test_avatar_full_success(self, api_client, user_factory):
-        """Если аватар есть, возвращается URL."""
-        user = user_factory(avatar="avatars/test_avatar.jpg")
-
-        url = reverse("api:users:users-avatar-full", kwargs={"username": user.username})
-        response = api_client.get(url)
-
-        assert response.status_code == 200
-        assert response.data["username"] == user.username
-        assert "http" in response.data["full_avatar_url"]
-        assert "avatars/test_avatar.jpg" in response.data["full_avatar_url"]
-
-
-@pytest.mark.django_db
 class TestUserViewSetModeration:
     """Тестирование блокировки/разблокировки пользователей."""
 
@@ -757,33 +838,22 @@ class TestUserViewSetModeration:
         )
 
     def test_block_user_success(self, api_client, user_factory, mocker):
-        """Успешная блокировка пользователя."""
+        """Успешная блокировка пользователя модератором."""
         moderator = user_factory(role=User.Role.MODERATOR)
         target = user_factory(is_blocked=False)
 
         api_client.force_authenticate(user=moderator)
 
-        mock_block_service = mocker.patch(
-            "users.api.views.block_user_service",
-            return_value=(True, "Пользователь успешно заблокирован."),
-        )
-        mocker.patch(
-            "users.api.permissions.CanBlockUserPermission.has_permission", return_value=True
-        )
-        mocker.patch(
-            "users.api.permissions.CanBlockUserPermission.has_object_permission", return_value=True
-        )
-
         url = reverse("api:users:users-block", kwargs={"username": target.username})
         response = api_client.post(url)
 
         assert response.status_code == 200
-        assert response.data["message"] == "Пользователь успешно заблокирован."
-        mock_block_service.assert_called_once()
+        assert response.data["is_blocked"] is True
 
-        args, kwargs = mock_block_service.call_args
-        assert kwargs["moderator"] == moderator
-        assert kwargs["target_user"] == target
+        target.refresh_from_db()
+        assert target.is_blocked is True
+        assert target.blocked_by == moderator
+        assert target.blocked_at is not None
 
     def test_block_user_already_blocked(self, api_client, user_factory, mocker):
         """Если пользователь уже заблокирован, возвращается 400."""
@@ -792,22 +862,10 @@ class TestUserViewSetModeration:
 
         api_client.force_authenticate(user=moderator)
 
-        mocker.patch(
-            "users.api.views.block_user_service",
-            return_value=(False, "Пользователь уже заблокирован."),
-        )
-        mocker.patch(
-            "users.api.permissions.CanBlockUserPermission.has_permission", return_value=True
-        )
-        mocker.patch(
-            "users.api.permissions.CanBlockUserPermission.has_object_permission", return_value=True
-        )
-
         url = reverse("api:users:users-block", kwargs={"username": target.username})
         response = api_client.post(url)
 
         assert response.status_code == 400
-        assert response.data["message"] == "Пользователь уже заблокирован."
 
     def test_unblock_user_success(self, api_client, user_factory, mocker):
         """Успешная разблокировка пользователя."""
@@ -816,24 +874,41 @@ class TestUserViewSetModeration:
 
         api_client.force_authenticate(user=moderator)
 
-        mock_unblock_service = mocker.patch(
-            "users.api.views.unblock_user_service",
-            return_value=(True, "Пользователь успешно разблокирован."),
-        )
-        mocker.patch(
-            "users.api.permissions.CanBlockUserPermission.has_permission", return_value=True
-        )
-        mocker.patch(
-            "users.api.permissions.CanBlockUserPermission.has_object_permission", return_value=True
-        )
-
         url = reverse("api:users:users-unblock", kwargs={"username": target.username})
         response = api_client.post(url)
 
         assert response.status_code == 200
-        assert response.data["message"] == "Пользователь успешно разблокирован."
-        mock_unblock_service.assert_called_once()
+        assert response.data["is_blocked"] is False
 
-        args, kwargs = mock_unblock_service.call_args
-        assert kwargs["moderator"] == moderator
-        assert kwargs["target_user"] == target
+        target.refresh_from_db()
+        assert target.is_blocked is False
+        assert target.blocked_at is None
+        assert target.blocked_by is None
+
+    @pytest.mark.parametrize(
+        "actor_role, target_role",
+        [
+            # нет права users.block_user
+            (User.Role.USER, User.Role.USER),
+            # роль цели выше
+            (User.Role.MODERATOR, User.Role.ADMIN),
+            # равная роль
+            (User.Role.MODERATOR, User.Role.MODERATOR),
+        ],
+    )
+    def test_block_forbidden(self, api_client, user_factory, actor_role, target_role):
+        """
+        Блокировка пользователя запрещена (403), если у инициатора нет права block_user или
+        роль цели выше либо равна роли инициатора. Статус цели не меняется.
+        """
+        actor = user_factory(role=actor_role)
+        target = user_factory(role=target_role)
+        api_client.force_authenticate(user=actor)
+
+        response = api_client.post(
+            reverse("api:users:users-block", kwargs={"username": target.username})
+        )
+
+        assert response.status_code == 403
+        target.refresh_from_db()
+        assert target.is_blocked is False

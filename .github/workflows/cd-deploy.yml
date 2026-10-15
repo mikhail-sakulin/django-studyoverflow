@@ -74,4 +74,6 @@ jobs:
             
             docker compose -p studyoverflow-prod $COMPOSE_FILES --env-file .env.prod up -d --wait
             
-            docker image prune -f
+            # -a - удаляет все образы, для которых сейчас нет запущенных контейнеров,
+            # без флага -a удалятся только образы, у которых нет имени и тега
+            docker image prune -a -f

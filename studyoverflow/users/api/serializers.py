@@ -3,13 +3,28 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core import exceptions
 from django.utils.http import urlsafe_base64_decode
-from drf_spectacular.utils import extend_schema_field, inline_serializer
 from rest_framework import serializers
 
-from users.services import is_user_online, validate_email_unique
+from users.services.online import is_user_online
+from users.services.validators import validate_email_unique
 
 
 User = get_user_model()
+
+
+class AvatarSerializer(serializers.Serializer):
+    """
+    Универсальный сериализатор для отображения всех вариантов аватара пользователя.
+
+    Предоставляет ссылки на оригинал и сгенерированные миниатюры разного размера.
+    Использует свойства модели User (avatar_small_sizeX_url), которые возвращают
+    ссылку на оригинал, если миниатюры еще не сгенерированы Celery.
+    """
+
+    original = serializers.URLField(source="avatar.url")
+    size1 = serializers.URLField(source="avatar_small_size1_url")
+    size2 = serializers.URLField(source="avatar_small_size2_url")
+    size3 = serializers.URLField(source="avatar_small_size3_url")
 
 
 class UserPublicProfileSerializer(serializers.ModelSerializer):
@@ -20,7 +35,7 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
     статус "онлайн" и ссылки на различные размеры аватара.
     """
 
-    avatar_urls = serializers.SerializerMethodField()
+    avatars = AvatarSerializer(source="*", read_only=True)
     online_status = serializers.SerializerMethodField()
 
     class Meta:
@@ -31,7 +46,7 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
             "email",
             "role",
             "online_status",
-            "avatar_urls",
+            "avatars",
             "first_name",
             "last_name",
             "bio",
@@ -48,27 +63,7 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
             "is_blocked": {"default": False},
         }
 
-    @extend_schema_field(
-        inline_serializer(
-            name="AvatarUrlsSerializer",
-            fields={
-                "avatar_original": serializers.URLField(),
-                "size1": serializers.URLField(),
-                "size2": serializers.URLField(),
-                "size3": serializers.URLField(),
-            },
-        )
-    )
-    def get_avatar_urls(self, user) -> dict[str, str]:
-        """Возвращает словарь ссылок на оригинал и миниатюры аватара."""
-        return {
-            "avatar_original": user.avatar.url,
-            "size1": user.avatar_small_size1_url,
-            "size2": user.avatar_small_size2_url,
-            "size3": user.avatar_small_size3_url,
-        }
-
-    def get_online_status(self, user):
+    def get_online_status(self, user) -> bool:
         """Проверяет текущий статус активности пользователя в Redis."""
         return is_user_online(user.pk)
 
@@ -80,18 +75,17 @@ class UserMyProfileSerializer(UserPublicProfileSerializer):
     Расширяет публичный профиль приватными полями и возможностью загрузки аватара.
     """
 
-    # Поле avatar определяется отдельно для явного указания его как файла в Swagger
-    avatar = serializers.ImageField(write_only=True, required=False, allow_null=True)
-
     class Meta(UserPublicProfileSerializer.Meta):
         fields = UserPublicProfileSerializer.Meta.fields + ["is_social", "avatar"]
         extra_kwargs = {
             "is_blocked": {"default": False},
             "is_social": {"default": False},
+            # "allow_null": True позволяет сбрасывать аватар на дефолтный при отправке null,
+            # в самой модели задано дефолтное значение, а null=False.
+            "avatar": {"write_only": True, "allow_null": True},
         }
         read_only_fields = [
             "id",
-            "avatar_urls",
             "reputation",
             "posts_count",
             "comments_count",
@@ -123,6 +117,13 @@ class UserMyProfileSerializer(UserPublicProfileSerializer):
             except exceptions.ValidationError as e:
                 raise serializers.ValidationError(e.messages)
         return value
+
+    def update(self, instance, validated_data):
+        """Сохраняет только переданные поля, не перезаписывая поля-счётчики и поле last_seen."""
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save(update_fields=list(validated_data))
+        return instance
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -186,7 +187,7 @@ class UserListSerializer(serializers.ModelSerializer):
     Сериализатор для краткого отображения списка пользователей.
     """
 
-    avatar_url = serializers.CharField(source="avatar_small_size2_url")
+    avatars = AvatarSerializer(source="*", read_only=True)
     online_status = serializers.SerializerMethodField()
 
     class Meta:
@@ -196,7 +197,7 @@ class UserListSerializer(serializers.ModelSerializer):
             "email",
             "role",
             "online_status",
-            "avatar_url",
+            "avatars",
             "reputation",
             "posts_count",
             "comments_count",
@@ -204,15 +205,15 @@ class UserListSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
-    def get_online_status(self, user):
+    def get_online_status(self, user) -> bool:
         """
-        Определяет статус онлайн на основе списка ID, полученного из контекста из Redis во ViewSet.
+        Определяет статус онлайн на основе множества ID, переданного
+        в context сериализатора в UserViewSet.
         """
-        online_ids = self.context.get("online_ids", set())
-        return user.id in online_ids
+        return user.id in self.context["online_ids"]
 
 
-class UserPasswordChangeSerializer(serializers.ModelSerializer):
+class UserPasswordChangeSerializer(serializers.Serializer):
     """
     Сериализатор для смены пароля авторизованного пользователя.
 
@@ -228,10 +229,6 @@ class UserPasswordChangeSerializer(serializers.ModelSerializer):
     password_new_confirm = serializers.CharField(
         required=True, write_only=True, style={"input_type": "password"}
     )
-
-    class Meta:
-        model = User
-        fields = ["password_old", "password_new", "password_new_confirm"]
 
     def validate_password_old(self, value):
         """Проверка правильности введенного старого пароля."""
@@ -257,7 +254,7 @@ class UserPasswordChangeSerializer(serializers.ModelSerializer):
         """Хеширует и сохраняет новый пароль."""
         user = self.context["request"].user
         user.set_password(self.validated_data["password_new"])
-        user.save()
+        user.save(update_fields=["password"])
         return user
 
 
@@ -323,7 +320,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     def save(self):
         """Хеширует и сохраняет новый пароль."""
         self.user.set_password(self.validated_data["password_new"])
-        self.user.save()
+        self.user.save(update_fields=["password"])
         return self.user
 
 
@@ -345,12 +342,6 @@ class LoginSerializer(serializers.Serializer):
 
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
-
-
-class DetailSerializer(serializers.Serializer):
-    """Сериализатор для текстовых ответов с полем "detail", используемый в схемах OpenAPI."""
-
-    detail = serializers.CharField()
 
 
 class RefreshJWTBlacklistSerializer(serializers.Serializer):

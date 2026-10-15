@@ -15,10 +15,10 @@ def generate_image(img: PILImage, ext: str, size: tuple[float, float]) -> BytesI
     Обрабатывает GIF и статические изображения.
     """
     # Определение формата изображения
-    if ext:
-        fmt = ext.replace(".", "").upper()
-    elif img.format:
+    if img.format:
         fmt = img.format
+    elif ext:
+        fmt = ext.replace(".", "").upper()
     else:
         fmt = "PNG"
 

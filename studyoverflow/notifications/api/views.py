@@ -1,3 +1,4 @@
+from django.db import transaction
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -12,8 +13,9 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from navigation.api.serializers import DetailSerializer
 from notifications.api.openapi_responses import NotificationNotFoundOpenApiResponse
-from notifications.api.serializers import DetailSerializer, NotificationSerializer
+from notifications.api.serializers import NotificationSerializer
 from notifications.mixins import NotificationOptimizeMixin
 from notifications.models import Notification
 from notifications.signals import notification_delete_reason
@@ -81,6 +83,15 @@ class NotificationViewSet(
     serializer_class = NotificationSerializer
 
     def get_queryset(self):
+        # Заглушка для интеграции с генератором документации drf-spectacular, например, при
+        # использовании команды "python manage.py spectacular".
+        # Прописывается, так как при генерации документации нет self.request.user, из-за чего
+        # будет вызвана и показана ошибка.
+        # Флаг swagger_fake_view равен True во время генерации схемы. При реальном запросе от
+        # пользователя значение будет равным False.
+        if getattr(self, "swagger_fake_view", False):
+            return Notification.objects.none()
+
         queryset = Notification.objects.filter(user=self.request.user)
 
         # Сортировка по полю is_read, если задан соответствующий GET-параметр
@@ -120,7 +131,8 @@ class NotificationViewSet(
     @action(detail=False, methods=["get"], url_path="unread-count")
     def unread_count(self, request):
         """Возвращает количество непрочитанных уведомлений."""
-        count = self.get_queryset().filter(is_read=False).count()
+        # self.get_queryset() не используется, чтобы на запрос не повлиял GET-параметр is_read
+        count = Notification.objects.filter(user=request.user, is_read=False).count()
         return Response({"unread_count": count})
 
     @extend_schema(
@@ -147,9 +159,12 @@ class NotificationViewSet(
         Помечает все непрочитанные уведомления пользователя прочитанными и создает
         Celery задачу для обновления счетчика непрочитанных уведомлений через Channels WebSocket.
         """
-        self.get_queryset().filter(is_read=False).update(is_read=True)
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
 
-        send_channel_notify_event.delay(user_id=request.user.pk, update_list=False)
+        user_id = request.user.pk
+        transaction.on_commit(
+            lambda: send_channel_notify_event.delay(user_id=user_id, update_list=False)
+        )
 
         return Response({"detail": "Все уведомления помечены прочитанными."})
 
@@ -178,9 +193,15 @@ class NotificationViewSet(
     def mark_read(self, request, pk=None):
         """Помечает одно уведомление прочитанным."""
         notification = self.get_object()
-        if not notification.is_read:
-            notification.is_read = True
-            notification.save(update_fields=["is_read"])
+
+        serializer = self.get_serializer(
+            notification,
+            data={"is_read": True},
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
         return Response({"detail": "Уведомление изменено на прочитанное."})
 
     @extend_schema(
@@ -200,7 +221,7 @@ class NotificationViewSet(
         """
         token = notification_delete_reason.set("self_delete")
         try:
-            self.get_queryset().delete()
+            Notification.objects.filter(user=request.user).delete()
         finally:
             notification_delete_reason.reset(token)
 

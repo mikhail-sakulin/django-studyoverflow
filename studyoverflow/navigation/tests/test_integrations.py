@@ -1,5 +1,5 @@
 """
-Интеграционные тесты взаимодействия объектов моделей проекта studyoverflow.
+Интеграционные тесты взаимодействия объектов моделей проекта Studyoverflow.
 
 Проверяют взаимодействие объектов моделей User, Post, Comment, Like и Notification, а также
 ORM, сигналы и Celery-задачи в сценариях создания, редактирования и удаления постов, комментариев
@@ -36,16 +36,6 @@ def assert_no_notification(user, notification_type, object_id=None):
     assert (
         not qs.exists()
     ), f"Уведомление {notification_type.label} для {user.username} не должно существовать."
-
-
-@pytest.fixture(autouse=True)
-def mock_notify_dispatch(mocker):
-    """
-    Мок celery задачи отправки обновления счетчика непрочитанных уведомлений через websocket.
-
-    Данная celery задача вызывается при создании уведомления в другой celery-задаче.
-    """
-    return mocker.patch("notifications.tasks.send_channel_notify_event.apply_async")
 
 
 @pytest.mark.django_db
@@ -158,8 +148,7 @@ class TestFullUserPostCommentLikeActions:
         # Проверка, сколько раз вызывалась замоканная celery-задача обновления счетчика
         # непрочитанных уведомлений (при создании уведомлений) для каждого пользователя
         actual_notify_dispatch_calls = [
-            call_args.kwargs.get("kwargs", {}).get("user_id")
-            for call_args in mock_notify_dispatch.call_args_list
+            call.args[1]["user_id"] for call in mock_notify_dispatch.call_args_list
         ]
         assert Counter(actual_notify_dispatch_calls) == expected_notify_dispatch_calls
 
@@ -182,7 +171,7 @@ class TestFullUserPostCommentLikeActions:
         assert_no_notification(user_a, NotificationType.LIKE_POST, object_id=post_like.pk)
 
         celery_remove_calls = [
-            c.kwargs.get("kwargs", {}).get("user_id") for c in mock_notify_dispatch.call_args_list
+            call.args[1]["user_id"] for call in mock_notify_dispatch.call_args_list
         ]
         assert Counter(celery_remove_calls) == expected_notify_dispatch_calls
 

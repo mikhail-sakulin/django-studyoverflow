@@ -1,9 +1,16 @@
+from typing import TYPE_CHECKING
+
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.utils.text import Truncator
 
 from notifications.models import Notification
-from users.models import User
+
+
+if TYPE_CHECKING:
+    from users.models import User
+else:
+    User = get_user_model()
 
 
 class IsReadFilter(admin.SimpleListFilter):
@@ -118,5 +125,4 @@ class NotificationAdmin(admin.ModelAdmin):
 
     def _can_do_actions(self, user: User):
         """Проверяет наличие прав администратора или модератора для выполнения действий."""
-        user_model = get_user_model()
-        return user.role in {user_model.Role.ADMIN, user_model.Role.MODERATOR}
+        return user.role in {User.Role.ADMIN, User.Role.MODERATOR}

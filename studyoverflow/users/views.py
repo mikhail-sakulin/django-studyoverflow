@@ -14,9 +14,11 @@ from django.contrib.auth.views import (
     PasswordResetConfirmView,
     PasswordResetDoneView,
     PasswordResetView,
+    RedirectURLMixin,
 )
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.cache import cache
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
@@ -36,12 +38,10 @@ from users.mixins import (
     UserOnlineFilterMixin,
     UserSortMixin,
 )
-from users.services import (
-    block_user_service,
-    get_cached_online_user_ids,
-    get_cached_user,
-    unblock_user_service,
-)
+from users.services.api_tokens import revoke_user_api_tokens
+from users.services.cache import get_cached_user
+from users.services.moderation import block_user_service, unblock_user_service
+from users.services.online import get_cached_online_user_ids
 
 
 User = get_user_model()
@@ -114,7 +114,7 @@ class UsersListHTMXView(UserHTMXPaginationMixin, UserSortMixin, UserOnlineFilter
         queryset = super().get_queryset()
         queryset = self.filter_by_online(queryset)
         queryset = self.apply_sorting(queryset)
-        return self.paginate_queryset(queryset)
+        return self.apply_pagination(queryset)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -129,7 +129,7 @@ class UsersListHTMXView(UserHTMXPaginationMixin, UserSortMixin, UserOnlineFilter
         return context
 
 
-class UserRegisterView(SuccessMessageMixin, CreateView):
+class UserRegisterView(RedirectURLMixin, SuccessMessageMixin, CreateView):
     """
     Страница регистрации нового пользователя.
 
@@ -140,7 +140,7 @@ class UserRegisterView(SuccessMessageMixin, CreateView):
 
     form_class = UserRegisterForm
     template_name = "users/register.html"
-    success_url = reverse_lazy("home")
+    next_page = reverse_lazy("home")
     success_message = "Регистрация успешно завершена!"
 
     def form_valid(self, form):
@@ -151,16 +151,10 @@ class UserRegisterView(SuccessMessageMixin, CreateView):
         user_signed_up.send(sender=user.__class__, request=self.request, user=user)
         return response
 
-    def get_success_url(self):
-        """Редирект после регистрации."""
-        # Редирект на next_url, если задан GET-параметр next
-        next_url = self.request.GET.get("next")
-        return next_url or self.success_url
-
     def get_context_data(self, **kwargs):
         """Передает GET-параметр next в шаблон."""
         context = super().get_context_data(**kwargs)
-        context["next"] = self.request.GET.get("next")
+        context["next"] = self.get_redirect_url()
         return context
 
 
@@ -294,8 +288,15 @@ class UserPasswordChangeView(
     success_message = "Пароль успешно изменен!"
 
     def form_valid(self, form):
-        response = super().form_valid(form)
-        user = self.request.user
+        with transaction.atomic():
+            # update_session_auth_hash вызывается самим Django
+            response = super().form_valid(form)
+
+            user = self.request.user
+
+            # Отзывает все DRF-токены и refresh JWT-токены пользователя
+            revoke_user_api_tokens(user)
+
         logger.info(
             f"Пользователь {user.username} успешно сменил пароль.",
             extra={
@@ -338,8 +339,14 @@ class UserPasswordResetConfirmView(SuccessMessageMixin, PasswordResetConfirmView
     success_message = "Пароль успешно восстановлен!"
 
     def form_valid(self, form):
-        response = super().form_valid(form)
-        user = form.user
+        with transaction.atomic():
+            response = super().form_valid(form)
+
+            user = form.user
+
+            # Отзывает все DRF-токены и refresh JWT-токены пользователя
+            revoke_user_api_tokens(user)
+
         logger.info(
             f"Пользователь {user.username} успешно восстановил пароль через email.",
             extra={

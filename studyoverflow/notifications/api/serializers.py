@@ -1,8 +1,10 @@
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from notifications.models import Notification
 from posts.models import Like
+from users.api.serializers import AvatarSerializer
 
 
 User = get_user_model()
@@ -13,9 +15,11 @@ class ActorSerializer(serializers.ModelSerializer):
     Сериализатор для краткого отображения данных инициатора уведомления.
     """
 
+    avatars = AvatarSerializer(source="*", read_only=True)
+
     class Meta:
         model = User
-        fields = ("id", "username", "avatar_small_size1")
+        fields = ("id", "username", "avatars")
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -24,7 +28,8 @@ class NotificationSerializer(serializers.ModelSerializer):
     """
 
     type_display = serializers.CharField(source="get_notification_type_display", read_only=True)
-    actor = ActorSerializer()
+    actor = ActorSerializer(read_only=True)
+    content_type = serializers.SlugRelatedField(slug_field="model", read_only=True, allow_null=True)
     content_object_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -41,7 +46,19 @@ class NotificationSerializer(serializers.ModelSerializer):
             "content_type",
             "content_object_url",
         ]
+        read_only_fields = (
+            "id",
+            "actor",
+            "notification_type",
+            "type_display",
+            "message",
+            "time_create",
+            "object_id",
+            "content_type",
+            "content_object_url",
+        )
 
+    @extend_schema_field(serializers.URLField(allow_null=True))
     def get_content_object_url(self, notification):
         """
         Формирует URL связанного с уведомлением объекта.
@@ -80,9 +97,3 @@ class NotificationSerializer(serializers.ModelSerializer):
                 "Вернуть is_read на False нельзя."
             )
         return value
-
-
-class DetailSerializer(serializers.Serializer):
-    """Сериализатор для текстовых ответов с полем "detail", используемый в схемах OpenAPI."""
-
-    detail = serializers.CharField()

@@ -45,21 +45,42 @@ def api_client():
 @pytest.fixture(autouse=True)
 def fake_redis(mocker):
     """
-    Подменяет подключение к Redis через fakeredis для OnlineStatusMiddleware.
+    Подменяет подключение к Redis через fakeredis и возвращает его.
 
     В OnlineStatusMiddleware, если пользователь аутентифицирован,
     есть обращение к сервисной функции set_user_online, в которой есть прямое обращение к Redis.
+    Для OnlineStatusMiddleware достаточно только самой подмены с autouse=True.
 
     Имитация сервера Redis в оперативной памяти для тестов,
     мок используется для подмены Redis при прямом обращении к Redis.
 
     Это Fake подмена (полноценная рабочая реализация) через Python-объект.
     """
-    redis = fakeredis.FakeStrictRedis()
+    redis = fakeredis.FakeStrictRedis(server=fakeredis.FakeServer())
     mocker.patch(
         "users.services.online.get_redis_connection",
         return_value=redis,
     )
+    return redis
+
+
+@pytest.fixture(autouse=True)
+def mock_notify_dispatch(mocker):
+    """
+    Мок Celery-задачи send_channel_notify_event отправки обновления
+    счетчика уведомлений через WebSocket, чтобы в тестах не выполнялись обращения к Redis.
+
+    Эта задача объявлена с base=QueueOnce (библиотека celery-once), где переопределен метод
+    .apply_async() (.delay() не переопределен, он просто вызывает переопределенный .apply_async()),
+    который создает ключ-замок в Redis для предотвращения дублей задачи с одними и теми же
+    параметрами. Обращения к Redis происходят при постановке задачи в очередь.
+
+    Celery-задачи запускаются через transaction.on_commit. В тестах при необходимости используется
+    фикстура django_capture_on_commit_callbacks из pytest-django, поэтому Celery-задачи могут
+    запускаться и в тестах, поэтому apply_async данной задачи мокается, чтобы не было
+    обращений в Redis.
+    """
+    return mocker.patch("notifications.tasks.send_channel_notify_event.apply_async")
 
 
 @pytest.fixture

@@ -2,17 +2,16 @@ from datetime import date
 from typing import Final
 
 import filetype
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files import File
-from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import RegexValidator
+from django.db.models.fields.files import FieldFile
 from django.utils import timezone
 from django.utils.deconstruct import deconstructible
 from django.utils.translation import gettext_lazy
 from PIL import Image
-
-from studyoverflow import settings
 
 
 @deconstructible
@@ -104,27 +103,31 @@ class AvatarFileValidator:
         "image/x-icon",
     )
 
-    MAX_SIZE: Final = 10 * 1024 * 1024
-    MIN_HEIGHT: Final = 100
-    MIN_WIDTH: Final = 100
-    MIN_ASPECT_RATION: Final = 0.25
-    MAX_ASPECT_RATION: Final = 4
+    MAX_SIZE: Final[int] = 10 * 1024 * 1024
+    MIN_HEIGHT: Final[int] = 100
+    MIN_WIDTH: Final[int] = 100
+    MIN_ASPECT_RATION: Final[float] = 0.25
+    MAX_ASPECT_RATION: Final[int] = 4
 
     def __call__(self, file: File, *args, **kwargs):
+        if not file:
+            return
+
         # Файл валидируется, только если он заново загружен, иначе валидация не нужна.
         # Без этой проверки, если файл не обновлен, будут лишний запрос в S3 хранилище и
         # последующая лишняя валидация.
-        underlying_file = getattr(file, "_file", file)
-        # При загрузке файла пользователем underlying_file принимает тип UploadedFile
-        if not isinstance(underlying_file, UploadedFile):
+        #
+        # _committed - атрибут поля FieldFile, равен True, если файл уже сохранен в хранилище,
+        # равен False, если задан еще не сохраненный новый файл.
+        if isinstance(file, FieldFile) and getattr(file, "_committed", False):
             return
 
         # Проверка размера файла
         if file.size > self.MAX_SIZE:
-            max_size_mb = self.MAX_SIZE / (1024 * 1024)
             raise ValidationError(
-                gettext_lazy(f"Максимальный разрешенный размер файла: {max_size_mb} Mb."),
+                gettext_lazy("Максимальный разрешенный размер файла: %(max_size)s Mb."),
                 code="file_too_large",
+                params={"max_size": self.MAX_SIZE // (1024 * 1024)},
             )
 
         # Проверка MIME-типа файла по содержимому
@@ -140,11 +143,9 @@ class AvatarFileValidator:
 
         if not kind or kind.mime not in self.ALLOWED_MIME_TYPES:
             raise ValidationError(
-                gettext_lazy(
-                    f"Недопустимый тип файла, разрешены только: "
-                    f"{', '.join(el.split('/')[-1] for el in self.ALLOWED_MIME_TYPES)}."
-                ),
+                gettext_lazy("Недопустимый тип файла, разрешены только: %(types)s."),
                 code="invalid_file_type",
+                params={"types": ", ".join(el.split("/")[-1] for el in self.ALLOWED_MIME_TYPES)},
             )
 
         # Проверка размеров и соотношения сторон
@@ -154,10 +155,11 @@ class AvatarFileValidator:
         if width < self.MIN_WIDTH or height < self.MIN_HEIGHT:
             raise ValidationError(
                 gettext_lazy(
-                    f"Изображение слишком маленькое. Разрешенный минимум: "
-                    f"{self.MIN_WIDTH}x{self.MIN_HEIGHT} px."
+                    "Изображение слишком маленькое. Разрешенный минимум: "
+                    "%(width)sx%(height)s px."
                 ),
                 code="file_too_small",
+                params={"width": self.MIN_WIDTH, "height": self.MIN_HEIGHT},
             )
 
         aspect_ratio = width / height
@@ -165,10 +167,10 @@ class AvatarFileValidator:
         if aspect_ratio < self.MIN_ASPECT_RATION or aspect_ratio > self.MAX_ASPECT_RATION:
             raise ValidationError(
                 gettext_lazy(
-                    f"Недопустимое соотношение сторон изображения. Допустимо "
-                    f"{self.MIN_ASPECT_RATION}-{self.MAX_ASPECT_RATION}."
+                    "Недопустимое соотношение сторон изображения. " "Допустимо %(min)s-%(max)s."
                 ),
                 code="invalid_file_aspect_ration",
+                params={"min": self.MIN_ASPECT_RATION, "max": self.MAX_ASPECT_RATION},
             )
 
 
@@ -182,22 +184,27 @@ class BirthDateValidator:
     - текущий возраст не превышает MAX_AGE лет.
     """
 
-    MAX_AGE: Final = 120
+    MAX_AGE: Final[int] = 120
 
     def __call__(self, value: date):
         today = timezone.localdate()
         if value > today:
             raise ValidationError(
-                "Дата рождения не может быть в будущем. "
-                f'Указывайте дату с учетом часового пояса "{settings.TIME_ZONE}".',
+                gettext_lazy(
+                    "Дата рождения не может быть в будущем. "
+                    'Указывайте дату с учетом часового пояса "%(tz)s".'
+                ),
                 code="future_date",
+                params={"tz": settings.TIME_ZONE},
             )
 
         age = today.year - value.year - ((today.month, today.day) < (value.month, value.day))
 
         if age > self.MAX_AGE:
             raise ValidationError(
-                f"Возраст не может превышать {self.MAX_AGE} лет.", code="max_age_exceeded"
+                gettext_lazy("Возраст не может превышать %(max_age)s лет."),
+                code="max_age_exceeded",
+                params={"max_age": self.MAX_AGE},
             )
 
 
@@ -216,5 +223,6 @@ def validate_email_unique(email: str, instance=None) -> None:
 
     if qs.exists():
         raise ValidationError(
-            "Пользователь с таким email (в любом регистре) уже существует.", code="email_exists"
+            gettext_lazy("Пользователь с таким email (в любом регистре) уже существует."),
+            code="email_exists",
         )

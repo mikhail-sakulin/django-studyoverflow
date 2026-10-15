@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Count
+from django.http import Http404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -27,26 +28,21 @@ from posts.api.pagination import PostCommentsPagination
 from posts.api.permissions import IsAuthorOrModeratorPermission
 from posts.api.serializers import (
     AuthorSerializer,
+    CommentBaseSerializer,
     CommentSerializer,
-    DetailSerializer,
+    PostFilterSerializer,
     PostSerializer,
     TagSerializer,
 )
 from posts.mixins import (
-    CommentSortMixin,
     CommentTreeQuerysetMixin,
-    LikeAnnotationsMixin,
     PostAnnotateQuerysetMixin,
     PostFilterSortMixin,
 )
 from posts.models import Comment, LowercaseTag, Post
-from posts.services import (
-    get_cached_post,
-    get_cached_tags,
-    log_comment_event,
-    log_post_event,
-    perform_toggle_like,
-)
+from posts.services.cache import get_cached_post, get_cached_tags
+from posts.services.like_handler import perform_toggle_like
+from posts.services.loggers import log_comment_event, log_post_event
 from users.api.openapi_responses_examples import OpenApiUnauthenticated401Response
 
 
@@ -93,13 +89,29 @@ class LikeMixin:
         """
         Кастомное действие, которое инвертирует лайк от пользователя к объекту:
         ставит, если нет, убирает, если есть.
+
+        При подобной реализации не вызывается self.check_object_permissions(request, obj)
+        (вместо self.get_object() объект получается напрямую через queryset внутри
+        perform_toggle_like), так как бизнес-логикой не предусмотрены права для конкретных
+        объектов. Для реализации вызова потребуется либо выносить транзакцию из perform_toggle_like
+        в данный action, либо вызывать метод внутри perform_toggle_like (с передачей callback).
         """
-        obj = self.get_object()  # type: ignore[attr-defined]
-        user = request.user
+        queryset = self.filter_queryset(self.get_queryset())  # type: ignore[attr-defined]
+        # lookup_url_kwarg - имя параметра в URL, из которого берется значение для поиска
+        # объекта (по умолчанию None, тогда ключ в kwargs совпадает с lookup_field),
+        # lookup_field - имя поля модели, по которому ищется объект (по умолчанию "pk"),
+        # оба параметра задаются во view.
+        pk = kwargs[self.lookup_url_kwarg or self.lookup_field]  # type: ignore[attr-defined]
 
-        liked_now, likes_count = perform_toggle_like(user, obj, source="api")
+        try:
+            liked_object, liked_now = perform_toggle_like(request.user, queryset, pk, source="api")
+        # ValueError указывается, чтобы возвращалось 404 вместо 500, если имя значение pk в URL
+        # будет неподходящего типа (не сможет быть преобразовано в число через int).
+        # ValueError вызывается в .get(pk="abc")
+        except (queryset.model.DoesNotExist, ValueError):  # type: ignore[attr-defined]
+            raise Http404
 
-        return Response({"liked_now": liked_now, "likes_count_on_object": likes_count})
+        return Response({"liked_now": liked_now, "likes_count_on_object": liked_object.likes_count})
 
     @extend_schema(
         summary="Список пользователей, лайкнувших объект.",
@@ -121,12 +133,9 @@ class LikeMixin:
         user_ids = obj.likes.values_list("user_id", flat=True)
         queryset = User.objects.filter(id__in=user_ids).order_by("id")
 
-        page = self.paginate_queryset(queryset)  # type: ignore[attr-defined]
-        if page is not None:
-            serializer = AuthorSerializer(page, many=True)
-            return self.get_paginated_response(serializer.data)  # type: ignore[attr-defined]
-
-        serializer = AuthorSerializer(queryset, many=True)
+        serializer = AuthorSerializer(
+            queryset, many=True, context=self.get_serializer_context()  # type: ignore[attr-defined]
+        )
         return Response(serializer.data)
 
 
@@ -202,6 +211,18 @@ class LikeMixin:
             200: OpenApiResponse(
                 description="Список постов успешно получен.", response=PostSerializer(many=True)
             ),
+            400: OpenApiResponse(
+                description="Некорректные параметры фильтрации.",
+                response=inline_serializer(
+                    name="PostFilterErrorSerializer",
+                    fields={
+                        "q": serializers.ListField(child=serializers.CharField(), required=False),
+                        "author": serializers.ListField(
+                            child=serializers.CharField(), required=False
+                        ),
+                    },
+                ),
+            ),
             404: PaginationErrorOpenApiResponse,
         },
     ),
@@ -242,7 +263,6 @@ class LikeMixin:
         responses={
             204: OpenApiResponse(
                 description="Пост успешно удален.",
-                response=DetailSerializer,
             ),
             401: OpenApiUnauthenticated401Response,
             403: PermissionDeniedOpenApiResponse,
@@ -278,7 +298,7 @@ class PostViewSet(
         if self.action in ["create", "like"]:
             return [IsAuthenticated()]
 
-        if self.action in ["update", "partial_update", "destroy"]:
+        if self.action in ["partial_update", "destroy"]:
             return [
                 IsAuthenticated(),
                 IsAuthorOrModeratorPermission(moderate_permission=self.moderator_permission_name),
@@ -291,12 +311,24 @@ class PostViewSet(
         Возвращает объект поста с кешированием и добавляет
         пользовательский флаг user_has_liked.
         """
+        if self.action in ("partial_update",):
+            # При частичном обновлении patch поста кеш поста не используется, объект берется из БД
+            # через стандартный метод GenericAPIView.get_object.
+            post = super().get_object()
+            # Добавляет объекту флаг лайка от пользователя
+            return self.set_user_has_liked(post)
+
         queryset = self.filter_queryset(self.get_queryset())
 
-        post = get_cached_post(
-            post_id=self.kwargs[self.lookup_field],
-            queryset=queryset,
-        )
+        try:
+            post = get_cached_post(
+                post_id=self.kwargs[self.lookup_url_kwarg or self.lookup_field],
+                queryset=queryset,
+            )
+        # ValueError обрабатывается, чтобы возвращалось 404 вместо 500, если значение post_id в
+        # URL будет неподходящего типа (не сможет быть преобразовано в число через int).
+        except ValueError:
+            raise Http404
 
         self.check_object_permissions(self.request, post)
 
@@ -328,6 +360,10 @@ class PostViewSet(
             queryset = self.prepare_post_queryset(queryset)
 
         return queryset
+
+    def list(self, request, *args, **kwargs):  # noqa: A003
+        PostFilterSerializer(data=request.query_params).is_valid(raise_exception=True)
+        return super().list(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         """Создание поста с добавлением текущего пользователя."""
@@ -386,7 +422,7 @@ class PostViewSet(
         auth=[],
         responses={
             200: OpenApiResponse(
-                description="Данные комментария успешно получены.", response=CommentSerializer
+                description="Данные комментария успешно получены.", response=CommentBaseSerializer
             ),
             404: create_new_not_found_response('"Object"'),
         },
@@ -397,7 +433,7 @@ class PostViewSet(
         "к указанному посту от имени текущего авторизованного пользователя.",
         responses={
             201: OpenApiResponse(
-                description="Комментарий успешно создан.", response=CommentSerializer
+                description="Комментарий успешно создан.", response=CommentBaseSerializer
             ),
             400: CommentFieldErrorValidationOpenApiResponse,
             401: OpenApiUnauthenticated401Response,
@@ -407,9 +443,18 @@ class PostViewSet(
     partial_update=extend_schema(
         summary="Частичное обновление комментария.",
         description="Изменяет текст комментария. Доступно автору или модератору.",
+        request=inline_serializer(
+            name="CommentUpdateSerializer",
+            fields={
+                "content": serializers.CharField(
+                    max_length=Comment.MAX_CONTENT_LENGTH,
+                    help_text="Текст комментария.",
+                ),
+            },
+        ),
         responses={
             200: OpenApiResponse(
-                description="Комментарий успешно обновлен.", response=CommentSerializer
+                description="Комментарий успешно обновлен.", response=CommentBaseSerializer
             ),
             400: CommentFieldErrorValidationOpenApiResponse,
             401: OpenApiUnauthenticated401Response,
@@ -431,8 +476,6 @@ class PostViewSet(
     ),
 )
 class CommentViewSet(
-    LikeAnnotationsMixin,
-    CommentSortMixin,
     CommentTreeQuerysetMixin,
     LikeMixin,
     ModelViewSet,
@@ -445,21 +488,31 @@ class CommentViewSet(
 
     pagination_class = PostCommentsPagination
     queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
+    serializer_class = CommentBaseSerializer
     moderator_permission_name = "posts.moderate_comment"
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_serializer_class(self):
+        """
+        Возвращает CommentSerializer с деревом дочерних комментариев только для списка
+        и просмотра ветки (thread). Для остальных действий возвращает CommentBaseSerializer.
+        """
+        if self.action in ["list", "thread"]:
+            return CommentSerializer
+
+        return CommentBaseSerializer
 
     def get_permissions(self):
         """
         Логика прав доступа:
         - Просмотр (list, retrieve): Доступно всем.
         - Создание (create): Только авторизованным пользователям.
-        - Изменение/Удаление (update, partial_update, destroy): Автору или Модератору.
+        - Изменение/Удаление (partial_update, destroy): Автору или Модератору.
         """
         if self.action in ["create", "like"]:
             return [IsAuthenticated()]
 
-        if self.action in ["update", "partial_update", "destroy"]:
+        if self.action in ["partial_update", "destroy"]:
             return [
                 IsAuthenticated(),
                 IsAuthorOrModeratorPermission(moderate_permission=self.moderator_permission_name),
@@ -474,17 +527,21 @@ class CommentViewSet(
         """
         post = self.get_post()
 
+        queryset = super().get_queryset()
+
         if self.action == "list":
             # queryset родительских комментариев с prefetch_related queryset дочерних комментариев
-            # для отображения списка комментариев поста
+            # для отображения списка комментариев поста, в вызываемом методе также используются
+            # select_related и аннотации.
             queryset = self.get_comment_tree_queryset(post)
         else:
-            # select_related автора и аннотирование комментария для его детального отображения
-            queryset = super().get_queryset().filter(post_id=post.pk).select_related("author")
-            # Аннотирование полями для лайков
+            # select_related автора
+            queryset = queryset.filter(post_id=post.pk).select_related("author")
+            # Аннотирование полем с флагом 'user_has_liked'
             queryset = self.annotate_queryset(queryset)
 
-        queryset = queryset.annotate(children_count=Count("child_comments", distinct=True))
+        if self.action in ["list", "thread", "retrieve"]:
+            queryset = queryset.annotate(child_count=Count("child_comments", distinct=True))
 
         return queryset
 
@@ -513,7 +570,7 @@ class CommentViewSet(
 
         queryset = self.get_comment_tree_queryset(post=self.get_post(), root_id=root_id)
 
-        queryset = queryset.annotate(children_count=Count("child_comments", distinct=True))
+        queryset = queryset.annotate(child_count=Count("child_comments", distinct=True))
 
         root_comment = queryset.first()
 
@@ -585,7 +642,7 @@ class CommentViewSet(
                 description="Информация о теге успешно получена.",
                 response=TagSerializer,
             ),
-            404: create_new_not_found_response('"LowercaseTag"'),
+            404: create_new_not_found_response("LowercaseTag"),
         },
     ),
 )

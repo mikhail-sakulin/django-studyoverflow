@@ -17,13 +17,9 @@ from django.core.files.storage import default_storage
 from django.core.management import call_command
 from django.utils import timezone
 
-from users.services import (
-    delete_old_avatar_names,
-    generate_avatar_small,
-    get_cached_online_user_ids,
-    get_counts_map,
-    get_reputation_map,
-)
+from users.services.avatars import delete_old_avatar_names, generate_avatar_small
+from users.services.online import get_cached_online_user_ids
+from users.services.user_stats import get_counts_map, get_reputation_map
 
 
 UserModel = get_user_model()
@@ -275,11 +271,16 @@ def download_and_set_avatar(user_id: int, avatar_url: str) -> None:
         for validator in user._meta.get_field("avatar").validators:
             validator(file_to_save)
 
-        user.avatar.save(
-            file_to_save.name,
-            file_to_save,
-            save=True,
-        )
+        # После работы с сетью (длительная операция) из БД снова берется
+        # актуальный аватар для повторной проверки.
+        user.refresh_from_db(fields=["avatar"])
+        # Если пользователь успел загрузить свой аватар, он не меняется.
+        if user.avatar and user.avatar.name != default_avatar:
+            return
+
+        # save=False, потому что при save=True не будет задано update_fields=["avatar"]
+        user.avatar.save(file_to_save.name, file_to_save, save=False)
+        user.save(update_fields=["avatar"])
 
     except ValidationError as e:
         logger.info(

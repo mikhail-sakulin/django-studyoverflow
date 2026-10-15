@@ -4,7 +4,7 @@ from django.db import connection
 from django.http import Http404
 from django.test.utils import CaptureQueriesContext
 
-from users.services import delete_cache_user, get_cached_user, get_user_cache_key
+from users.services.cache import delete_cache_user, get_cached_user, get_user_cache_key
 
 
 @pytest.fixture(autouse=True)
@@ -19,8 +19,8 @@ def clear_cache():
 class TestUserProfileCacheKey:
 
     def test_returns_expected_key(self):
-        """Возвращает корректный ключ кеша объекта пользователя в нижнем регистре."""
-        assert get_user_cache_key("TestUser") == "user_profile_testuser"
+        """Возвращает корректный ключ кеша объекта пользователя в верхнем регистре."""
+        assert get_user_cache_key("TestUser") == "user_profile_TESTUSER"
 
 
 @pytest.mark.django_db

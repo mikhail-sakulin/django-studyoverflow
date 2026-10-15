@@ -5,7 +5,7 @@ from django.http import Http404
 from django.test.utils import CaptureQueriesContext
 
 from posts.models import LowercaseTag, Post
-from posts.services import (
+from posts.services.cache import (
     delete_cache_post_detail,
     delete_cache_tags_list,
     delete_cached_posts_by_author,

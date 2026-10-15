@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from posts.services import log_comment_event, log_like_event, log_post_event
+from posts.services.loggers import log_comment_event, log_like_event, log_post_event
 
 
 @pytest.fixture

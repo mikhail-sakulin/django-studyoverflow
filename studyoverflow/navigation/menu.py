@@ -5,7 +5,7 @@ from studyoverflow.urls_api_v1 import app_name as api_name
 from users.urls import app_name as users_app_name
 
 
-# Меню сайта для header для base.html
+# Меню сайта для header и footer
 MENU: Final = [
     {"name": "Все посты", "url": f"{posts_app_name}:list"},
     {"name": "Создать пост", "url": f"{posts_app_name}:create"},

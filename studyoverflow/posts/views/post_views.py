@@ -3,6 +3,7 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
+from django.http import Http404
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
@@ -15,7 +16,8 @@ from posts.mixins import (
     SingleObjectCacheMixin,
 )
 from posts.models import Post
-from posts.services import get_cached_post, log_post_event
+from posts.services.cache import get_cached_post
+from posts.services.loggers import log_post_event
 from users.mixins import IsAuthorOrModeratorMixin
 
 
@@ -38,7 +40,24 @@ class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMix
     paginate_by = 7
     extra_context = {"section_of_menu_selected": "posts:list"}
 
+    def get_filter_form(self):
+        """Создает и сохраняет форму фильтрации один раз за запрос."""
+        # Форма валидируется автоматически при первом обращении к полю errors
+        if not hasattr(self, "_filter_form"):
+            self._filter_form = PostFilterForm(self.request.GET or None)
+        return self._filter_form
+
+    def get_paginate_by(self, queryset):
+        # При ошибках в фильтрации пагинация не нужна
+        if self.get_filter_form().errors:
+            return None
+        return super().get_paginate_by(queryset)
+
     def get_queryset(self):
+        # При ошибках в фильтрации не выполняет запросы в БД
+        if self.get_filter_form().errors:
+            return Post.objects.none()
+
         queryset = super().get_queryset()
 
         # Фильтрация по полям модели (через PostFilterSortMixin)
@@ -55,23 +74,18 @@ class PostListView(ContextTagMixin, PostFilterSortMixin, PostAnnotateQuerysetMix
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        filter_form = PostFilterForm(self.request.GET or None)
-
-        if filter_form.data.get("author"):
-            filter_form.is_valid()
-
-        context["filter_form"] = filter_form
+        context["filter_form"] = self.get_filter_form()
 
         get_params = self.request.GET.copy()
-        if "page" in get_params:
-            get_params.pop("page")
+        get_params.pop("page", None)
+
         context["querystring"] = get_params.urlencode()
 
         return context
 
 
 class PostCreateView(
-    ContextTagMixin, PostAuthorMixin, LoginRequiredMixin, SuccessMessageMixin, CreateView
+    LoginRequiredMixin, ContextTagMixin, PostAuthorMixin, SuccessMessageMixin, CreateView
 ):
     """
     Страница создания нового поста.
@@ -84,8 +98,8 @@ class PostCreateView(
     success_url = reverse_lazy("posts:list")
     success_message = "Пост успешно создан!"
     extra_context = {
-        "section_of_menu_selected": "posts:create"
-    }  # Добавляет выбранный раздел меню в контекст
+        "section_of_menu_selected": "posts:create"  # Добавляет выбранный раздел меню в контекст
+    }
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -104,14 +118,20 @@ class PostDetailView(PostAnnotateQuerysetMixin, DetailView):
 
     def get_object(self, queryset=None):
         """Возвращает объект поста с кешированием."""
-        queryset = queryset or self.get_queryset()
+        if queryset is None:
+            queryset = self.get_queryset()
 
         post_id = self.kwargs.get(self.pk_url_kwarg)
+        post_slug = self.kwargs.get(self.slug_url_kwarg)
 
         post = get_cached_post(
             post_id=post_id,
             queryset=queryset,
         )
+
+        # slug из URL должен совпадать с реальным slug поста
+        if post.slug != post_slug:
+            raise Http404("Пост не найден.")
 
         # Добавляет объекту флаг лайка от пользователя
         return self.set_user_has_liked(post)

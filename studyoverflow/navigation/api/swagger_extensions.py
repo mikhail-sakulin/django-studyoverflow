@@ -19,7 +19,8 @@ class CustomSessionScheme(OpenApiAuthenticationExtension):
             "type": "apiKey",
             "in": "cookie",
             "name": "sessionid",
-            "description": "Аутентификация через сессию в cookie клиента.",
+            "description": "Аутентификация через сессию в cookie клиента. "
+            "В поле Value вводится только сама сессия.",
         }
 
 
@@ -37,7 +38,7 @@ class CustomTokenScheme(OpenApiAuthenticationExtension):
             "type": "apiKey",
             "in": "header",
             "name": "Authorization",
-            "description": 'Аутентификация через DRF токен. Формат: "Token <токен>"',
+            "description": 'Аутентификация через DRF токен. В поле Value вводится "Token <токен>".',
         }
 
 
@@ -55,5 +56,7 @@ class CustomJWTScheme(OpenApiAuthenticationExtension):
             "type": "http",
             "scheme": "bearer",
             "bearerFormat": "JWT",
-            "description": 'Аутентификация через JWT токен. Формат: "Bearer <jwt_токен>"',
+            "description": "Аутентификация через JWT токен. В поле Value вводится только "
+            'сам токен. Swagger UI автоматически подставит "Bearer " при '
+            "формировании заголовка Authorization.",
         }

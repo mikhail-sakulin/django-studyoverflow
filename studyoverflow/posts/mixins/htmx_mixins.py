@@ -8,6 +8,7 @@ from typing import Optional
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404, HttpResponse
+from django.shortcuts import resolve_url
 
 
 logger = logging.getLogger(__name__)
@@ -93,7 +94,7 @@ class LoginRequiredRedirectHTMXMixin(LoginRequiredMixin):
 
     def handle_no_permission(self):
         if self.request.headers.get("Hx-Request"):
-            return HttpResponse(headers={"HX-Redirect": f"{self.get_login_url()}"})
+            return HttpResponse(headers={"HX-Redirect": resolve_url(self.get_login_url())})
         return super().handle_no_permission()
 
 

@@ -16,7 +16,7 @@ AUTH_USER_MODEL = "users.User"
 # ----------------------------------------
 
 # URL страницы для логина
-LOGIN_URL = "/users/login/"
+LOGIN_URL = "users:login"
 
 # URL для редиректа после успешного логина
 LOGIN_REDIRECT_URL = "home"
@@ -145,7 +145,9 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=14),  # Время жизни refresh token
     "ROTATE_REFRESH_TOKENS": True,  # Выдавать новый refresh при обновлении
     "BLACKLIST_AFTER_ROTATION": True,  # Добавлять старый refresh в blacklist
-    "UPDATE_LAST_LOGIN": True,  # Обновлять user.last_login при логине
+    # last_login обновляется стандартным обработчиком сигнала user_logged_in,
+    # который отправляется вручную в CustomTokenObtainPairView
+    "UPDATE_LAST_LOGIN": False,  # Обновлять user.last_login при логине
     "ALGORITHM": "HS256",  # Алгоритм подписи JWT
     "SIGNING_KEY": SECRET_KEY,  # Секретный ключ для подписи
     "VERIFYING_KEY": "",  # Публичный ключ при алгоритмах RS256 или ES256
@@ -183,6 +185,9 @@ REST_AUTH = {
     # False, если токен забирает фронтенд сам из JSON-тела.
     # True для передачи refresh-токена только в httponly куке, тогда js не имеет к ней доступа.
     "JWT_AUTH_HTTPONLY": False,
+    # Сериализатор для отображения данных пользователя в ответах dj-rest-auth
+    # после успешной аутентификации.
+    "USER_DETAILS_SERIALIZER": "users.api.serializers.UserMyProfileSerializer",
 }
 
 # HTTPS конфигурация dj_rest_auth, если Nginx настроен на работу по SSL/HTTPS

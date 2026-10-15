@@ -43,6 +43,8 @@
           {% for post in posts %}
             {% include 'posts/post_card.html' %}
           {% endfor %}
+        {% elif filter_form.errors %}
+          <h5 class="text-white text-center px-1 mt-5">Для поиска постов исправьте ошибки в форме фильтрации.</h5>
         {% else %}
           <h5 class="text-white text-center px-1 mt-5">Постов с заданными фильтрами не найдено.</h5>
         {% endif %}

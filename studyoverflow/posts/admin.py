@@ -10,6 +10,7 @@ from django.utils.html import format_html
 from django.utils.text import Truncator
 
 from posts.models import Comment, Like, LowercaseTag, Post, TaggedPost
+from posts.services.cache import delete_cache_post_detail
 
 
 # Задает HTML-атрибуты для тега textarea для текстовых полей rendered_content и search_content
@@ -180,7 +181,14 @@ class PostAdmin(admin.ModelAdmin):
             )
             return
 
-        count = queryset.update(content="")
+        post_ids = list(queryset.values_list("id", flat=True))
+
+        count = queryset.update(content="", rendered_content="", search_content="")
+
+        # Инвалидация кеша очищенных постов
+        for post_id in post_ids:
+            delete_cache_post_detail(post_id)
+
         self.message_user(request, f"Содержимое {count} постов очищено.")
 
     @admin.display(description="Отредактировано", boolean=True)

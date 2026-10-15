@@ -8,7 +8,8 @@ from django.db.models import Q
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from users.services import delete_cache_user, remove_user_offline
+from users.services.cache import USER_CACHE_IGNORED_FIELDS, delete_cache_user
+from users.services.online import remove_user_offline
 from users.services.permissions import MODERATOR_PERMISSIONS, STAFF_PERMISSIONS
 from users.tasks import delete_all_avatars_files_task
 
@@ -50,9 +51,8 @@ def delete_user_avatars_after_user_deleted(sender, instance, **kwargs):
     Использует transaction.on_commit, чтобы файлы удалялись только после
     успешного завершения транзакции БД.
     """
-    transaction.on_commit(
-        lambda: delete_all_avatars_files_task.delay(str(instance.s3_storage_uuid))
-    )
+    storage_uuid = str(instance.s3_storage_uuid)
+    transaction.on_commit(lambda: delete_all_avatars_files_task.delay(storage_uuid))
 
 
 @receiver(user_logged_in)
@@ -115,6 +115,9 @@ def log_user_logout(sender, request, user, **kwargs):
 
     Логирует выход пользователя из системы с сохранением данных пользователя.
     """
+    if user is None:
+        return
+
     source = getattr(request, "source_for_logging", "unknown") if request else "unknown"
 
     logger.info(
@@ -137,6 +140,9 @@ def remove_user_offline_when_logged_out(sender, request, user, **kwargs):
 
     Удаляет информацию о присутствии пользователя (online status) из Redis.
     """
+    if user is None:
+        return
+
     remove_user_offline(user.pk)
 
 
@@ -187,15 +193,27 @@ def log_user_login_failed(sender, credentials, request, **kwargs):
 @receiver(post_save, sender=UserModel)
 def invalidate_user_object_cache_on_save(sender, instance, created, raw, update_fields, **kwargs):
     """
-    Удаляет кэш объекта пользователя при изменении данных пользователя, кроме пароля.
+    Удаляет кэш объекта пользователя при изменении данных пользователя,
+    кроме USER_CACHE_IGNORED_FIELDS.
     """
     if created or raw:
         return
 
-    if update_fields and "password" in update_fields:
+    # Если update_fields передан явно и все переданные поля входят в игнорируемые, то
+    # кещ удалять не нужно.
+    if update_fields is not None and set(update_fields) <= USER_CACHE_IGNORED_FIELDS:
         return
 
-    delete_cache_user(instance.username)
+    username = instance.username
+    transaction.on_commit(lambda: delete_cache_user(username))
+
+    # При изменении username старый объект пользователя также удаляется из кеша
+    old_username = instance._original_username
+    if old_username and old_username != instance.username:
+        transaction.on_commit(lambda: delete_cache_user(old_username))
+
+    # В случае повторного .save()
+    instance._original_username = instance.username
 
 
 @receiver(post_delete, sender=UserModel)
@@ -203,4 +221,5 @@ def invalidate_user_object_cache_on_delete(sender, instance, **kwargs):
     """
     Удаляет кэш объекта пользователя при его удалении.
     """
-    delete_cache_user(instance.username)
+    username = instance.username
+    transaction.on_commit(lambda: delete_cache_user(username))

@@ -1,8 +1,9 @@
 import logging
 
+from django.core.exceptions import BadRequest
 from django.http import HttpRequest
 
-from users.services import get_cached_online_user_ids
+from users.services.online import get_cached_online_user_ids
 
 
 logger = logging.getLogger(__name__)
@@ -28,16 +29,18 @@ class UserOnlineFilterMixin:
         if online == "any":
             return queryset
 
-        self.online_ids = get_cached_online_user_ids()
+        online_ids = self.get_online_ids()
 
         if online == "online":
-            return queryset.filter(id__in=self.online_ids)
+            return queryset.filter(id__in=online_ids)
 
-        return queryset.exclude(id__in=self.online_ids)
+        return queryset.exclude(id__in=online_ids)
 
     def get_online_ids(self):
         """Возвращает список ID пользователей, находящихся онлайн."""
-        return getattr(self, "online_ids", get_cached_online_user_ids())
+        if not hasattr(self, "_online_ids"):
+            self._online_ids = get_cached_online_user_ids()
+        return self._online_ids
 
 
 class UserSortMixin:
@@ -97,8 +100,10 @@ class UserHTMXPaginationMixin:
     paginate_htmx_by = 9
     offset_param = "offset"
     limit_param = "limit"
+    # специальное значение: вернуть всех, начиная с offset
+    limit_all = -1
 
-    def paginate_queryset(self, queryset):
+    def apply_pagination(self, queryset):
         """
         Применяет offset-limit пагинацию к queryset.
 
@@ -114,6 +119,10 @@ class UserHTMXPaginationMixin:
         try:
             offset = int(offset)
             limit = int(limit)
+
+            if offset < 0 or (limit < 1 and limit != self.limit_all):
+                raise ValueError("Некорректные параметры пагинации.")
+
         except ValueError:
             logger.warning(
                 "Некорректные параметры пагинации.",
@@ -125,12 +134,15 @@ class UserHTMXPaginationMixin:
                     "event_type": "htmx_pagination_invalid_params",
                 },
             )
-            # Дефолтные значения, чтобы во view не было ошибок
-            self.offset = 0
-            self.limit = self.paginate_htmx_by
-            self.remaining = False
+            # Дефолтные значения, чтобы во view не было ошибок (при return queryset.none())
+            # self.offset = 0
+            # self.limit = self.paginate_htmx_by
+            # self.remaining = False
 
-            return queryset.none()
+            # return queryset.none()
+
+            # Вместо возврата пустого списка возвращается 400-ый ответ
+            raise BadRequest("Некорректные параметры пагинации.")
 
         self.offset = offset
         self.limit = limit

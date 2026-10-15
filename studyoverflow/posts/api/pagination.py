@@ -23,3 +23,38 @@ class PostCommentsPagination(CustomPageNumberPagination):
                 "results": data,
             }
         )
+
+    def get_paginated_response_schema(self, schema):
+        """
+        Метод перехватывается drf-spectacular для генерации
+        OpenAPI-схемы пагинации списка комментариев поста.
+        """
+        return {
+            "type": "object",
+            "required": ["parents_comments_count", "all_comments_count", "results"],
+            "properties": {
+                "parents_comments_count": {
+                    "type": "integer",
+                    "example": 12,
+                    "description": "Общее количество родительских комментариев.",
+                },
+                "all_comments_count": {
+                    "type": "integer",
+                    "example": 34,
+                    "description": "Общее количество всех комментариев (включая дочерние).",
+                },
+                "next": {
+                    "type": "string",
+                    "nullable": True,
+                    "format": "uri",
+                    "example": "http://127.0.0.1/api/v1/posts/1/comments/?page=3",
+                },
+                "previous": {
+                    "type": "string",
+                    "nullable": True,
+                    "format": "uri",
+                    "example": "http://127.0.0.1/api/v1/posts/1/comments/?page=1",
+                },
+                "results": schema,
+            },
+        }

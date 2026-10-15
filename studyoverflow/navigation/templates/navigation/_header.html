@@ -35,15 +35,16 @@
              href="{% url 'notifications:base' %}"
              class="btn btn-outline-light border-0 align-items-center position-relative">
 
-              {# Иконка уведомлений #}
+            {# Иконка уведомлений и частицы #}
+            <span class="bell-wrapper">
               <i id="i-notifications" class="{% if unread_notifications_count > 0 %}bi bi-bell-fill{% else %}bi bi-bell{% endif %}"></i>
-
-              {# Счётчик уведомлений #}
-              <span id="notifications-count" class="{% if unread_notifications_count > 0 %}text-danger{% else %}text-warning{% endif %}" data-user-id="{{ user.id }}">
-                  {{ unread_notifications_count }}
-              </span>
-
               <div class="notification-particles"></div>
+            </span>
+
+            {# Счётчик уведомлений #}
+            <span id="notifications-count" class="{% if unread_notifications_count > 0 %}text-danger{% else %}text-warning{% endif %}" data-user-id="{{ user.id }}">
+                {{ unread_notifications_count }}
+            </span>
           </a>
 
           <a href="{% url 'users:my_profile' %}" id="profile-button" class="btn btn-warning me-2">

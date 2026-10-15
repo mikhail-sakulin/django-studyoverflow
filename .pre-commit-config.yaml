@@ -64,7 +64,7 @@ repos:
 
       - id: django-tests
         name: Django tests
-        entry: pytest -n 0 -c studyoverflow/pytest.ini --ignore=e2e
+        entry: pytest -c studyoverflow/pytest.ini --ignore=e2e
         language: system
         types: [python]
         # Указано регулярное выражение, хук запускается, только если в индекс (подготовленные к коммиту

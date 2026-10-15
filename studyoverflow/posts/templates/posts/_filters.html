@@ -17,6 +17,14 @@
         <label for="id_q" class="form-label">Поиск в постах</label>
         <input type="text" id="id_q" name="q" class="form-control" value="{{ request.GET.q }}"
                placeholder="Текст в заголовке, содержимом или в именах тегов...">
+
+        {% if filter_form.q.errors %}
+          <div class="text-danger mt-1">
+            {% for error in filter_form.q.errors %}
+              <div class="mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
     </div>
 

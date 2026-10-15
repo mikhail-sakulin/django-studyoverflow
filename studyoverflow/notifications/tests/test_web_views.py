@@ -76,8 +76,10 @@ class TestNotificationMarkReadView:
             is_api=False,
         )
 
-    def test_forbidden_for_other_user(self, client, user_factory, notification_post_factory):
-        """Попытка прочитать чужое уведомление возвращает 403 Forbidden."""
+    def test_returns_not_found_for_other_user(
+        self, client, user_factory, notification_post_factory
+    ):
+        """Попытка прочитать чужое уведомление возвращает 404."""
         owner = user_factory()
         other_user = user_factory()
 
@@ -87,7 +89,7 @@ class TestNotificationMarkReadView:
         url = reverse("notifications:mark_read", kwargs={"pk": notification.pk})
         response = client.post(url)
 
-        assert response.status_code == 403
+        assert response.status_code == 404
         notification.refresh_from_db()
         assert notification.is_read is False
 
@@ -113,7 +115,12 @@ class TestNotificationMarkAllReadView:
         assert_login_required(url_name="notifications:mark_all_read", method="post")
 
     def test_mark_all_read_success_and_triggers_celery(
-        self, client, user_factory, notification_post_factory, mocker
+        self,
+        client,
+        user_factory,
+        notification_post_factory,
+        mocker,
+        django_capture_on_commit_callbacks,
     ):
         """
         Все непрочитанные уведомления пользователя становятся прочитанными,
@@ -129,8 +136,12 @@ class TestNotificationMarkAllReadView:
         n_other = notification_post_factory(user=other_user)
 
         client.force_login(user)
-        url = reverse("notifications:mark_all_read")
-        response = client.post(url)
+
+        # Коллбеки, зарегистрированные через transaction.on_commit, выполнятся при выходе
+        # из блока with.
+        with django_capture_on_commit_callbacks(execute=True):
+            url = reverse("notifications:mark_all_read")
+            response = client.post(url)
 
         assert response.status_code == 200
 
@@ -169,8 +180,10 @@ class TestNotificationDeleteView:
             is_api=False,
         )
 
-    def test_forbidden_for_other_user(self, client, user_factory, notification_post_factory):
-        """Удаление чужого уведомления запрещено, возвращается 403."""
+    def test_returns_not_found_for_other_user(
+        self, client, user_factory, notification_post_factory
+    ):
+        """Удаление чужого уведомления запрещено, возвращается 404."""
         owner = user_factory()
         other_user = user_factory()
 
@@ -180,7 +193,7 @@ class TestNotificationDeleteView:
         url = reverse("notifications:delete", kwargs={"pk": notification.pk})
         response = client.post(url)
 
-        assert response.status_code == 403
+        assert response.status_code == 404
         assert Notification.objects.filter(pk=notification.pk).exists() is True
 
     def test_delete_notification_success(self, client, user_factory, notification_post_factory):

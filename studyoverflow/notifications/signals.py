@@ -6,7 +6,7 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from notifications.models import Notification
-from notifications.services import (
+from notifications.services.notification_handlers import (
     handle_notification_comment_like,
     handle_notification_comment_on_post_created,
     handle_notification_post_created,

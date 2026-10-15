@@ -1,83 +1,77 @@
 import pytest
+from django.core.cache import cache
 
-from posts.models import LowercaseTag
+from posts.models import LowercaseTag, Post
+from posts.services.cache import (
+    get_cached_post,
+    get_cached_tags,
+    get_post_cache_key,
+    get_tags_cache_key,
+)
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.mark.django_db
 class TestUserCountersSignals:
     """Тестирование вызовов сервиса обновления счетчиков пользователя."""
 
-    def test_post_create_and_delete_updates_author_posts_count(
-        self, user_factory, post_factory, mocker
-    ):
+    def test_post_create_and_delete_updates_author_posts_count(self, user_factory, post_factory):
         """При создании и удалении поста изменяется счетчик posts_count у автора."""
-        mock_update = mocker.patch("posts.signals.update_user_counter_field")
         user = user_factory()
 
         # Создание поста
         post = post_factory(author=user)
-        mock_update.assert_called_with(user.pk, "posts_count", 1)
+        user.refresh_from_db()
+        assert user.posts_count == 1
 
         # Обновление поста не увеличивает счетчик
-        mock_update.reset_mock()
         post.title = "Новый заголовок"
         post.save()
-        mock_update.assert_not_called()
+        user.refresh_from_db()
+        assert user.posts_count == 1
 
         # Удаление поста
         post.delete()
-        mock_update.assert_called_with(user.pk, "posts_count", -1)
+        user.refresh_from_db()
+        assert user.posts_count == 0
 
     def test_comment_create_and_delete_updates_author_comments_count(
-        self, user_factory, comment_factory, mocker
+        self, user_factory, comment_factory
     ):
         """
         При создании и удалении комментария изменяется счетчик comments_count у автора комментария.
         """
-        mock_update = mocker.patch("posts.signals.update_user_counter_field")
         user = user_factory()
 
         comment = comment_factory(author=user)
-        mock_update.assert_called_with(user.pk, "comments_count", 1)
+        user.refresh_from_db()
+        assert user.comments_count == 1
 
         comment.delete()
-        mock_update.assert_called_with(user.pk, "comments_count", -1)
+        user.refresh_from_db()
+        assert user.comments_count == 0
 
+    @pytest.mark.parametrize("target", ["post", "comment"])
     def test_post_like_create_and_delete_updates_author_reputation(
-        self, user_factory, post_factory, like_factory, mocker
+        self, target, user_factory, post_factory, comment_factory, like_factory
     ):
-        """При лайке поста у автора поста изменяется репутация."""
-        mock_update = mocker.patch("posts.signals.update_user_counter_field")
-
+        """При лайке поста или комментария у автора изменяется репутация."""
         author = user_factory()
-        post = post_factory(author=author)
-        user_liker = user_factory()
+        obj = post_factory(author=author) if target == "post" else comment_factory(author=author)
 
-        # Очистка истории вызовов мока, чтобы затем проверить еще один его вызов
-        mock_update.reset_mock()
-        like = like_factory(user=user_liker, content_object=post)
-        mock_update.assert_called_with(author.pk, "reputation", 1)
+        like = like_factory(user=user_factory(), content_object=obj)
+        author.refresh_from_db()
+        assert author.reputation == 1
 
         like.delete()
-        mock_update.assert_called_with(author.pk, "reputation", -1)
-
-    def test_comment_like_create_and_delete_updates_author_reputation(
-        self, user_factory, comment_factory, like_factory, mocker
-    ):
-        """При лайке комментария у автора поста изменяется репутация."""
-        mock_update = mocker.patch("posts.signals.update_user_counter_field")
-
-        author = user_factory()
-        comment = comment_factory(author=author)
-        user_liker = user_factory()
-
-        # Очистка истории вызовов мока, чтобы затем проверить еще один его вызов
-        mock_update.reset_mock()
-        like = like_factory(user=user_liker, content_object=comment)
-        mock_update.assert_called_with(author.pk, "reputation", 1)
-
-        like.delete()
-        mock_update.assert_called_with(author.pk, "reputation", -1)
+        author.refresh_from_db()
+        assert author.reputation == 0
 
 
 @pytest.mark.django_db
@@ -150,82 +144,98 @@ class TestObjectCountersSignals:
 @pytest.mark.django_db
 class TestPostCacheSignals:
 
-    def test_post_cache_invalidation_on_update_and_delete(self, post_factory, mocker):
-        """
-        При создании поста кэш не сбрасывается.
+    def _fill_cache(self, post):
+        """Создает кеш для поста."""
+        get_cached_post(post.pk, Post.objects.all())
+        assert cache.get(get_post_cache_key(post.pk)) is not None
 
-        При обновлении и удалении поста вызывается сервис удаления кэша.
-        """
-        mock_delete_cache = mocker.patch("posts.signals.delete_cache_post_detail")
-
-        # 1) Создание поста (created=True) — кэш не сбрасывается
+    def test_update_invalidates_post_cache(self, post_factory, django_capture_on_commit_callbacks):
+        """При обновлении поста кеш инвалидируется."""
         post = post_factory()
-        mock_delete_cache.assert_not_called()
+        self._fill_cache(post)
 
-        # 2) Обновление поста (created=False) — кэш сбрасывается
-        post.title = "Обновленный заголовок"
-        post.save()
-        mock_delete_cache.assert_called_once_with(post.pk)
+        with django_capture_on_commit_callbacks(execute=True):
+            post.title = "Обновленный заголовок"
+            post.save()
 
-        # 3) Удаление поста — кэш сбрасывается
-        mock_delete_cache.reset_mock()
-        post_id = post.pk
-        post.delete()
-        mock_delete_cache.assert_called_once_with(post_id)
+        assert cache.get(get_post_cache_key(post.pk)) is None
+
+    def test_delete_invalidates_post_cache(self, post_factory, django_capture_on_commit_callbacks):
+        """При удалении поста кеш инвалидируется."""
+        post = post_factory()
+        post_pk = post.pk
+        self._fill_cache(post)
+
+        with django_capture_on_commit_callbacks(execute=True):
+            post.delete()
+
+        assert cache.get(get_post_cache_key(post_pk)) is None
+
+    def test_tags_change_invalidates_post_cache(
+        self, post_factory, django_capture_on_commit_callbacks
+    ):
+        """При изменении тега поста кеш поста инвалидируется."""
+        post = post_factory(tags=["first_tag"])
+        self._fill_cache(post)
+
+        with django_capture_on_commit_callbacks(execute=True):
+            post.tags.add("second_tag")
+
+        assert cache.get(get_post_cache_key(post.pk)) is None
 
 
 @pytest.mark.django_db
 class TestTagCacheSignals:
 
-    def test_tags_cache_invalidation_on_create_update_and_delete(self, mocker):
+    def test_tags_cache_invalidation_on_create_update_and_delete(
+        self, django_capture_on_commit_callbacks
+    ):
         """
-        При создании, изменении и удалении тега вызывается сервис удаления кеша списка тегов.
+        При создании, изменении и удалении тега удаляется кеш списка тегов.
         """
-        mock_delete_cache = mocker.patch("posts.signals.delete_cache_tags_list")
+        key = get_tags_cache_key()
 
-        # 1) Создание тега — кеш сбрасывается
-        tag = LowercaseTag.objects.create(name="python")
-        mock_delete_cache.assert_called_once()
+        # Создание тега
+        get_cached_tags()
+        with django_capture_on_commit_callbacks(execute=True):
+            tag = LowercaseTag.objects.create(name="python")
+        assert cache.get(key) is None
 
-        # 2) Обновление тега — кеш сбрасывается
-        mock_delete_cache.reset_mock()
-        tag.name = "django"
-        tag.save()
-        mock_delete_cache.assert_called_once()
+        # Изменение тега
+        get_cached_tags()
+        assert cache.get(key) is not None
+        with django_capture_on_commit_callbacks(execute=True):
+            tag.name = "django"
+            tag.save()
+        assert cache.get(key) is None
 
-        # 3) Удаление тега — кеш сбрасывается
-        mock_delete_cache.reset_mock()
-        tag.delete()
-        mock_delete_cache.assert_called_once()
+        # Удаление тега
+        get_cached_tags()
+        with django_capture_on_commit_callbacks(execute=True):
+            tag.delete()
+        assert cache.get(key) is None
 
 
 @pytest.mark.django_db
 class TestTagPostsCountSignals:
 
     def test_tag_posts_count_increases_and_cache_invalidated_on_post_creation(
-        self, post_factory, mocker
+        self, post_factory, django_capture_on_commit_callbacks, mocker
     ):
         """
         При создании поста с тегами у каждого тега увеличивается posts_count
         и сбрасывается кеш списка тегов.
         """
-        mock_delete_cache = mocker.patch("posts.signals.delete_cache_tags_list")
-
-        # Теги создаются заранее, чтобы можно было сделать reset mock_delete_cache.reset_mock()
-        # после создания тегов. Тогда можно будет проверить, что мок mock_delete_cache вызывался
-        # именно при назначении тегов посту.
         LowercaseTag.objects.create(name="python")
         LowercaseTag.objects.create(name="django")
+        get_cached_tags()
 
-        mock_delete_cache.reset_mock()
+        with django_capture_on_commit_callbacks(execute=True):
+            post_factory(tags=["python", "django"])
 
-        post_factory(tags=["python", "django"])
-
-        tag_python = LowercaseTag.objects.get(name="python")
-        tag_django = LowercaseTag.objects.get(name="django")
-        assert tag_python.posts_count == 1
-        assert tag_django.posts_count == 1
-        assert mock_delete_cache.call_count == 2
+        assert LowercaseTag.objects.get(name="python").posts_count == 1
+        assert LowercaseTag.objects.get(name="django").posts_count == 1
+        assert cache.get(get_tags_cache_key()) is None
 
     def test_tag_posts_count_increases_for_multiple_posts_with_same_tag(self, post_factory):
         """При создании нескольких постов с одинаковым тегом posts_count суммируется."""
@@ -236,16 +246,14 @@ class TestTagPostsCountSignals:
         assert tag.posts_count == 2
 
     def test_tag_posts_count_decreases_and_cache_invalidated_on_post_delete(
-        self, post_factory, mocker
+        self, post_factory, django_capture_on_commit_callbacks
     ):
         """При удалении поста posts_count связанного тега уменьшается и сбрасывается кеш."""
         post = post_factory(tags=["python"])
-        tag = LowercaseTag.objects.get(name="python")
-        assert tag.posts_count == 1
+        get_cached_tags()
 
-        mock_delete_cache = mocker.patch("posts.signals.delete_cache_tags_list")
-        post.delete()
+        with django_capture_on_commit_callbacks(execute=True):
+            post.delete()
 
-        tag.refresh_from_db()
-        assert tag.posts_count == 0
-        mock_delete_cache.assert_called_once()
+        assert LowercaseTag.objects.get(name="python").posts_count == 0
+        assert cache.get(get_tags_cache_key()) is None

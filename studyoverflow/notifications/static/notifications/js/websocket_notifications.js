@@ -7,6 +7,7 @@
     - Обновление списка уведомлений через HTMX
     - Автоматическое переподключение при обрыве соединения
     - Heartbeat: периодическое оповещение сервера, что пользователь онлайн
+    - Обработка завершения сессии (код закрытия 4401)
 */
 
 
@@ -25,25 +26,51 @@ document.addEventListener("DOMContentLoaded", function () {
     const wsScheme = location.protocol === "https:" ? "wss" : "ws";
     const wsUrl = `${wsScheme}://${location.host}/ws/notifications/`;
 
+    // Код, которым сервер закрывает соединение, если сессии соединения больше не существует.
+    // WS_CLOSE_SESSION_ENDED задается в notifications/consumers.py, значения должны совпадать.
+    // Причины закрытия с данным кодом: logout в другой вкладке, истек срок сессии или сменился
+    // ключ сессии, например, после смены пароля.
+    const WS_CLOSE_SESSION_ENDED = 4401;
+
     let socket;
+    let heartbeatTimer = null;
+
+    // true, пока идет повторная (единственная) попытка подключения после кода 4401.
+    // Флаг нужен, чтобы различать ситуации:
+    // - сессия только сменила ключ (пользователь не выходил): повторное подключение с новой
+    //   cookie пройдет, onopen сбросит флаг;
+    // - пользователь действительно вышел: сервер отклонит подключение (код 1006), и по флагу
+    //   понятно, что переподключаться дальше не нужно, иначе цикл повторялся бы бесконечно.
+    let retryAfterSessionEnded = false;
+
+    // Останавливает периодическую отправку heartbeat, если таймер запущен
+    function stopHeartbeat() {
+        if (heartbeatTimer !== null) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+    }
 
     // --------------------------
     // Анимация новых уведомлений
     // --------------------------
     function animateNotification() {
-        // Пульс иконки
+        // Пульсация иконки
         iconEl.classList.add("pulse");
         setTimeout(() => iconEl.classList.remove("pulse"), 500);
 
-        // Частицы
+        // Фиксированные частицы
         const container = buttonEl.querySelector(".notification-particles");
-        for (let i = 0; i < 8; i++) {
+        const particleCount = 8;
+        const radius = 25;
+        const startAngle = -Math.PI / 2;
+
+        for (let i = 0; i < particleCount; i++) {
             const particle = document.createElement("div");
             particle.classList.add("particle");
 
-            // Случайное направление
-            const angle = Math.random() * 2 * Math.PI;
-            const radius = 20 + Math.random() * 10;
+            const angle = startAngle + (i / particleCount) * 2 * Math.PI;
+
             particle.style.setProperty("--dx", `${Math.cos(angle) * radius}px`);
             particle.style.setProperty("--dy", `${Math.sin(angle) * radius}px`);
 
@@ -61,15 +88,18 @@ document.addEventListener("DOMContentLoaded", function () {
         socket.onopen = () => {
             console.log("WS connected");
 
+            retryAfterSessionEnded = false;
+
             // -----------------------------------------------------------------------
             // Heartbeat: каждую 1 минуту сообщается серверу, что пользователь онлайн
             // -----------------------------------------------------------------------
-            setInterval(() => {
+            stopHeartbeat();
+            heartbeatTimer = setInterval(() => {
                 if (socket.readyState === WebSocket.OPEN) {
                     // type "heartbeat" будет обрабатываться сервером
                     socket.send(JSON.stringify({ type: "heartbeat" }));
                 }
-            }, 60 * 1000); // 1 минута
+            }, 60 * 1000);  // 1 минута
         };
 
         socket.onmessage = event => {
@@ -132,6 +162,27 @@ document.addEventListener("DOMContentLoaded", function () {
         // Обработка закрытия WS
         // --------------------------
         socket.onclose = event => {
+            stopHeartbeat();
+
+            // Сервер закрыл соединение из-за завершения сессии.
+            // Делается одна попытка подключиться заново: если сессия просто сменила ключ
+            // (например, после смены пароля), новое подключение возьмет актуальную cookie.
+            if (event.code === WS_CLOSE_SESSION_ENDED) {
+                console.warn("WS session ended, trying to reconnect once...");
+                retryAfterSessionEnded = true;
+                setTimeout(connect, 1000);
+                return;
+            }
+
+            // Повторная попытка после 4401 не удалась: сервер отклонил подключение, так как
+            // пользователь вышел из аккаунта.
+            if (retryAfterSessionEnded) {
+                console.warn("WS reconnect after session end failed, user is logged out");
+                // Обновление страницы
+                location.reload();
+                return;
+            }
+
             if (!event.wasClean) {
                 console.warn("WS disconnected, reconnecting...");
                 setTimeout(connect, 5000);

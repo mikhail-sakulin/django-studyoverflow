@@ -31,14 +31,25 @@ class UserActivityMiddleware:
             return self.get_response(request)
 
         logger_extra_data = {
-            "user_id": request.user.pk if request.user.is_authenticated else None,
-            "username": request.user.username if request.user.is_authenticated else None,
+            "before_response": {
+                "user_id": request.user.pk if request.user.is_authenticated else None,
+                "username": request.user.username if request.user.is_authenticated else None,
+            },
             "method": request.method,
             "path": request.path,
             "event_type": "request",
         }
 
         response = self.get_response(request)
+
+        logger_extra_data.update(
+            {
+                "after_response": {
+                    "user_id": request.user.pk if request.user.is_authenticated else None,
+                    "username": request.user.username if request.user.is_authenticated else None,
+                },
+            }
+        )
 
         logger.info(
             "Отправлен запрос к ресурсу.",

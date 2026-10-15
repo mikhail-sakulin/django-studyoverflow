@@ -1,11 +1,18 @@
 from django.contrib.auth import get_user_model
 from django.utils.timezone import localtime
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from taggit.serializers import TagListSerializerField
 
 from posts.models import Comment, LowercaseTag, Post
-from posts.services import validate_and_normalize_tags, validate_comment
-from users.services import is_author_or_moderator
+from posts.services.validators import (
+    validate_and_normalize_tags,
+    validate_author_exists,
+    validate_comment,
+    validate_search_query,
+)
+from users.api.serializers import AvatarSerializer
+from users.services.permissions import is_author_or_moderator
 
 
 User = get_user_model()
@@ -16,9 +23,11 @@ class AuthorSerializer(serializers.ModelSerializer):
     Сериализатор для краткого отображения данных автора поста или комментария.
     """
 
+    avatars = AvatarSerializer(source="*", read_only=True)
+
     class Meta:
         model = User
-        fields = ("id", "username", "avatar")
+        fields = ("id", "username", "role", "is_blocked", "avatars")
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -30,29 +39,12 @@ class PostSerializer(serializers.ModelSerializer):
 
     author = AuthorSerializer(read_only=True)
     time_update = serializers.SerializerMethodField()
-    title = serializers.CharField(
-        max_length=Post.MAX_TITLE_SLUG_LENGTH_POST,
-        required=True,
-        error_messages={
-            "max_length": f"Длина заголовка не должна превышать "
-            f"{Post.MAX_TITLE_SLUG_LENGTH_POST} символов."
-        },
-    )
-    content = serializers.CharField(
-        write_only=True,
-        required=False,
-        allow_blank=True,
-        max_length=Post.MAX_CONTENT_LENGTH,
-        error_messages={
-            "max_length": f"Длина контента не должна превышать {Post.MAX_CONTENT_LENGTH} символов."
-        },
-    )
     tags = TagListSerializerField()
+    likes_count = serializers.IntegerField(read_only=True)
+    comments_count = serializers.IntegerField(read_only=True)
 
-    # Аннотированные поля, должны добавляться в queryset
-    likes_count = serializers.IntegerField(read_only=True, default=0)
+    # Аннотированное поля, лайкнул ли пользователь пост, должно добавляться в queryset
     user_has_liked = serializers.BooleanField(read_only=True, default=False)
-    comments_count = serializers.IntegerField(read_only=True, default=0)
 
     # Флаг может ли текущий пользователь изменять или удалять объект
     can_edit_or_delete = serializers.SerializerMethodField()
@@ -88,8 +80,40 @@ class PostSerializer(serializers.ModelSerializer):
             "comments_count",
             "can_edit_or_delete",
         )
+        extra_kwargs = {
+            "title": {
+                "min_length": Post.MIN_TITLE_LENGTH,
+                "help_text": (
+                    f"От {Post.MIN_TITLE_LENGTH} всего символов, "
+                    f"минимум {Post.MIN_TITLE_LENGTH} буквенных символов."
+                ),
+                "error_messages": {
+                    "max_length": f"Длина заголовка не должна превышать "
+                    f"{Post.MAX_TITLE_SLUG_LENGTH_POST} символов."
+                },
+            },
+            "content": {
+                "error_messages": {
+                    "max_length": f"Длина контента не должна превышать "
+                    f"{Post.MAX_CONTENT_LENGTH} символов."
+                },
+            },
+        }
 
-    def get_time_update(self, post):
+    def to_representation(self, instance):
+        """
+        Поле content возвращается в ответе только тем, для кого флаг can_edit_or_delete == True,
+        содержит исходный текст в Markdown-синтаксисе, используется при редактировании.
+        """
+        data = super().to_representation(instance)
+
+        if not data.get("can_edit_or_delete"):
+            data.pop("content", None)
+
+        return data
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_time_update(self, post) -> str | None:
         """Возвращает время изменения в локальном часовом поясе, если пост редактировался."""
         if post.is_edited and post.time_update:
             # перевод времени UTC из базы в зону, указанную в settings.TIME_ZONE
@@ -125,17 +149,27 @@ class PostSerializer(serializers.ModelSerializer):
         return instance
 
 
-class CommentSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для комментариев.
+class PostFilterSerializer(serializers.Serializer):
+    """Сериализатор для валидации GET-параметров фильтрации списка постов."""
 
-    Поддерживает вложенную структуру, включает агрегацию лайков и дочерних комментариев.
+    q = serializers.CharField(required=False, allow_blank=True)
+    author = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_q(self, value: str) -> str:
+        return validate_search_query(value)
+
+    def validate_author(self, value: str) -> str:
+        return validate_author_exists(value)
+
+
+class CommentBaseSerializer(serializers.ModelSerializer):
+    """
+    Базовый сериализатор для комментариев без информации о вложенности.
     """
 
     author = AuthorSerializer(read_only=True)
     time_update = serializers.SerializerMethodField()
     content = serializers.CharField(
-        write_only=True,
         required=True,
         max_length=Comment.MAX_CONTENT_LENGTH,
         error_messages={
@@ -143,18 +177,13 @@ class CommentSerializer(serializers.ModelSerializer):
             f"{Comment.MAX_CONTENT_LENGTH} символов."
         },
     )
-    # Аннотированные поля, должны добавляться в queryset
-    likes_count = serializers.IntegerField(read_only=True, default=0)
+    likes_count = serializers.IntegerField(read_only=True)
+
+    # Аннотированное поля, лайкнул ли пользователь комментарий, должно добавляться в queryset
     user_has_liked = serializers.BooleanField(read_only=True, default=False)
 
     # Флаг может ли текущий пользователь изменять или удалять объект
     can_edit_or_delete = serializers.SerializerMethodField()
-
-    # Счетчик дочерних комментариев. Считается только для родительских комментариев.
-    children_count = serializers.SerializerMethodField()
-
-    # Вложенность через "self"
-    child_comments = serializers.SerializerMethodField()
 
     # Переопределение ForeignKey полей для замены выпадающего списка select
     # на обычное поле ввода для уменьшения нагрузки на БД при работе с UI DRF.
@@ -173,7 +202,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = (
+        fields: tuple[str, ...] = (
             "id",
             "author",
             "parent_comment",
@@ -186,10 +215,8 @@ class CommentSerializer(serializers.ModelSerializer):
             "likes_count",
             "user_has_liked",
             "can_edit_or_delete",
-            "children_count",
-            "child_comments",
         )
-        read_only_fields = (
+        read_only_fields: tuple[str, ...] = (
             "id",
             "author",
             "time_create",
@@ -199,25 +226,37 @@ class CommentSerializer(serializers.ModelSerializer):
             "likes_count",
             "user_has_liked",
             "can_edit_or_delete",
-            "children_count",
-            "child_comments",
         )
+
+    def to_representation(self, instance):
+        """
+        Поле content возвращается в ответе только тем, для кого флаг can_edit_or_delete == True,
+        содержит исходный текст в Markdown-синтаксисе, используется при редактировании.
+        """
+        data = super().to_representation(instance)
+
+        if not data.get("can_edit_or_delete"):
+            data.pop("content", None)
+
+        return data
 
     def __init__(self, *args, **kwargs):
         """Блокирует возможность изменения parent_comment или reply_to при редактировании."""
         super().__init__(*args, **kwargs)
-        if self.instance:
+        if self.instance is not None:
             self.fields["parent_comment"].read_only = True
             self.fields["reply_to"].read_only = True
 
-    def get_time_update(self, comment):
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_time_update(self, comment) -> str | None:
         """Возвращает время изменения в локальном часовом поясе, если комментарий редактировался."""
         if comment.is_edited and comment.time_update:
-            # перевод времени UTC из базы в зону, указанную в settings.TIME_ZONE
+            # перевод времени UTC из БД в зону, указанную в settings.TIME_ZONE
             return localtime(comment.time_update).isoformat()
+
         return None
 
-    def get_can_edit_or_delete(self, comment):
+    def get_can_edit_or_delete(self, comment) -> bool:
         """Возвращает флаг, может ли текущий пользователь изменять или удалять объект."""
         user = self.context["request"].user
         if not user.is_authenticated:
@@ -226,32 +265,6 @@ class CommentSerializer(serializers.ModelSerializer):
         return is_author_or_moderator(
             user=user, obj=comment, permission_required="posts.moderate_comment"
         )
-
-    def get_child_comments(self, comment):
-        """
-        Отображает вложенные (child) комментарии тем же сериализатором:
-        - Возвращает данные только для родительских комментариев (parent_comment is None).
-        - Использует флаг 'display_tree' из context для отображения дочерних комментариев.
-        """
-        if comment.parent_comment_id is not None:
-            return None
-
-        if not self.context.get("display_tree", False):
-            return None
-
-        if comment.child_comments:
-            return CommentSerializer(comment.child_comments, many=True, context=self.context).data
-        return None
-
-    def get_children_count(self, comment):
-        """Количество дочерних комментариев для родительского. Возвращает None для дочерних."""
-        if not hasattr(comment, "children_count"):
-            return None
-
-        if comment.parent_comment_id is not None:
-            return None
-
-        return comment.children_count
 
     def validate(self, attrs):
         """Валидация иерархии и целостности комментариев."""
@@ -273,17 +286,67 @@ class CommentSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class ChildCommentSerializer(CommentBaseSerializer):
+    """
+    Сериализатор дочернего комментария. Своих дочерних комментариев не имеет (только один
+    уровень вложенности), поэтому вложенных полей нет.
+    """
+
+
+class CommentSerializer(CommentBaseSerializer):
+    """
+    Сериализатор родительского комментария с веткой ответов.
+    """
+
+    # Счетчик дочерних комментариев
+    child_count = serializers.SerializerMethodField()
+    # Вложенные дочерние комментарии
+    child_comments = serializers.SerializerMethodField()
+
+    class Meta(CommentBaseSerializer.Meta):
+        fields: tuple[str, ...] = CommentBaseSerializer.Meta.fields + (
+            "child_count",
+            "child_comments",
+        )
+        read_only_fields: tuple[str, ...] = CommentBaseSerializer.Meta.read_only_fields + (
+            "child_count",
+            "child_comments",
+        )
+
+    @extend_schema_field(ChildCommentSerializer(many=True))
+    def get_child_comments(self, comment):
+        """
+        Отображает вложенные (child) комментарии:
+        - Возвращает данные только для родительских комментариев (parent_comment is None).
+        - Использует флаг 'display_tree' из context для отображения дочерних комментариев.
+        """
+        if comment.parent_comment_id is not None:
+            return None
+
+        if not self.context.get("display_tree", False):
+            return None
+
+        return ChildCommentSerializer(comment.child_comments, many=True, context=self.context).data
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_child_count(self, comment):
+        """Количество дочерних комментариев для родительского. Возвращает None для дочерних."""
+        if not hasattr(comment, "child_count"):
+            return None
+
+        if comment.parent_comment_id is not None:
+            return None
+
+        return comment.child_count
+
+
 class TagSerializer(serializers.ModelSerializer):
     """
     Сериализатор для тегов.
     """
 
+    posts_count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = LowercaseTag
         fields = ["id", "name", "posts_count"]
-
-
-class DetailSerializer(serializers.Serializer):
-    """Сериализатор для текстовых ответов с полем "detail", используемый в схемах OpenAPI."""
-
-    detail = serializers.CharField()

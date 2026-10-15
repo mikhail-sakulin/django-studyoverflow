@@ -1,5 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponse, HttpResponseForbidden
+from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views import View
 from django.views.generic import ListView, TemplateView
@@ -42,10 +43,7 @@ class NotificationMarkReadView(LoginRequiredRedirectHTMXMixin, View):
     """
 
     def post(self, request, *args, **kwargs):
-        notification = get_object_or_404(Notification, pk=kwargs["pk"])
-
-        if notification.user != request.user:
-            return HttpResponseForbidden("Not allowed")
+        notification = get_object_or_404(Notification, pk=kwargs["pk"], user=request.user)
 
         if not notification.is_read:
             notification.is_read = True
@@ -64,7 +62,10 @@ class NotificationMarkAllReadView(LoginRequiredRedirectHTMXMixin, View):
     def post(self, request, *args, **kwargs):
         Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
 
-        send_channel_notify_event.delay(user_id=request.user.pk, update_list=False)
+        user_id = request.user.pk
+        transaction.on_commit(
+            lambda: send_channel_notify_event.delay(user_id=user_id, update_list=False)
+        )
 
         return HttpResponse()
 
@@ -75,10 +76,7 @@ class NotificationDeleteView(LoginRequiredRedirectHTMXMixin, View):
     """
 
     def post(self, request, *args, **kwargs):
-        notification = get_object_or_404(Notification, pk=kwargs["pk"])
-
-        if notification.user != request.user:
-            return HttpResponseForbidden("Not allowed")  # 403
+        notification = get_object_or_404(Notification, pk=kwargs["pk"], user=request.user)
 
         # Устанавливается переменная контекста для текущего запроса.
         # Она используется обработчиком сигнала post_delete как флаг, что инициатором
@@ -120,9 +118,9 @@ class NotificationDeleteAllView(LoginRequiredRedirectHTMXMixin, View):
         # _self_initiated_delete для каждого python-объекта уведомления.
         #
         # 4) Celery-задача send_channel_notify_event для обновления числа уведомлений не будет
-        # вызываться многократно, потому что она защищена QueueOnce с keys=["user_id"] - пока
-        # одна задача выполняется, ее дубликат не будет добавлен в очередь касательного
-        # одного пользователя.
+        # вызываться многократно, потому что она защищена QueueOnce с
+        # "keys": ["user_id", "update_list", "reason"] - пока одна задача выполняется, ее дубликат
+        # с теми же параметрами не будет добавлен в очередь.
         #
         # Устанавливается переменная контекста для текущего запроса.
         # Она используется обработчиком сигнала post_delete как флаг, что инициатором

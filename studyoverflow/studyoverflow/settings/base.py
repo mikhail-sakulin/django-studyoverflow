@@ -54,7 +54,7 @@ ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost"])
 # ----------------------------------------
 
 INSTALLED_APPS = [
-    # Указывается первым, чтобы django runserver работал через ASGI
+    # "daphne" указывается первым, чтобы django runserver работал через ASGI
     # Отключить, если нужно использовать профилирование через Django Debug Toolbar
     "daphne",
     # Django core
@@ -88,8 +88,13 @@ INSTALLED_APPS = [
     # Кастомные приложения проекта
     "navigation.apps.NavigationConfig",
     "posts.apps.PostsConfig",
-    "users.apps.UsersConfig",
     "notifications.apps.NotificationsConfig",
+    # users должно указываться последним, потому что в нём подключается обработчик сигнала
+    # post_migrate (sync_default_groups), который собирает группы Moderators и StaffViewers
+    # из прав других приложений, а права создаются для приложений в порядке INSTALLED_APPS
+    # стандартным Django-обработчиком сигнала post_migrate из "django.contrib.auth".
+    # Если приложение окажется в списке ниже users, группы соберутся без его прав.
+    "users.apps.UsersConfig",
 ]
 
 if DEBUG:
@@ -196,10 +201,10 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 # Параметры SMTP
 EMAIL_HOST = env("EMAIL_HOST")
-EMAIL_PORT = env("EMAIL_PORT")
+EMAIL_PORT = env.int("EMAIL_PORT")
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
-EMAIL_USE_SSL = env("EMAIL_USE_SSL")
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL")
 
 # Email по умолчанию для исходящих писем с сайта
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
@@ -207,8 +212,16 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # Email, с которого Django шлёт системные уведомления
 SERVER_EMAIL = EMAIL_HOST_USER
 
-# Список администраторов, которые получают письма об ошибках
-ADMINS = [EMAIL_HOST_USER]
+# Список администраторов, которые получают письма об ошибках, может использоваться в:
+# 1) AdminEmailHandler (django.utils.log) - logging-обработчик, который при логировании
+#    ошибок (например, 500 в django.request) шлёт письмо на адреса из ADMINS;
+# 2) Явный вызов django.core.mail.mail_admins().
+#
+# Формат для Django 5.2: список пар (имя, адрес), само имя нигде не используется. В Django 6.0
+# другой формат - задается список адресов [EMAIL_HOST_USER] без имен.
+#
+# В текущей версии проекта не используется.
+ADMINS = [("Admin", EMAIL_HOST_USER)]
 
 
 # ----------------------------------------
@@ -258,7 +271,33 @@ if NGINX_SSL_ENABLED:
     # Эта настройка говорит Django верить заголовку HTTP_X_FORWARDED_PROTO в запросе, чтобы Django
     # понимал, что клиент отправляет запросы по https.
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # Флаг заставляет Django перенаправлять все HTTP-запросы на HTTPS.
+    #
+    # Упрощенно SecurityMiddleware проверяет:
+    #   if settings.SECURE_SSL_REDIRECT and not request.is_secure():
+    #     # 301 redirect на https://...
+    # request.is_secure() смотрит на SECURE_PROXY_SSL_HEADER (заголовок HTTP_X_FORWARDED_PROTO)
+    # и проверяет, что там указан https.
+    #
+    # Nginx сам отвечает на HTTP-запросы редиректом 301 на HTTPS и до Django их не пропускает при
+    # NGINX_SSL_ENABLED, но дополнительная защита устанавливается на уровне Django.
+    SECURE_SSL_REDIRECT = True
+
     # Добавляет флаг Secure к куке с сессией (sessionid), куку можно передать только по https.
     SESSION_COOKIE_SECURE = True
     # Добавляет флаг Secure к куке с CSRF-токеном (csrftoken), куку можно передать только по https.
     CSRF_COOKIE_SECURE = True
+
+    # Список доверенных доменов, с которых бекенду разрешено принимать небезопасные
+    # HTTP-запросы (POST, PUT, DELETE и PATCH) при запросе по протоколу https.
+    CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+
+    # Настройки HSTS - механизма, при котором сервер сообщает браузеру, что сайт должен
+    # открываться только по HTTPS, даже если введен HTTP.
+    #
+    # Время в секундах, сколько браузер должен помнить, что сайт доступен только по HTTPS,
+    # браузер обновляет свой параметр при каждом ответе, но строго по HTTPS, пока не прошел
+    # заданный период, сайт по HTTP будет недоступен из браузера, браузер сам подставит HTTPS.
+    SECURE_HSTS_SECONDS = 3600
+    # Правило распространяется на все поддомены (в том числе www)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True

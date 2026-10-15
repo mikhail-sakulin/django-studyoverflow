@@ -33,8 +33,10 @@ def handle_send_channel_notify_event(
     через Channels WebSocket пользователю после фиксации транзакции.
     """
     transaction.on_commit(
-        lambda: send_channel_notify_event.apply_async(
-            kwargs={"user_id": notification.user_id, "update_list": update_list, "reason": reason},
+        lambda: send_channel_notify_event.delay(
+            user_id=notification.user_id,
+            update_list=update_list,
+            reason=reason,
         )
     )
 

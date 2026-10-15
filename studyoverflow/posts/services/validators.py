@@ -12,6 +12,10 @@ if TYPE_CHECKING:
     from posts.models import Comment
 
 
+# Минимальная длина поискового запроса, задается для GIN-индексов с триграммами pg_trgm
+MIN_SEARCH_LENGTH = 3
+
+
 @deconstructible
 class PostTitleValidator:
     """
@@ -154,3 +158,35 @@ def validate_comment(  # noqa: C901 (is too complex)
                 errors["reply_to"] = "Ответ должен ссылаться на корень ветки или его детей."
 
     return errors
+
+
+def validate_search_query(q: str) -> str:
+    """Валидатор для введенного текста, используемого при поиске постов."""
+    q = q.strip()
+
+    if q and len("".join(q.split())) < MIN_SEARCH_LENGTH:
+        raise ValidationError(
+            f"Введите минимум {MIN_SEARCH_LENGTH} не пробельных символа, "
+            f"так как используются GIN-индексы с триграммами."
+        )
+
+    return q
+
+
+def validate_author_exists(author: str) -> str:
+    """Валидатор имени автора, используемого при поиске постов."""
+    from django.contrib.auth import get_user_model
+
+    from users.services.validators import CustomUsernameValidator
+
+    author = author.strip()
+
+    if not author:
+        return author
+
+    CustomUsernameValidator()(author)
+
+    if not get_user_model().objects.filter(username__iexact=author).exists():
+        raise ValidationError("Указанного автора не существует.")
+
+    return author

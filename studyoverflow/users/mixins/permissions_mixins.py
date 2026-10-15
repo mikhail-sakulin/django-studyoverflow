@@ -1,9 +1,10 @@
-from typing import Optional
+from typing import Any, Optional
 
 from django.core.exceptions import PermissionDenied
+from django.db.models import QuerySet
 from django.http import HttpRequest
 
-from users.services import is_author_or_moderator
+from users.services.permissions import is_author_or_moderator
 
 
 class IsAuthorOrModeratorMixin:
@@ -13,26 +14,29 @@ class IsAuthorOrModeratorMixin:
     Доступ разрешён, если выполняется одно из условий:
     - Пользователь является автором объекта
     - Пользователь имеет permission на модерацию объекта
+
+    При использовании во views данный миксин должен указываться после LoginRequiredMixin,
+    тогда анонимные пользователи получат редирект на логин, а не 403.
     """
 
     moderator_permission_name: Optional[str] = None
     request: HttpRequest
 
-    def has_permission(self, obj):
+    def can_modify_object(self, obj):
         return is_author_or_moderator(
             user=self.request.user, obj=obj, permission_required=self.moderator_permission_name
         )
 
-    def dispatch(self, request, *args, **kwargs):
+    def get_object(self, queryset: Optional[QuerySet] = None) -> Any:
         """
         Проверяет права пользователя перед выполнением действия.
         """
-        obj = self.get_object()  # type: ignore[attr-defined]
+        obj = super().get_object(queryset)  # type: ignore[misc]
 
-        if not self.has_permission(obj):
+        if not self.can_modify_object(obj):
             raise PermissionDenied("Недостаточно прав для выполнения этого действия.")
 
-        return super().dispatch(request, *args, **kwargs)  # type: ignore[misc]
+        return obj
 
 
 class SocialUserPasswordChangeForbiddenMixin:

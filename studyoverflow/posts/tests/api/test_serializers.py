@@ -4,7 +4,7 @@ import pytest
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from posts.api.serializers import CommentSerializer, PostSerializer
+from posts.api.serializers import CommentSerializer, PostFilterSerializer, PostSerializer
 
 
 class TestPostSerializer:
@@ -63,33 +63,34 @@ class TestPostSerializer:
         mock_validate.assert_called_once_with(["Django "])
         assert result == ["django"]
 
-    def test_create_assigns_tags(self, mocker):
-        """Метод create корректно извлекает теги и устанавливает их."""
-        serializer = PostSerializer()
-        mock_post = mocker.Mock()
-        mock_super_create = mocker.patch(
-            "rest_framework.serializers.ModelSerializer.create", return_value=mock_post
-        )
 
-        serializer.create({"title": "Новый пост", "tags": ["python", "django"]})
+class TestPostFilterSerializer:
+    """Тестирование сериализатора для валидации GET-параметров фильтрации списка постов."""
 
-        # Теги удалены из kwargs
-        mock_super_create.assert_called_once_with({"title": "Новый пост"})
-        # Теги присвоены через .set()
-        mock_post.tags.set.assert_called_once_with(["python", "django"])
+    @pytest.mark.parametrize("data", [{}, {"q": ""}, {"q": "   "}, {"author": ""}])
+    def test_empty_values_are_valid(self, data):
+        """Разрешено передавать пустые значения GET-параметров или не передавать их вовсе."""
+        assert PostFilterSerializer(data=data).is_valid()
 
-    def test_update_assigns_tags(self, mocker):
-        """Метод update корректно обновляет теги, если они переданы."""
-        serializer = PostSerializer()
-        mock_instance = mocker.Mock()
-        mock_super_update = mocker.patch(
-            "rest_framework.serializers.ModelSerializer.update", return_value=mock_instance
-        )
+    def test_short_q_is_invalid(self):
+        """При неверном "q" возвращается ошибка поля."""
+        serializer = PostFilterSerializer(data={"q": "ab"})
+        assert not serializer.is_valid()
+        assert "q" in serializer.errors
 
-        serializer.update(mock_instance, {"title": "Обновлено", "tags": ["drf"]})
+    @pytest.mark.django_db
+    def test_author_validation(self, user_factory):
+        """
+        Если указанный автор существует, валидация проходит. Для несуществующего автора
+        вызывается исключение.
+        """
+        user_factory(username="valid_author")
 
-        mock_super_update.assert_called_once_with(mock_instance, {"title": "Обновлено"})
-        mock_instance.tags.set.assert_called_once_with(["drf"])
+        assert PostFilterSerializer(data={"author": "VALID_AUTHOR"}).is_valid()
+
+        serializer = PostFilterSerializer(data={"author": "ghost_user"})
+        assert not serializer.is_valid()
+        assert "author" in serializer.errors
 
 
 class TestCommentSerializer:
@@ -130,7 +131,7 @@ class TestCommentSerializer:
         assert serializer_no_tree.get_child_comments(parent_comment) is None
 
         # CommentSerializer заменяется на MagicMock
-        mock_serializer_cls = mocker.patch("posts.api.serializers.CommentSerializer")
+        mock_serializer_cls = mocker.patch("posts.api.serializers.ChildCommentSerializer")
         # mock_serializer_cls.return_value - то, что вернется при вызове класса - MagicMock
         # .data - у вернувшегося MagicMock задается атрибут .data с нужным значением,
         # у настоящего CommentSerializer .data - это @property
@@ -145,17 +146,17 @@ class TestCommentSerializer:
             context=serializer_with_tree.context,
         )
 
-    def test_get_children_count(self):
+    def test_get_child_count(self):
         """Количество ответов возвращается только для родительских комментариев."""
         serializer = CommentSerializer()
 
-        comment_root_with_count = SimpleNamespace(parent_comment_id=None, children_count=5)
-        comment_child_with_count = SimpleNamespace(parent_comment_id=1, children_count=5)
+        comment_root_with_count = SimpleNamespace(parent_comment_id=None, child_count=5)
+        comment_child_with_count = SimpleNamespace(parent_comment_id=1, child_count=5)
         comment_no_count = SimpleNamespace(parent_comment_id=None)
 
-        assert serializer.get_children_count(comment_root_with_count) == 5
-        assert serializer.get_children_count(comment_child_with_count) is None
-        assert serializer.get_children_count(comment_no_count) is None
+        assert serializer.get_child_count(comment_root_with_count) == 5
+        assert serializer.get_child_count(comment_child_with_count) is None
+        assert serializer.get_child_count(comment_no_count) is None
 
     def test_validate_hierarchy_calls_service(self, mocker):
         """Проверка вызова сервиса validate_comment при валидации."""

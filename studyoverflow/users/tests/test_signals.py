@@ -4,6 +4,11 @@ import pytest
 from allauth.account.signals import user_signed_up
 from django.contrib.auth import get_user_model
 from django.contrib.auth.signals import user_logged_in, user_logged_out, user_login_failed
+from django.core.cache import cache
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+
+from users.services.cache import get_cached_user, get_user_cache_key
 
 
 User = get_user_model()
@@ -15,32 +20,30 @@ def mock_logger(mocker):
     return mocker.patch("users.signals.logger.info")
 
 
+@pytest.fixture(autouse=True)
+def clear_cache():
+    cache.clear()
+    yield
+    cache.clear()
+
+
 @pytest.mark.django_db
 class TestUserDeletionSignals:
     """Тесты сигналов удаления пользователя."""
 
-    @pytest.fixture(autouse=True)
-    def mock_on_commit(self, mocker):
-        """Выполнение transaction.on_commit в тестах."""
-        return mocker.patch("django.db.transaction.on_commit", side_effect=lambda func: func())
-
-    @pytest.fixture(autouse=True)
-    def mock_handle_notification_user_created(self, mocker):
-        # Мокается сервис создания уведомления, который вызовется при создании пользователя.
-        #
-        # В других тестах, где создается пользователь, все нормально, поскольку
-        # не мокается transaction.on_commit.
-        mocker.patch("notifications.signals.handle_notification_user_created")
-
-    def test_delete_user_triggers_avatar_cleanup_task(self, user_factory, mocker, mock_on_commit):
+    def test_delete_user_triggers_avatar_cleanup_task(
+        self, user_factory, django_capture_on_commit_callbacks
+    ):
         """Удаление пользователя запускает очистку файлов аватара."""
         user = user_factory()
+        path = default_storage.save(
+            f"avatars/{user.s3_storage_uuid}/avatar.png", ContentFile(b"avatar")
+        )
 
-        mock_task = mocker.patch("users.signals.delete_all_avatars_files_task.delay")
+        with django_capture_on_commit_callbacks(execute=True):
+            user.delete()
 
-        user.delete()
-
-        mock_task.assert_called_once_with(str(user.s3_storage_uuid))
+        assert not default_storage.exists(path)
 
     def test_delete_user_writes_log(self, user_factory, mock_logger):
         """Удаление пользователя записывает событие в лог."""
@@ -111,35 +114,56 @@ class TestLoginFailedSignal:
 @pytest.mark.django_db
 class TestUserObjectCacheSignals:
 
-    def test_user_cache_invalidation_on_update(self, user_factory, mocker):
+    def test_user_cache_invalidation_on_update(
+        self, user_factory, django_capture_on_commit_callbacks
+    ):
         """
-        При обновлении пользователя, кроме пароля, вызывается сервис удаления кеша
-        объекта пользователя.
+        При обновлении пользователя, кроме полей из USER_CACHE_IGNORED_FIELDS (например, пароля) с
+        использованием .save(update_fields=[...]), удаляется кеш объекта пользователя.
         """
-        mock_delete_cache = mocker.patch("users.signals.delete_cache_user")
-
-        # 1) Создание пользователя — кеш не сбрасывается
         user = user_factory()
-        mock_delete_cache.assert_not_called()
+        get_cached_user(user.username)
+        assert cache.get(get_user_cache_key(user.username)) is not None
 
-        # 2) Обновление пользователя — кеш сбрасывается
-        user.first_name = "new_username"
-        user.save()
-        mock_delete_cache.assert_called_once_with(user.username)
+        # Кеш сбрасывается
+        with django_capture_on_commit_callbacks(execute=True):
+            user.first_name = "Ivan"
+            user.save()
 
-    def test_user_cache_invalidation_on_delete(self, user_factory, mocker):
+        assert cache.get(get_user_cache_key(user.username)) is None
+
+        get_cached_user(user.username)
+
+        # При обновлении пароля кеш не сбрасывается
+        with django_capture_on_commit_callbacks(execute=True):
+            user.set_password("NewStrongPassword123")
+            user.save(update_fields=["password"])
+
+        assert cache.get(get_user_cache_key(user.username)) is not None
+
+    def test_username_change_invalidates_old_key(
+        self, user_factory, django_capture_on_commit_callbacks
+    ):
+        """При обновлении username пользователя кеш по старому username сбрасывается."""
+        user = user_factory(username="old_name")
+        get_cached_user(username="old_name")
+
+        with django_capture_on_commit_callbacks(execute=True):
+            user.username = "new_name"
+            user.save()
+
+        assert cache.get(get_user_cache_key(username="old_name")) is None
+
+    def test_user_cache_invalidation_on_delete(
+        self, user_factory, django_capture_on_commit_callbacks
+    ):
         """
-        При удалении пользователя вызывается сервис удаления кеша
-        объекта пользователя.
+        При удалении пользователя удаляется кеш объекта пользователя.
         """
-        mock_delete_cache = mocker.patch("users.signals.delete_cache_user")
-
-        # 1) Создание пользователя — кеш не сбрасывается
         user = user_factory()
-        mock_delete_cache.assert_not_called()
+        get_cached_user(user.username)
 
-        # 3) Удаление пользователя — кеш сбрасывается
-        mock_delete_cache.reset_mock()
-        username = user.username
-        user.delete()
-        mock_delete_cache.assert_called_once_with(username)
+        with django_capture_on_commit_callbacks(execute=True):
+            user.delete()
+
+        assert cache.get(get_user_cache_key(user.username)) is None

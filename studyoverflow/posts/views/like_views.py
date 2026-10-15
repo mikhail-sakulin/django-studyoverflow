@@ -12,7 +12,7 @@ from django.views import View
 
 from posts.mixins import LoginRequiredHTMXMixin
 from posts.models import Comment, Post
-from posts.services import perform_toggle_like
+from posts.services.like_handler import perform_toggle_like
 
 
 logger = logging.getLogger(__name__)
@@ -39,6 +39,9 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, View, ABC):
         Нужно переопределять в дочерних классах."""
         pass
 
+    def get_queryset(self):
+        return self.model.objects.all()
+
     def post(self, request, *args, **kwargs):
         """
         Добавляет или удаляет лайк для объекта.
@@ -47,7 +50,9 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, View, ABC):
         в случае отсутствия объекта (DoesNotExist).
         """
         try:
-            liked_object = self.model.objects.get(pk=kwargs[self.pk_url_kwarg])
+            liked_object, user_has_liked = perform_toggle_like(
+                request.user, self.get_queryset(), kwargs[self.pk_url_kwarg], source="web"
+            )
         except self.model.DoesNotExist:
             response = HttpResponse(status=404)
             response["HX-Trigger"] = json.dumps({"reloadPage": True})
@@ -55,8 +60,6 @@ class ToggleLikeBaseView(LoginRequiredHTMXMixin, View, ABC):
             messages.error(self.request, "Ресурс был удален.")
 
             return response
-
-        user_has_liked, likes_count = perform_toggle_like(request.user, liked_object, source="web")
 
         if not user_has_liked:
             message_text = "Лайк удален."
@@ -91,6 +94,9 @@ class ToggleLikePostView(ToggleLikeBaseView):
     pk_url_kwarg = "post_pk"
     obj_type = "post"
 
+    def get_queryset(self):
+        return super().get_queryset().filter(slug=self.kwargs["post_slug"])
+
     def _get_toggle_like_url(self, post):
         """Возвращает URL для кнопки лайка поста."""
         return reverse_lazy(
@@ -106,6 +112,14 @@ class ToggleLikeCommentView(ToggleLikeBaseView):
     model = Comment
     pk_url_kwarg = "comment_pk"
     obj_type = "comment"
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .filter(post_id=self.kwargs["post_pk"], post__slug=self.kwargs["post_slug"])
+            .select_related("post")
+        )
 
     def _get_toggle_like_url(self, comment):
         """Возвращает URL для кнопки лайка комментария."""

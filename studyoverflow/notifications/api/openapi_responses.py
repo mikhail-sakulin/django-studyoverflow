@@ -1,6 +1,6 @@
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse
 
-from notifications.api.serializers import DetailSerializer
+from navigation.api.serializers import DetailSerializer
 
 
 NotificationNotFoundOpenApiResponse = OpenApiResponse(

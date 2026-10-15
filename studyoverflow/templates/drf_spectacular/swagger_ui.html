@@ -58,4 +58,41 @@
       {% include template_name_js %}
     </script>
   {% endif %}
+
+  <script>
+    // Ручной скролл к операции по хэшу: #swagger-ui рендерится асинхронно, браузер не успевает проскроллить сам при загрузке страницы
+    (function () {
+      if (!window.location.hash) return;
+
+      // отрезается "#" и выполняется декодирование, получается хеш "/auth/auth_drf_token_login_create"
+      var rawHash = decodeURIComponent(window.location.hash.slice(1));
+      // строка приводится к формату id операции в DOM: "operations-auth-auth_drf_token_login_create"
+      var targetId = 'operations' + rawHash.replace(/\//g, '-');
+      // получение контейнера, куда рендерится список операций
+      var container = document.getElementById('swagger-ui');
+
+      // скролл
+      function tryScroll() {
+        // поиск элемента операции по вычисленному id
+        var target = document.getElementById(targetId);
+        if (target) {
+          // если элемент найден — выполняется скролл к нему
+          target.scrollIntoView({ block: 'start' });
+          return true;
+        }
+        return false;
+      }
+
+      if (tryScroll()) return;
+
+      // отслеживание появления новых элементов внутри контейнера
+      var observer = new MutationObserver(function () {
+        // как только элемент найден и скролл выполнен — наблюдение отключается
+        if (tryScroll()) observer.disconnect();
+      });
+      observer.observe(container, { childList: true, subtree: true });
+
+      setTimeout(function () { observer.disconnect(); }, 15000);
+    })();
+  </script>
 {% endblock %}
