@@ -1,7 +1,7 @@
 # StudyOverflow
 **StudyOverflow** — это веб-приложение на классическом Django-фреймворке с дополнительной реализацией REST API через Django REST Framework (DRF), созданное как платформа для вопросов и ответов по программированию по аналогии со Stack Overflow.
 
-<img width="1705" height="1140" alt="main-page" src="https://github.com/user-attachments/assets/1a890b49-b334-410e-a947-e19c1eb8c17b" /><br>
+<img width="1705" height="1140" alt="main-page" src="https://github.com/user-attachments/assets/74c19978-b8f6-4d39-a6b7-9f90634ef53b" />
 
 [Содержание](#содержание) · [Структура проекта](#1-структура-проекта) · [Быстрый запуск](#23-быстрый-пробный-запуск-без-предварительной-настройки) · [ER-диаграмма](#41-er-диаграмма-кастомных-django-моделей)
 
@@ -713,7 +713,7 @@ crontab -l
 
 ER-диаграмма кастомных Django-моделей проекта (и стандартной django_content_type) и связей между ними:
 
-<img width="1648" height="1429" alt="dbdiagram-download" src="https://github.com/user-attachments/assets/3b04a4a4-9c52-4704-9878-b462fdd76138" />
+<img width="1648" height="1429" alt="dbdiagram-download" src="https://github.com/user-attachments/assets/3fc8e07a-4d84-4115-879f-00729752b0e3" />
 
 #### Дополнения к ER-диаграмме
 
@@ -757,7 +757,7 @@ models.UniqueConstraint(
 
 ### 4.2 Кастомные Django-приложения
 
-<img width="1733" height="1295" alt="django-apps-2" src="https://github.com/user-attachments/assets/68cbbd82-8a44-4e52-ae5c-5929e04c0e2d" />
+<img width="1733" height="1295" alt="django-apps-2" src="https://github.com/user-attachments/assets/51f1112b-99e1-4c69-b77a-154b92f0723d" />
 
 **1) Приложение `navigation`**
 
@@ -861,7 +861,7 @@ models.UniqueConstraint(
 
 ### 4.3 Система уведомлений
 
-<img width="1715" height="1016" alt="notifications" src="https://github.com/user-attachments/assets/c1d5ef36-98c8-4082-ac3e-49757d86c592" />
+<img width="1715" height="1016" alt="notifications" src="https://github.com/user-attachments/assets/28fa9216-03ed-47bf-aafb-1a01baf5a941" />
 
 #### Универсальность уведомлений
 
@@ -911,7 +911,7 @@ class NotificationType(models.TextChoices):
 
 ### 4.4 Роли пользователей, права и группы
 
-<img width="1774" height="1244" alt="users" src="https://github.com/user-attachments/assets/3cba8d98-cb56-43d5-8d63-2067fa7f04f5" />
+<img width="1774" height="1244" alt="users" src="https://github.com/user-attachments/assets/8aaad08a-911a-408c-8a56-ccede63ddcff" />
 
 В Django-проекте реализованы роли пользователей с разными правами на основе поля `role` модели `User` в связке со стандартными группами и правами `permissions` Django, а также с кастомными правами моделей: `"block_user"` для `User`, `"moderate_post"` для `Post` и `"moderate_comment"` для `Comment`.
 
@@ -955,7 +955,7 @@ ROLE_GROUPS_MAP = {
 
 #### Блокировка пользователей
 
-<img width="1715" height="968" alt="user-moderation" src="https://github.com/user-attachments/assets/93d12f14-7013-4949-b51f-282d9eae85e3" />
+<img width="1715" height="968" alt="user-moderation" src="https://github.com/user-attachments/assets/d0b52468-802d-4db6-869a-486570af3fca" />
 
 Блокировка и разблокировка вынесены в сервисный слой `users/services/moderation.py`. Перед изменением статуса проверяется право на модерацию через сервисную функцию `can_moderate`, после чего заполняются поля `is_blocked`, `blocked_at`, `blocked_by`.
 
@@ -971,7 +971,7 @@ ROLE_GROUPS_MAP = {
 ### 4.5.1 Web
 
 <div align="center">
-  <img width="450" alt="login-page" src="https://github.com/user-attachments/assets/439b4780-dcc2-4303-aa60-852daa9a8107" />
+  <img width="450" alt="login-page" src="https://github.com/user-attachments/assets/6fe4bcd7-e77e-4076-8fc9-b9716e7349b9" />
 </div>
 
 Для web-части проекта (классические Django-views) используется классическая аутентификация Django через сессии (`django.contrib.sessions`) — после успешной аутентификации `user_id` и конкретный бекенд аутентификации, вернувший пользователя, сохраняются в сессии в БД (таблица `django_session`), а `sessionid` передаётся клиенту в cookie.
@@ -987,7 +987,7 @@ ROLE_GROUPS_MAP = {
 ### 4.5.2 Api
 
 <div align="center">
-  <img width="500" alt="api-auth" src="https://github.com/user-attachments/assets/b085ed77-d7fc-410c-8d84-b46a85e14646" />
+  <img width="500" alt="api-auth" src="https://github.com/user-attachments/assets/a94147e4-6c96-4eb4-b0af-71575b3194de" />
 </div>
 
 REST API поддерживает три независимых способа аутентификации, которые можно использовать одновременно:
@@ -1268,7 +1268,7 @@ queryset = queryset.filter(
 
 ### 4.8 Поддержка Markdown и LaTeX
 
-<img width="1837" height="1299" alt="markdown-latex-2" src="https://github.com/user-attachments/assets/a52ae061-babd-4960-8837-40a5a35b21a7" />
+<img width="1837" height="1299" alt="markdown-latex-2" src="https://github.com/user-attachments/assets/f6de111b-17b8-42b5-80a3-3abb89fc0b44" />
 
 Для создания постов и комментариев реализована поддержка синтаксиса Markdown с возможностью вставки математических формул через LaTeX-синтаксис (правила разметки и результат для пользователей описаны в html-шаблоне `posts/templates/posts/_markdown_rules.html`). На бекенде исходный текст рендерится в безопасный HTML один раз при сохранении или при изменении, результат кешируется в БД. На фронтенде реализован live-предпросмотр без обращений к серверу.
 
