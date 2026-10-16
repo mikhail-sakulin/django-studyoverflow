@@ -143,7 +143,7 @@ class TestNotificationViewSet:
         assert n2.is_read is True
         assert n_other.is_read is False
 
-        mock_task.assert_called_once_with(user_id=user.pk, update_list=False)
+        mock_task.assert_called_once_with(user_id=user.pk, update_list=False, reason="update")
 
     def test_mark_read_action(self, api_client, user_factory, notification_post_factory):
         """Пометка конкретного уведомления как прочитанного изменяет его статус."""

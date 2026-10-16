@@ -153,7 +153,7 @@ class TestNotificationMarkAllReadView:
         assert n2.is_read is True
         assert n_other.is_read is False
 
-        mock_task.assert_called_once_with(user_id=user.pk, update_list=False)
+        mock_task.assert_called_once_with(user_id=user.pk, update_list=False, reason="update")
 
 
 @pytest.mark.django_db
