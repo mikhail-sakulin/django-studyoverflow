@@ -32,7 +32,11 @@ services:
     image: ${STUDYOVERFLOW_IMAGE}:${IMAGE_TAG_CI:-dev}
     env_file:
       - .env.test
-    command: pytest
+    # -p no:cacheprovider - флаг отключает сохранение кеша pytest, поскольку у пользователя,
+    # от имени которого выполняется процесс в контейнере, нет прав на запись внутри контейнера.
+    # Сейчас в контейнер монтируется код с хоста, на хост запись возможна, но для надежности
+    # флаг все равно добавляется.
+    command: pytest -p no:cacheprovider
     environment:
       POSTGRES_HOST: "postgres"
       POSTGRES_PORT: "5432"
