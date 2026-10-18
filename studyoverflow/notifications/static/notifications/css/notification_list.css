@@ -24,6 +24,13 @@
     animation: notificationSlideIn 0.3s ease-out both;
 }
 
+.notification-name-block {
+    display: inline;
+    white-space: nowrap;
+    font-size: 1rem;
+    margin-top: -0.25rem;
+}
+
 @keyframes notificationSlideIn {
     from {
         opacity: 0;
