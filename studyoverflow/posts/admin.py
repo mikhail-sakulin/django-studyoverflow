@@ -9,6 +9,7 @@ from django.db.models.functions import Length
 from django.utils.html import format_html
 from django.utils.text import Truncator
 
+from posts.forms import PostAdminForm
 from posts.models import Comment, Like, LowercaseTag, Post, TaggedPost
 from posts.services.cache import delete_cache_post_detail
 
@@ -98,6 +99,8 @@ class PostAdmin(admin.ModelAdmin):
     Конфигурация отображения и управления постами в админ-панели.
     """
 
+    form = PostAdminForm
+
     list_display = (
         "id",
         "author",
@@ -169,6 +172,10 @@ class PostAdmin(admin.ModelAdmin):
             actions.pop("clear_content", None)
 
         return actions
+
+    def has_add_permission(self, request):
+        """Запрещает создание постов через админ-панель."""
+        return False
 
     @admin.action(description="Очистить контент выбранных постов")
     def clear_content(self, request, queryset):
@@ -297,7 +304,7 @@ class CommentAdmin(admin.ModelAdmin):
         )
 
     def has_add_permission(self, request):
-        """Запрещает создание комментариев через админ-паенль."""
+        """Запрещает создание комментариев через админ-панель."""
         return False
 
 
