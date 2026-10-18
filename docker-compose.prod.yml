@@ -159,6 +159,7 @@ services:
 
   certbot:
     image: certbot/certbot
+    restart: unless-stopped
     volumes:
       # Certbot сохранит выпущенные SSL-сертификаты, чтобы Nginx смог прочитать их
       - certbot-etc:/etc/letsencrypt

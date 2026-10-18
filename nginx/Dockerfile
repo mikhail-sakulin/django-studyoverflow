@@ -1,4 +1,4 @@
-FROM nginx:latest
+FROM nginx:1.30-alpine
 
 # Создается папка для хранения исходных конфигов
 RUN mkdir -p /etc/nginx/source_configs

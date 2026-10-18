@@ -40,6 +40,20 @@ class PostCreateForm(forms.ModelForm):
         return normalized_tags
 
 
+class PostAdminForm(forms.ModelForm):
+    """
+    Форма поста для админ-панели, выполняет валидацию и нормализацию тегов.
+    """
+
+    class Meta:
+        model = Post
+        # Поля в админ-панели задаются в соответствующем классе PostAdmin
+        fields = "__all__"
+
+    def clean_tags(self):
+        return validate_and_normalize_tags(self.cleaned_data["tags"])
+
+
 class PostFilterForm(forms.Form):
     """
     Форма фильтрации постов по автору с валидацией существования пользователя.

@@ -279,7 +279,9 @@ class TestPostDeleteView:
 
         # Не автор -> 403 на GET и POST
         client.force_login(user_factory())
-        assert client.get(url).status_code == 403
+        # GET-запрос запрещен, возвращается 405
+        assert client.get(url).status_code == 405
+        # При POST-запросе для не автора возвращается 403
         assert client.post(url).status_code == 403
 
     def test_moderator_can_delete_foreign_post(self, client, user_factory, post_factory, mocker):

@@ -163,7 +163,9 @@ class NotificationViewSet(
 
         user_id = request.user.pk
         transaction.on_commit(
-            lambda: send_channel_notify_event.delay(user_id=user_id, update_list=False)
+            lambda: send_channel_notify_event.delay(
+                user_id=user_id, update_list=False, reason="update"
+            )
         )
 
         return Response({"detail": "Все уведомления помечены прочитанными."})

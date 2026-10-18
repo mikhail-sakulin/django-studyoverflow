@@ -74,6 +74,10 @@ jobs:
             
             docker compose -p studyoverflow-prod $COMPOSE_FILES --env-file .env.prod up -d --wait
             
+            # Перезагружает Nginx (без остановки работы), чтобы он перечитал конфиг и заново отрезолвил имена
+            # upstream-серверов через Docker DNS, так как после пересоздания контейнеров с бэкендом у них новые IP.
+            docker compose -p studyoverflow-prod $COMPOSE_FILES --env-file .env.prod exec -T nginx nginx -s reload
+            
             # -a - удаляет все образы, для которых сейчас нет запущенных контейнеров,
             # без флага -a удалятся только образы, у которых нет имени и тега
             docker image prune -a -f

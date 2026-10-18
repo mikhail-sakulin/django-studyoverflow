@@ -258,6 +258,7 @@ class UserDeleteView(LoginRequiredMixin, DeleteView):
 
     model = User
     success_url = reverse_lazy("home")
+    http_method_names = ["post"]
 
     def get_object(self, queryset=None):
         return self.request.user
