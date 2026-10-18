@@ -192,6 +192,7 @@ class PostDeleteView(
     model = Post
     success_url = reverse_lazy("posts:list")
     moderator_permission_name = "posts.moderate_post"
+    http_method_names = ["post"]
 
     def form_valid(self, form):
         post = self.get_object()
