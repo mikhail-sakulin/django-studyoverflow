@@ -15,7 +15,10 @@
 
       <div>
         <div class="d-flex align-items-center mb-1">
-          <a href="{% url 'users:profile' notification.actor.username %}" class="username-comment author-name me-1">{{ notification.actor.username }} {% user_role_badge notification.actor %}</a>
+          <span class="notification-name-block">
+            <a href="{% url 'users:profile' notification.actor.username %}" class="author-name">{{ notification.actor.username }}</a>
+            {% user_role_badge notification.actor %}
+          </span>
         </div>
 
         <div class="time-create-update-comment text-secondary">
