@@ -285,7 +285,9 @@ class Post(models.Model):
             self.search_content = strip_tags_and_whitespace_chars_from_html(self.rendered_content)
             # Если content задан в update_fields, то производные поля также должны быть сохранены
             if update_fields is not None and "content" in update_fields:
-                kwargs["update_fields"] = {*update_fields, "rendered_content", "search_content"}
+                kwargs["update_fields"] = list(
+                    {*update_fields, "rendered_content", "search_content"}
+                )
 
         super().save(*args, **kwargs)
 
@@ -447,7 +449,7 @@ class Comment(models.Model):
             self.rendered_content = render_markdown_safe(self.content)
             # Если content задан в update_fields, то производные поля также должны быть сохранены
             if update_fields is not None and "content" in update_fields:
-                kwargs["update_fields"] = {*update_fields, "rendered_content"}
+                kwargs["update_fields"] = list({*update_fields, "rendered_content"})
 
         super().save(*args, **kwargs)
 
