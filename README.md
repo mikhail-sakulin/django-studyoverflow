@@ -179,7 +179,7 @@ docker-compose.yml              # Базовая конфигурация инф
 Для запуска проекта понадобятся:
 
 - [**Docker**](https://docs.docker.com/get-docker/) версии 24+
-- [**Docker Compose**](https://docs.docker.com/compose/install/) версии 2.20+ (используется `!override`)
+- [**Docker Compose**](https://docs.docker.com/compose/install/) версии 2.24+ (используется `!override`)
 
 ### 2.2 Копирование файлов для запуска
 
@@ -376,8 +376,8 @@ docker compose -p studyoverflow-demo -f docker-compose.yml -f docker-compose.pro
 | `SOCIAL_AUTH_GOOGLE_SECRET` | Ключ Google OAuth App | Ключ | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
 | `SOCIAL_AUTH_YANDEX_ID` | ID Яндекс OAuth App | ID приложения | [Яндекс OAuth](https://oauth.yandex.ru/) |
 | `SOCIAL_AUTH_YANDEX_SECRET` | Ключ Яндекс OAuth App | Ключ | [Яндекс OAuth](https://oauth.yandex.ru/) |
-| `SOCIAL_AUTH_VK_ID` | ID VK OAuth App | ID приложения | [VK Apps](https://vk.com/apps?act=manage) |
-| `SOCIAL_AUTH_VK_SECRET` | Ключ VK OAuth App | Ключ | [VK Apps](https://vk.com/apps?act=manage) |
+| `SOCIAL_AUTH_VK_ID` | ID VK OAuth App | ID приложения | [VK Apps](https://id.vk.ru/about/business/go) |
+| `SOCIAL_AUTH_VK_SECRET` | Ключ VK OAuth App | Ключ | [VK Apps](https://id.vk.ru/about/business/go) |
 
 > В соответствии с ФЗ №149 авторизация через сервисы GitHub и Google должна быть недоступна для пользователей.
 
@@ -459,19 +459,19 @@ docker compose -p studyoverflow-dev -f docker-compose.yml -f docker-compose.dev.
 Применение миграций БД:
 
 ```bash
-docker compose -p studyoverflow-dev exec studyoverflow-1 python manage.py migrate
+docker compose -p studyoverflow-dev -f docker-compose.yml -f docker-compose.dev.yml --env-file .env.dev exec studyoverflow-1 python manage.py migrate
 ```
 
 Создание суперпользователя (только если заданы необходимые переменные окружения) через кастомную команду create_superuser_from_env, используя данные из переменных окружения:
 
 ```bash
-docker compose -p studyoverflow-dev exec studyoverflow-1 python manage.py create_superuser_from_env
+docker compose -p studyoverflow-dev -f docker-compose.yml -f docker-compose.dev.yml --env-file .env.dev exec studyoverflow-1 python manage.py create_superuser_from_env
 ```
 
 Если вы не задавали данные суперпользователя в переменных окружения в `.env.dev` файле, то используйте стандартную Django-команду:
 
 ```bash
-docker compose -p studyoverflow-dev exec -it studyoverflow-1 python manage.py createsuperuser
+docker compose -p studyoverflow-dev -f docker-compose.yml -f docker-compose.dev.yml --env-file .env.dev exec -it studyoverflow-1 python manage.py createsuperuser
 ```
 
 6) После запуска проект будет доступен на `http://localhost:8000/`.
@@ -504,7 +504,7 @@ Prod-сборка предназначена для полноценного р�
 - `adminer` — веб-интерфейс для просмотра и управления БД PostgreSQL;
 - `flower` — веб-интерфейс для мониторинга задач и очередей Celery.
 
-В отличие от dev-сборки, на хост в prod-сборке проброшены только порты `80` (HTTP) или `443` (HTTPS) у сервиса `nginx` (порты должны быть свободными на хосте) — все остальные сервисы (включая Adminer, Grafana и Flower) доступны напрямую только внутри Docker-сети. Через Nginx по вложенным путям `/grafana/`, `/flower/` и `/adminer/` доступны соответствующие сервисы, запросы к бекенду также проксируются через Nginx.
+В отличие от dev-сборки, на хост в prod-сборке проброшены только порты `80` и `443` у сервиса `nginx` (порты должны быть свободными на хосте) — все остальные сервисы (включая Adminer, Grafana и Flower) доступны напрямую только внутри Docker-сети. Через Nginx по вложенным путям `/grafana/`, `/flower/` и `/adminer/` доступны соответствующие сервисы, запросы к бекенду также проксируются через Nginx.
 
 #### Особенности prod-lite-сборки
 
@@ -590,11 +590,18 @@ Nginx в prod- и prod-lite-сборках выполняет роль reverse-p
 
 В результате данной логики один и тот же Docker-образ Nginx подходит для запуска сборок как по HTTP, так и по HTTPS без пересборки образа, переключение происходит только через переменную окружения `NGINX_SSL_ENABLED`.
 
+**Домен.** В файлах указан `studyoverflow.ru`. При развёртывании на своём домене замените его:
+
+- `nginx/http.conf`, `http-lite.conf`, `https.conf`, `https-lite.conf`: `server_name`;
+- `nginx/https.conf`, `https-lite.conf`: пути `ssl_certificate` и `ssl_certificate_key` (`/etc/letsencrypt/live/<домен>/...`). Папка называется по первому домену из команды `certbot -d`;
+- `studyoverflow/static/robots.txt`: строка `Sitemap:`;
+- `.env.prod`: `SITE_DOMAIN`, `DJANGO_ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`.
+
 ### 3.2 Использование Certbot для получения и продления SSL-сертификатов
 
 [**Certbot**](https://certbot.eff.org/) — консольный клиент [Let's Encrypt](https://letsencrypt.org/), бесплатного удостоверяющего центра, который выпускает и подтверждает SSL-сертификаты для доменов. Сертификат нужен, чтобы сайт мог работать по HTTPS.
 
-В `docker-compose.prod.yml` для этого используется сервис `certbot`. В контейнере задан бесконечный цикл ожидания в `entrypoint` для выполнения периодической команды `certbot`. Процесс выпуска и продления сертификата:
+В `docker-compose.prod.yml` для этого используется сервис `certbot`. В контейнере задан бесконечный цикл ожидания в `entrypoint` для выполнения периодической команды `certbot` (продление сертификата выполняет периодическая cron-задача на хосте через docker compose exec). Процесс выпуска и продления сертификата:
 
 - Certbot использует **webroot-плагин**: он создает временный файл-подтверждение в общем с Nginx томе (`certbot-webroot`), а Let's Encrypt обращается к этому файлу через порт `80` — удостоверяющий центр убеждается, что домен указывает на данный сервер.
 - после успешной проверки Certbot сохраняет сертификат и приватный ключ в том `certbot-etc`, смонтированный также в контейнер с Nginx для работы по HTTPS.
@@ -1129,7 +1136,7 @@ def get_avatar_small_url(self, size: str = "size1") -> str | None:
 
     При загрузке нового аватара, пока новые миниатюры еще не сгенерированы Celery-задачей,
     поля-миниатюры принимают значения None (задается в методе _reset_small_avatars при его
-    вызове с default=None), поэтому текущий метод в случае отсутствия миниатюры вернет оригинал.
+    вызове с default=False), поэтому текущий метод в случае отсутствия миниатюры вернет оригинал.
     """
     fields = {
         "size1": self.avatar_small_size1,
@@ -1458,6 +1465,8 @@ Workflow вызывается из CD Publish and Deploy, а также може
 2) **Подготовка `.env.example.release`.** Из `.env.example` создается копия, где `IMAGE_TAG` задается равным версии релиза, а имена образов заменяются на образы из GHCR;
 3) **Создание GitHub Release** с названием `Release <версия>`. К релизу прикрепляются файлы для запуска prod- и prod-lite-сборок.
 
+Git-тег нужно ставить только на коммит ветки release/cd, для которого уже опубликованы образы (CD Publish and Deploy).
+
 ### 5.6 GitHub переменные и секреты для CI/CD-пайплайнов
 
 GitHub переменные и секреты задаются в репозитории: **Settings → Secrets and variables → Actions** (вкладки **Variables** и **Secrets**). Используются только для деплоя.
@@ -1505,7 +1514,7 @@ GitHub переменные и секреты задаются в репозит
 Настройки заданы в `studyoverflow/pytest.ini`:
 
 - `DJANGO_SETTINGS_MODULE = studyoverflow.settings.test` — настройки проекта для тестирования;
-- `--reuse-db` — тестовая БД сохраняется между запусками. После появления новых миграций БД нужно пересоздать: `pytest --create-db --timeout=0`. Флаг `--timeout=0` обязателен, чтобы успели примениться миграции;
+- `--reuse-db` — тестовая БД сохраняется между запусками. После появления новых миграций БД нужно пересоздать: `pytest --create-db --timeout=0`. Флаг `--timeout=0` обязателен (с параметром `timeout_func_only = true` в `pytest.ini` не обязателен), чтобы успели примениться миграции;
 - `--timeout=10` — тест падает при заданном таймауте;
 - `-n 4` — параллельный запуск в 4 процессах;
 - `--strict-markers` — нельзя использовать незарегистрированные маркеры;
@@ -1571,7 +1580,7 @@ docker compose -p studyoverflow-test -f docker-compose.test.yml --env-file .env.
 Удаление оставшихся после выполнения тестов контейнеров (с БД):
 
 ```bash
-docker compose -p studyoverflow-test -f docker-compose.test.yml --env-file .env.test down
+docker compose -p studyoverflow-test -f docker-compose.test.yml --env-file .env.test down -v
 ```
 
 #### Запуск в pre-commit
@@ -1610,7 +1619,7 @@ E2E-тесты проверяют запущенную production-сборку �
 
 E2E-тесты запускаются для тестирования prod- или prod-lite-сборки, поднятой с дополнительным файлом конфигурации для CD (`docker-compose.cd.yml` или `docker-compose.cd-lite.yml`)).
 
-1) Запустите нужную сборку, порт `80` на хосте должен быть свободен:
+1) Запустите нужную сборку, порты `80` и `443` на хосте должны быть свободны:
 
 Полная prod-сборка:
 
