@@ -127,7 +127,7 @@ jobs:
         with:
           context: ./e2e
           file: ./e2e/Dockerfile
-          tags: studyoverflow-e2e:latest
+          tags: e2e-playwright:latest
           load: true
           cache-from: type=gha,scope=e2e-playwright
           cache-to: type=gha,mode=max,scope=e2e-playwright
@@ -246,7 +246,7 @@ jobs:
         with:
           context: ./e2e
           file: ./e2e/Dockerfile
-          tags: studyoverflow-e2e:latest
+          tags: e2e-playwright:latest
           load: true
           cache-from: type=gha,scope=e2e-playwright
           cache-to: type=gha,mode=max,scope=e2e-playwright
