@@ -19,8 +19,17 @@ class CustomSessionScheme(OpenApiAuthenticationExtension):
             "type": "apiKey",
             "in": "cookie",
             "name": "sessionid",
-            "description": "Аутентификация через сессию в cookie клиента. "
-            "В поле Value вводится только сама сессия.",
+            "description": (
+                "Аутентификация через сессию в cookie клиента. В Swagger UI поле Value не работает:"
+                " заголовок Cookie входит в список запрещённых для fetch/XHR (HTTP-запросы из JS) "
+                "заголовков (forbidden header names), поэтому браузер не отправит введённое "
+                "значение. Для API-аутентификации через сессию нужно отправить запрос "
+                "POST /api/v1/auth/session-login/ в Swagger (также подойдет web-аутентификация). "
+                "Для POST/PUT/PATCH/DELETE запросов при сессии дополнительно нужен заголовок "
+                "X-CSRFToken со значением куки csrftoken. Swagger UI прикрепляет его автоматически,"
+                " но берёт значение при загрузке страницы, поэтому после аутентификации через "
+                "сессию страницу Swagger нужно перезагрузить."
+            ),
         }
 
 
