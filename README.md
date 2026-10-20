@@ -994,7 +994,7 @@ ROLE_GROUPS_MAP = {
 ### 4.5.2 Api
 
 <div align="center">
-  <img width="500" alt="api-auth" src="https://github.com/user-attachments/assets/a94147e4-6c96-4eb4-b0af-71575b3194de" />
+  <img width="500" alt="api-auth" src="https://github.com/user-attachments/assets/5027cfb0-8967-446d-b17c-5de46306ac9e" />
 </div>
 
 REST API поддерживает три независимых способа аутентификации, которые можно использовать одновременно:

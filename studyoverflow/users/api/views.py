@@ -109,6 +109,15 @@ class AuthViewSet(viewsets.GenericViewSet):
 
     @extend_schema(
         summary="Аутентификация для создания сессии.",
+        description=(
+            "При успешном входе в ответе приходит Set-Cookie с sessionid, и браузер сохраняет "
+            "сессию. Дальше запросы из Swagger UI аутентифицируются автоматически, вводить "
+            "сессию в окне Authorize не нужно (там поле Value для сессии не работает).\n\n"
+            "После входа перезагрузите страницу Swagger: для POST/PUT/PATCH/DELETE запросов "
+            "при сессии нужен заголовок X-CSRFToken. Swagger UI прикрепляет его автоматически, "
+            "но берёт значение при загрузке страницы, поэтому без перезагрузки такие запросы "
+            "вернут 403."
+        ),
         auth=[],
         request=LoginSerializer,
         examples=LOGIN_REQUEST_EXAMPLES,

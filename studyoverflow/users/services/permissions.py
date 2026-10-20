@@ -55,6 +55,9 @@ def can_moderate(actor: User, target: User) -> bool:
     """
     user_model = get_user_model()
 
+    if not actor.has_perm("users.block_user"):
+        return False
+
     role_priority = {
         user_model.Role.ADMIN: 3,
         user_model.Role.MODERATOR: 2,

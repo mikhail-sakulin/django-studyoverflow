@@ -26,7 +26,7 @@ class TestUserBlockServices:
         with pytest.raises(PermissionDenied) as exc:
             service_func(moderator, target_user)
 
-        assert "Нельзя модерировать" in str(exc.value)
+        assert "Недостаточно прав" in str(exc.value)
 
     @pytest.mark.parametrize(
         (
