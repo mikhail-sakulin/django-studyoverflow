@@ -38,6 +38,9 @@ def _set_user_block_state(
 
     Внутренняя сервисная функция для управления статусом блокировки пользователя.
     """
+    if not moderator.has_perm("users.block_user"):
+        raise PermissionDenied("Недостаточно прав для блокировки пользователей.")
+
     if not can_moderate(moderator, target_user):
         raise PermissionDenied(
             "Нельзя модерировать пользователя с равной или более высокой ролью. / "
