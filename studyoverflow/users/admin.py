@@ -85,6 +85,11 @@ class UserAdmin(admin.ModelAdmin):
         "date_joined",
         "last_seen",
     )
+    autocomplete_fields = ("blocked_by",)
+
+    def has_add_permission(self, request):
+        """Запрещает создание пользователей через админ-панель."""
+        return False
 
     def message_user(
         self, request, message, level=messages.INFO, extra_tags="", fail_silently=False
@@ -111,8 +116,8 @@ class UserAdmin(admin.ModelAdmin):
         self._apply_block_service(request, queryset, unblock_user_service, "Разблокировано")
 
     def has_block_permission(self, request) -> bool:
-        """Проверка прав для @admin.action, нужен для permissions=["block"]."""
-        return self._can_block_users(request.user)
+        """Проверка прав для @admin.action(permissions=["block"])."""
+        return request.user.has_perm("users.block_user")
 
     @admin.display(description="Аватар (изображение)", ordering="username")
     def user_avatar(self, user: User):
@@ -123,12 +128,6 @@ class UserAdmin(admin.ModelAdmin):
             return mark_safe(f"<img src='{user.avatar.url}' width=50>")
         else:
             return "Без изображения"
-
-    def _can_block_users(self, user: User):
-        """
-        Проверяет, имеет ли текущий пользователь право блокировать аккаунты.
-        """
-        return user.role in {User.Role.ADMIN, User.Role.MODERATOR}
 
     def _apply_block_service(self, request, queryset, service, done_label: str) -> None:
         """
